@@ -1,21 +1,23 @@
 # BuildYourWealth: specyfikacja MVP
 
-Status: **zaakceptowana przez właściciela (etap A, 2026-10-19); w trakcie
-review etapu B**. Dokument powstał
-na podstawie wywiadu z właścicielem produktu (Jakub). Proces pracy opisuje
+Status: **zaakceptowana przez właściciela produktu, po review etapu B
+(2026-10-19)**. Dokument powstał na podstawie wywiadu z właścicielem produktu.
+Proces pracy opisuje
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
 ## 1. Problem
 
-Jakub co miesiąc odkłada część przychodu na oszczędności i inwestycje według
-ustalonych z góry procentów. Dziś liczy to w arkuszu, co jest uciążliwe:
+Użytkownik co miesiąc odkłada część przychodu na oszczędności i inwestycje według
+ustalonych z góry procentów. Bez aplikacji liczy to w arkuszu, co jest uciążliwe:
 przychód zmienia się z miesiąca na miesiąc, każda pula dzieli się dalej na kilka
 celów, a na koniec trzeba ręcznie dopisać wpłaty do stanu majątku.
 
 ## 2. Użytkownik
 
-- MVP: jeden użytkownik, Jakub, do osobistego użytku.
-- Kiedyś: być może rodzina i znajomi (poza MVP, patrz rozdz. 9).
+- Osoba, która chce regularnie odkładać ustaloną część zmiennego przychodu
+  i śledzić swój majątek w jednym miejscu.
+- MVP: jedno konto użytkownika, do osobistego użytku.
+- Później: kolejni użytkownicy, np. rodzina i znajomi (poza MVP, patrz rozdz. 9).
 - Korzysta głównie na komputerze, czasem na telefonie.
 
 ## 3. Oczekiwany rezultat i kryteria sukcesu
@@ -26,7 +28,7 @@ Aplikacja jest udana, gdy:
    inwestycje i każdy cel, bez ręcznych obliczeń.
 2. Rozliczenie miesiąca dopisuje faktycznie wpłacone kwoty do majątku, a suma
    oszczędności i inwestycji rośnie z miesiąca na miesiąc.
-3. Jakub przestaje używać arkusza do tego celu.
+3. Użytkownik nie potrzebuje już arkusza do tego celu.
 
 ## 4. Pojęcia
 
@@ -44,7 +46,7 @@ Aplikacja jest udana, gdy:
 
 ### 5.1 Logowanie
 - Dostęp tylko po zalogowaniu (e-mail i hasło). Bez publicznej rejestracji.
-- Konto właściciela tworzone jednorazowo przy wdrożeniu.
+- Konto użytkownika tworzone jednorazowo przy wdrożeniu.
 - Dane jednego użytkownika nie mogą być widoczne bez zalogowania.
 
 ### 5.2 Majątek (źródła)
@@ -59,7 +61,9 @@ Aplikacja jest udana, gdy:
   w planie nierozliczonego miesiąca.
 - Typu i waluty źródła nie można zmienić, jeśli źródło jest połączone z celem
   albo ma rozliczone wpłaty. Nazwę i notatkę można zmieniać zawsze.
-- Zachowanie zarchiwizowanego źródła z wartością > 0: otwarte pytanie P4.
+- Zarchiwizować można tylko źródło o wartości 0 (najpierw trzeba wyzerować
+  wartość, np. po wypłacie). Zarchiwizowane źródło nie liczy się do majątku
+  ani do liczby źródeł i nie pojawia się na liście wyboru celów.
 
 ### 5.3 Plan podziału
 - Dwie pule: Oszczędności i Inwestycje, każda z procentem przychodu.
@@ -87,8 +91,13 @@ Aplikacja jest udana, gdy:
 - Wpisywanie przychodów bieżącego miesiąca: kilka pozycji (nazwa, kwota netto
   w PLN), sumowanych. Miesiąc powstaje przy pierwszym wpisanym przychodzie.
 - Przychody otwartego miesiąca można dodawać, edytować i usuwać; plan
-  przelicza się od razu. Możliwość wpisania przychodu za miniony miesiąc:
-  otwarte pytanie P6.
+  przelicza się od razu.
+- Przychody każdego nierozliczonego miesiąca można edytować także po jego
+  zakończeniu (wejście z pigułki zaległości albo z Historii).
+- Jeśli poprzedni miesiąc kalendarzowy nie istnieje, użytkownik może go
+  utworzyć, wpisując za niego przychód. Dostaje plan obowiązujący w chwili
+  utworzenia i od razu czeka na rozliczenie. Starszych miesięcy nie można
+  tworzyć.
 - Pusty stan (brak przychodu w bieżącym miesiącu): zachęta „Wpisz przychód
   z października” i przycisk „Dodaj przychód”; plan nie jest pokazywany.
 - Po rozliczeniu bieżącego miesiąca ekran pokazuje go jako rozliczony, tylko
@@ -124,8 +133,9 @@ Aplikacja jest udana, gdy:
 - Rozliczenie jest atomowe i jednorazowe: albo zapisują się wszystkie kwoty,
   albo żadna. Ponowna próba rozliczenia (druga karta, podwójne kliknięcie)
   jest odrzucana komunikatem „Ten miesiąc jest już rozliczony”.
-- Błąd po rozliczeniu poprawia się ręczną edycją wartości źródła. Wpływ
-  takiego błędu na postęp celu: otwarte pytanie P5.
+- Błąd po rozliczeniu poprawia się ręczną edycją wartości źródła, a postęp
+  celu ręczną edycją jego kwoty startowej („Już uzbierane”). Rozliczony
+  miesiąc i historia pozostają bez zmian.
 - Nierozliczone miesiące nie blokują planowania kolejnych.
 
 ### 5.6 Historia
@@ -163,8 +173,10 @@ przecinku. Bez arytmetyki zmiennoprzecinkowej.
 8. Przeliczenia PLN↔EUR: `EUR = PLN ÷ kurs`, `PLN = EUR × kurs`, zaokrąglone
    do najbliższego grosza lub eurocenta, połówki w górę. Każde źródło jest
    przeliczane osobno, potem sumowane.
-9. Postęp celu i jego kwoty docelowa i startowa są w walucie zależnej od
-   decyzji P3.
+9. Kwota docelowa, kwota startowa i postęp celu są w walucie jego źródła.
+   Dla celu ze źródłem EUR postęp sumuje faktyczne kwoty w EUR, bez
+   przeliczania kursem. Zmiana źródła celu na źródło w innej walucie jest
+   zablokowana, jeśli cel ma kwotę docelową, startową albo rozliczone wpłaty.
 
 Przykład: przychód 9 800,00 zł, oszczędności 20%, inwestycje 15% →
 oszczędności 1 960,00 zł, inwestycje 1 470,00 zł, do wydania 6 370,00 zł.
@@ -211,7 +223,7 @@ pokazywana 1 447,49 zł, a 0,01 zł przechodzi do „do wydania”.
 
 Wybrany wariant: **B, „Przepływ pieniędzy”**
 (makiety: https://claude.ai/artifact/QzpWJfXNTrTvD5VFVmV1qC, artboard
-„B · Przepływ pieniędzy”; dostęp ma właściciel).
+„B · Przepływ pieniędzy”; dostęp ma właściciel produktu).
 
 - Nawigacja na górze: logo, zakładki Ten miesiąc, Majątek, Plan podziału,
   Historia, Ustawienia (aktywna jako pigułka), przełącznik motywu.
@@ -259,16 +271,16 @@ Wybrany wariant: **B, „Przepływ pieniędzy”**
   planach. Akceptujemy ograniczenia darmowych planów (np. usypianie serwera).
 - Aplikacja webowa dostępna przez internet, HTTPS.
 - Dane trwałe w bazie danych.
-- Wybór stosu technologicznego: etap C (`STACK.md`), bez preferencji właściciela.
+- Wybór stosu technologicznego: etap C (`STACK.md`), bez preferencji właściciela produktu.
 
 ## 11. Fakty, założenia, decyzje, otwarte pytania
 
-**Fakty (od właściciela):** problem i obecny arkusz; jeden użytkownik w MVP;
+**Fakty (od właściciela produktu):** problem i obecny arkusz; jeden użytkownik w MVP;
 przychody netto, kilka źródeł; podział procentowy pul i celów; źródła z ręcznie
 edytowaną wartością; rozliczenie na koniec miesiąca; zero kosztów; logowanie;
 głównie komputer.
 
-**Decyzje (potwierdzone przez właściciela):** reszta przychodu tylko jako
+**Decyzje (potwierdzone przez właściciela produktu):** reszta przychodu tylko jako
 „do wydania”; cel połączony ze źródłem wybieranym z listy; wypłaty przez ręczną
 edycję wartości; zmiana planu tylko na przyszłość; powiadomienie tylko
 w aplikacji; zaokrąglenia do grosza z resztą do „do wydania”; walidacja
@@ -276,7 +288,10 @@ procentów; rozliczony miesiąc zablokowany; zaległe miesiące nie blokują;
 waluta per źródło z ręcznym kursem; wpłata na cel procentowa, kwota docelowa
 tylko do postępu; MVP z celami i historią, bez wykresu, eksportu i importu;
 wariant wizualny B; oba motywy; postęp celu liczony z rozliczonych wpłat
-plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
+plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2);
+kwoty celu w walucie źródła (P3); archiwizacja tylko źródła o wartości 0 (P4);
+korekta postępu przez kwotę startową (P5); edycja przychodów nierozliczonych
+miesięcy i utworzenie poprzedniego miesiąca (P6).
 
 **Założenia (zaproponowane przez agenta, zaakceptowane razem ze specyfikacją):**
 - Z1: brak publicznej rejestracji, konto tworzone przy wdrożeniu, reset hasła
@@ -288,11 +303,7 @@ plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
 - Z5: zaokrąglenie w dół na poziomie puli i celu (rozdz. 6).
 - Z6: domyślny motyw zgodny z ustawieniem systemu.
 
-**Otwarte pytania (z review etapu B):**
-- **P3:** waluta kwoty docelowej i startowej celu połączonego ze źródłem EUR.
-- **P4:** czy zarchiwizowane źródło z wartością > 0 wlicza się do majątku.
-- **P5:** jak poprawić postęp celu po błędnie wpisanej kwocie w rozliczeniu.
-- **P6:** czy można wpisać przychód za miniony miesiąc.
+**Otwarte pytania:** brak.
 
 ## 12. Scenariusze akceptacyjne
 
@@ -333,3 +344,13 @@ plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
     6 272,51 zł.
 15. **Podwójne rozliczenie:** drugie zatwierdzenie tego samego miesiąca jest
     odrzucone, a wartości źródeł zmieniają się tylko raz.
+16. **Archiwizacja:** źródła o wartości 500,00 zł nie da się zarchiwizować;
+    po zmianie wartości na 0 i odłączeniu od celów archiwizacja się udaje,
+    a liczba źródeł na ekranie „Ten miesiąc” spada o 1.
+17. **Cel w EUR:** cel z kwotą docelową 2 000,00 €, kwotą startową 500,00 €
+    i rozliczoną wpłatą 51,28 € pokazuje postęp 551 / 2 000 €, niezależnie
+    od zmiany kursu.
+18. **Poprzedni miesiąc:** w październiku, gdy wrzesień nie istnieje,
+    użytkownik wpisuje przychód za wrzesień; wrzesień powstaje z bieżącym
+    planem i pojawia się pigułka „Wrzesień 2026 czeka na rozliczenie”.
+    Utworzenie sierpnia nie jest możliwe.
