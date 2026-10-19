@@ -1,7 +1,7 @@
 # Uniwersalny workflow pracy nad projektem z agentami AI
 
-> Stan procesu w tym repozytorium: **etap A (discovery)**, `SPEC.md` czeka na
-> akceptację właściciela.
+> Stan procesu w tym repozytorium: **etap A zakończony**, `SPEC.md` zaakceptowany;
+> następny krok: etap B (niezależne review specyfikacji).
 
 ## 1. Cel
 

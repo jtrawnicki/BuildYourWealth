@@ -1,7 +1,7 @@
 # BuildYourWealth: specyfikacja MVP
 
-Status: **szkic do akceptacji (etap A)**. Dokument powstał na podstawie wywiadu
-z właścicielem produktu (Jakub, 2026-10-19). Proces pracy opisuje
+Status: **zaakceptowana przez właściciela (etap A, 2026-10-19)**. Dokument powstał
+na podstawie wywiadu z właścicielem produktu (Jakub). Proces pracy opisuje
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
 ## 1. Problem
@@ -63,7 +63,9 @@ Aplikacja jest udana, gdy:
   i źródło wybierane z listy źródeł tego samego typu.
 - Procenty celów w puli muszą sumować się dokładnie do 100% (pusta pula z 0%
   nie wymaga celów).
-- Cel może mieć opcjonalną kwotę docelową. Tylko wtedy pokazuje pasek postępu.
+- Cel może mieć opcjonalną kwotę docelową oraz opcjonalną kwotę startową
+  (ile już uzbierano przed rozpoczęciem korzystania z aplikacji). Tylko cel
+  z kwotą docelową pokazuje pasek postępu.
 - Po osiągnięciu kwoty docelowej cel jest oznaczony „osiągnięty”, a wpłaty
   idą dalej, dopóki użytkownik nie zmieni procentów.
 - Zmiana planu podziału obowiązuje od miesięcy utworzonych po zmianie.
@@ -115,7 +117,9 @@ zmiennoprzecinkowej.
 4. Różnica między kwotą puli a sumą kwot jej celów (z zaokrągleń) przechodzi
    do „do wydania”, a nie do celów.
 5. `do wydania` = `przychód` − suma kwot celów.
-6. Postęp celu = wartości z otwartego pytania P1 (rozdz. 11).
+6. Postęp celu = kwota startowa + suma faktycznych kwot z rozliczonych miesięcy
+   dla tego celu. Ręczne zmiany wartości źródła (wycena, wypłata) nie zmieniają
+   postępu celu.
 7. Majątek w PLN = suma wartości źródeł PLN + suma wartości źródeł EUR × kurs.
 
 Przykład: przychód 9 800,00 zł, oszczędności 20%, inwestycje 15% →
@@ -156,8 +160,11 @@ Wybrany wariant: **B, „Przepływ pieniędzy”**
 - Oba motywy, kontrast tekstu co najmniej 4.5:1, cele dotyku co najmniej 44 px.
 - Responsywność: projektowane pod komputer, w pełni używalne od 360 px szerokości.
 - Język interfejsu: polski. Format liczb: `1 960,00 zł`, `220,50 €`.
-- Pozostałe ekrany (Majątek, Plan podziału, Historia, Rozliczenie, Ustawienia,
-  Logowanie) w tym samym stylu; patrz otwarte pytanie P2.
+- Makiety ekranów Rozliczenie i Plan podziału są w tym samym pliku makiet
+  (artboardy „B2 · Rozliczenie miesiąca” i „B3 · Plan podziału”).
+- Pozostałe ekrany (Majątek, Historia, Ustawienia, Logowanie) w tym samym stylu,
+  bez osobnych makiet.
+- Źródła makiet są w repozytorium: [`docs/design/`](docs/design/README.md).
 
 ## 9. Poza MVP (świadomie odłożone)
 
@@ -194,9 +201,10 @@ w aplikacji; zaokrąglenia do grosza z resztą do „do wydania”; walidacja
 procentów; rozliczony miesiąc zablokowany; zaległe miesiące nie blokują;
 waluta per źródło z ręcznym kursem; wpłata na cel procentowa, kwota docelowa
 tylko do postępu; MVP z celami i historią, bez wykresu, eksportu i importu;
-wariant wizualny B; oba motywy.
+wariant wizualny B; oba motywy; postęp celu liczony z rozliczonych wpłat
+plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
 
-**Założenia (przyjęte przez agenta, do potwierdzenia przy akceptacji):**
+**Założenia (zaproponowane przez agenta, zaakceptowane razem ze specyfikacją):**
 - Z1: brak publicznej rejestracji, konto tworzone przy wdrożeniu, reset hasła
   bez e-maila (operacja administracyjna).
 - Z2: miesiąc powstaje przy pierwszym przychodzie i dostaje plan podziału
@@ -206,15 +214,7 @@ wariant wizualny B; oba motywy.
 - Z5: zaokrąglenie w dół na poziomie puli i celu (rozdz. 6).
 - Z6: domyślny motyw zgodny z ustawieniem systemu.
 
-**Otwarte pytania:**
-- **P1 (blokujące):** jak liczyć postęp celu z kwotą docelową?
-  a) suma rozliczonych wpłat na ten cel plus kwota początkowa podana przy
-  tworzeniu celu; b) bieżąca wartość połączonego źródła (prostsze, uwzględnia
-  wypłaty, ale wymaga osobnego źródła dla każdego celu z kwotą docelową).
-  Rekomendacja: **a**.
-- **P2:** czy przed etapem C przygotować makiety pozostałych ekranów
-  (szczególnie Rozliczenie i Plan podziału)? Rekomendacja: **tak**, dla tych
-  dwóch.
+**Otwarte pytania:** brak.
 
 ## 12. Scenariusze akceptacyjne
 
@@ -241,6 +241,9 @@ wariant wizualny B; oba motywy.
 9. **Wypłata:** ręczne zmniejszenie wartości źródła zmniejsza sumę majątku.
 10. **Cel osiągnięty:** cel z kwotą docelową 5 000 zł po przekroczeniu tej kwoty
     pokazuje „osiągnięty”, a kolejny miesiąc nadal planuje na niego wpłatę.
-11. **Motywy i telefon:** wszystkie ekrany działają w obu motywach i przy
+11. **Postęp celu:** cel z kwotą startową 2 000 zł i rozliczonymi wpłatami
+    588 zł i 512 zł pokazuje 3 100 / 5 000 zł; ręczne zmniejszenie wartości
+    połączonego źródła nie zmienia tego postępu.
+12. **Motywy i telefon:** wszystkie ekrany działają w obu motywach i przy
     szerokości 360 px bez przewijania w poziomie.
-12. **Dostęp:** bez zalogowania żaden ekran ani endpoint nie zwraca danych.
+13. **Dostęp:** bez zalogowania żaden ekran ani endpoint nie zwraca danych.
