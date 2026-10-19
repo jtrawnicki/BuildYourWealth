@@ -1,6 +1,7 @@
 # BuildYourWealth: specyfikacja MVP
 
-Status: **zaakceptowana przez właściciela (etap A, 2026-10-19)**. Dokument powstał
+Status: **zaakceptowana przez właściciela (etap A, 2026-10-19); w trakcie
+review etapu B**. Dokument powstał
 na podstawie wywiadu z właścicielem produktu (Jakub). Proces pracy opisuje
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
@@ -42,7 +43,7 @@ Aplikacja jest udana, gdy:
 ## 5. Funkcje MVP
 
 ### 5.1 Logowanie
-- Dostęp tylko po zalogowaniu (e-mail lub login i hasło). Bez publicznej rejestracji.
+- Dostęp tylko po zalogowaniu (e-mail i hasło). Bez publicznej rejestracji.
 - Konto właściciela tworzone jednorazowo przy wdrożeniu.
 - Dane jednego użytkownika nie mogą być widoczne bez zalogowania.
 
@@ -54,77 +55,124 @@ Aplikacja jest udana, gdy:
 - Kurs EUR→PLN jest jednym ustawieniem wpisywanym ręcznie przez użytkownika.
 - Widok pokazuje sumę majątku w PLN, osobno sumę oszczędności i inwestycji,
   oraz wartość każdego źródła w jego walucie (dla EUR także w PLN).
-- Źródła połączonego z celem nie można zarchiwizować, dopóki cel go używa.
+- Źródła nie można zarchiwizować, dopóki używa go cel w bieżącym planie albo
+  w planie nierozliczonego miesiąca.
+- Typu i waluty źródła nie można zmienić, jeśli źródło jest połączone z celem
+  albo ma rozliczone wpłaty. Nazwę i notatkę można zmieniać zawsze.
+- Zachowanie zarchiwizowanego źródła z wartością > 0: otwarte pytanie P4.
 
 ### 5.3 Plan podziału
 - Dwie pule: Oszczędności i Inwestycje, każda z procentem przychodu.
 - Suma procentów obu pul ≤ 100%.
 - W każdej puli dowolna liczba celów; każdy cel ma nazwę, procent puli
-  i źródło wybierane z listy źródeł tego samego typu.
-- Procenty celów w puli muszą sumować się dokładnie do 100% (pusta pula z 0%
-  nie wymaga celów).
+  (większy od 0) i źródło wybierane z listy źródeł tego samego typu.
+- Procenty pul i celów mają najwyżej 2 miejsca po przecinku (np. 33,33%).
+- Procenty celów w puli muszą sumować się dokładnie do 100,00%. Pula z 0%
+  może nie mieć celów; jeśli je ma, obowiązuje ta sama reguła.
 - Cel może mieć opcjonalną kwotę docelową oraz opcjonalną kwotę startową
   (ile już uzbierano przed rozpoczęciem korzystania z aplikacji). Tylko cel
   z kwotą docelową pokazuje pasek postępu.
-- Po osiągnięciu kwoty docelowej cel jest oznaczony „osiągnięty”, a wpłaty
+- Gdy postęp jest większy lub równy kwocie docelowej, cel jest oznaczony „osiągnięty”, a wpłaty
   idą dalej, dopóki użytkownik nie zmieni procentów.
 - Zmiana planu podziału obowiązuje od miesięcy utworzonych po zmianie.
   Istniejące miesiące zachowują plan, z którym powstały.
+- Każdy miesiąc zapamiętuje migawkę planu: procenty pul, procenty celów
+  i źródło każdego celu. Nazwa, kwota docelowa i kwota startowa są bieżącymi
+  atrybutami celu i ich zmiana działa od razu, także w widoku starszych miesięcy.
+- Cel ma stałą tożsamość: edycja go nie zmienia, więc postęp liczy się dalej.
+  Usunięcie celu z planu nie zmienia historii ani nierozliczonych miesięcy,
+  które go zawierają.
 
 ### 5.4 Ten miesiąc (ekran główny)
 - Wpisywanie przychodów bieżącego miesiąca: kilka pozycji (nazwa, kwota netto
   w PLN), sumowanych. Miesiąc powstaje przy pierwszym wpisanym przychodzie.
-- Przychody otwartego miesiąca można edytować; plan przelicza się od razu.
+- Przychody otwartego miesiąca można dodawać, edytować i usuwać; plan
+  przelicza się od razu. Możliwość wpisania przychodu za miniony miesiąc:
+  otwarte pytanie P6.
+- Pusty stan (brak przychodu w bieżącym miesiącu): zachęta „Wpisz przychód
+  z października” i przycisk „Dodaj przychód”; plan nie jest pokazywany.
+- Po rozliczeniu bieżącego miesiąca ekran pokazuje go jako rozliczony, tylko
+  do odczytu, z kwotami faktycznymi.
 - Ekran pokazuje: łączny przychód, kwotę każdej puli, kwotę „do wydania”,
   pasek podziału przychodu i listę „przelewów do wykonania” (cel, źródło,
   procent, kwota, pasek postępu celu, jeśli ma kwotę docelową).
+- Kwota puli pokazywana wszędzie (karty, legenda, zdanie „odkładasz X”,
+  Historia) to suma kwot jej celów (reguła 6.4).
 - Dla celu połączonego ze źródłem w EUR kwota jest podana w PLN oraz
-  orientacyjnie w EUR według bieżącego kursu.
+  orientacyjnie w EUR według bieżącego kursu (reguła 6.8). Bez ustawionego
+  kursu zamiast kwoty w EUR jest link „Ustaw kurs EUR”.
 - Ekran pokazuje sumę majątku i link do sekcji Majątek.
 
 ### 5.5 Rozliczenie miesiąca
-- Miesiąc można rozliczyć od jego ostatniego dnia.
-- Każdy nierozliczony miesiąc z przeszłości jest widoczny jako komunikat
-  w aplikacji („Wrzesień 2026 czeka na rozliczenie”) z przyciskiem
-  „Rozlicz”. Brak przypomnień poza aplikacją.
-- Rozliczenie: lista celów z zaplanowanymi kwotami.
-  - „Plan zrealizowany” zatwierdza wszystkie kwoty bez zmian.
-  - Albo użytkownik wpisuje faktyczną kwotę przy każdym celu (także 0).
-  - Dla źródła w EUR kwota jest dopisywana w EUR; pole jest wstępnie wypełnione
-    przeliczeniem po bieżącym kursie i można je poprawić.
+- Miesiąc można rozliczyć od jego ostatniego dnia (strefa czasowa
+  Europe/Warsaw).
+- Każdy nierozliczony miesiąc z przeszłości jest widoczny jako osobna pigułka
+  „Wrzesień 2026 czeka na rozliczenie” z linkiem „Rozlicz”, od najstarszego.
+  Brak przypomnień poza aplikacją.
+- Ekran rozliczenia (makieta B2): użytkownik wybiera jedną z dwóch opcji,
+  a potem zatwierdza przyciskiem „Zatwierdź rozliczenie”.
+  - „Tak, plan zrealizowany”: faktyczne kwoty = zaplanowane.
+  - „Nie, wpiszę faktyczne kwoty”: pole przy każdym celu, wstępnie wypełnione
+    kwotą planu; dozwolone 0.
+  - Dla źródła w EUR kwota jest zapisywana w EUR. W obu opcjach jest to kwota
+    planu przeliczona po bieżącym kursie (reguła 6.8); w trybie ręcznym można
+    ją poprawić. Bez ustawionego kursu rozliczenia nie da się zatwierdzić,
+    a ekran prosi o kurs.
 - Po zatwierdzeniu faktyczne kwoty są dodawane do bieżącej wartości
-  połączonych źródeł, a miesiąc staje się rozliczony i tylko do odczytu.
-- Błąd po rozliczeniu poprawia się ręczną edycją wartości źródła.
+  połączonych źródeł, kurs użyty przy rozliczeniu jest zapisywany, a miesiąc
+  staje się rozliczony i tylko do odczytu.
+- Rozliczenie jest atomowe i jednorazowe: albo zapisują się wszystkie kwoty,
+  albo żadna. Ponowna próba rozliczenia (druga karta, podwójne kliknięcie)
+  jest odrzucana komunikatem „Ten miesiąc jest już rozliczony”.
+- Błąd po rozliczeniu poprawia się ręczną edycją wartości źródła. Wpływ
+  takiego błędu na postęp celu: otwarte pytanie P5.
 - Nierozliczone miesiące nie blokują planowania kolejnych.
 
 ### 5.6 Historia
 - Lista miesięcy z przychodem, planem i wykonaniem dla każdej puli i celu,
   ze statusem otwarty/rozliczony.
+- Wykonanie celu EUR jest pokazane w EUR oraz w PLN po kursie zapisanym przy
+  rozliczeniu, więc późniejsza zmiana kursu nie zmienia historii.
 
 ### 5.7 Ustawienia
 - Kurs EUR→PLN (ręczny).
-- Motyw: jasny, ciemny, systemowy (domyślnie systemowy). Wybór jest zapamiętany.
+- Motyw: jasny, ciemny, systemowy (domyślnie systemowy). Wybór jest zapamiętany
+  w przeglądarce. Przycisk motywu w nagłówku ustawia motyw przeciwny do
+  widocznego; powrót do „systemowy” jest tylko w Ustawieniach.
 - Wylogowanie.
 
 ## 6. Reguły obliczeń
 
-Wszystkie kwoty liczone w groszach (liczby całkowite), bez arytmetyki
-zmiennoprzecinkowej.
+Wszystkie kwoty liczone w groszach lub eurocentach (liczby całkowite),
+procenty w setnych częściach procenta (33,33% = 3333), kurs z 4 miejscami po
+przecinku. Bez arytmetyki zmiennoprzecinkowej.
 
 1. `przychód` = suma pozycji przychodu miesiąca.
-2. `kwota puli` = zaokrąglenie w dół do grosza z `przychód × procent puli`.
-3. `kwota celu` = zaokrąglenie w dół do grosza z `kwota puli × procent celu`.
-4. Różnica między kwotą puli a sumą kwot jej celów (z zaokrągleń) przechodzi
-   do „do wydania”, a nie do celów.
+2. `kwota bazowa puli` = zaokrąglenie w dół do grosza z
+   `przychód × procent puli`. To wartość pośrednia, nie jest pokazywana.
+3. `kwota celu` = zaokrąglenie w dół do grosza z
+   `kwota bazowa puli × procent celu`.
+4. `kwota puli` (pokazywana) = suma kwot jej celów. Różnica z zaokrągleń
+   przechodzi do „do wydania”.
 5. `do wydania` = `przychód` − suma kwot celów.
 6. Postęp celu = kwota startowa + suma faktycznych kwot z rozliczonych miesięcy
    dla tego celu. Ręczne zmiany wartości źródła (wycena, wypłata) nie zmieniają
    postępu celu.
-7. Majątek w PLN = suma wartości źródeł PLN + suma wartości źródeł EUR × kurs.
+7. Majątek w PLN = suma wartości źródeł PLN + suma przeliczeń wartości źródeł
+   EUR na PLN (reguła 8).
+8. Przeliczenia PLN↔EUR: `EUR = PLN ÷ kurs`, `PLN = EUR × kurs`, zaokrąglone
+   do najbliższego grosza lub eurocenta, połówki w górę. Każde źródło jest
+   przeliczane osobno, potem sumowane.
+9. Postęp celu i jego kwoty docelowa i startowa są w walucie zależnej od
+   decyzji P3.
 
 Przykład: przychód 9 800,00 zł, oszczędności 20%, inwestycje 15% →
 oszczędności 1 960,00 zł, inwestycje 1 470,00 zł, do wydania 6 370,00 zł.
 Cel 25% inwestycji = 367,50 zł.
+
+Przykład z resztą z zaokrągleń: przychód 9 650,00 zł, inwestycje 15% (cele
+60/25/15) → kwota bazowa 1 447,50 zł, cele 868,50 + 361,87 + 217,12, kwota puli
+pokazywana 1 447,49 zł, a 0,01 zł przechodzi do „do wydania”.
 
 ## 7. Przypadki brzegowe
 
@@ -139,7 +187,25 @@ Cel 25% inwestycji = 367,50 zł.
 | Ujemna wartość źródła lub ujemna kwota | Niedozwolone. Wypłatę zapisuje się zmniejszeniem wartości źródła. |
 | Brak ustawionego kursu EUR przy źródle EUR | Aplikacja prosi o kurs przed pokazaniem sumy majątku. |
 | Dwa cele połączone z tym samym źródłem | Dozwolone. |
-| Zmiana kursu EUR | Zmienia tylko przeliczenia na PLN; wartości w EUR bez zmian. |
+| Zmiana kursu EUR | Zmienia tylko bieżące przeliczenia na PLN; wartości w EUR i rozliczone miesiące bez zmian. |
+| Brak kursu EUR przy celu EUR | „Ten miesiąc” pokazuje link „Ustaw kurs EUR” zamiast kwoty w EUR; rozliczenia nie da się zatwierdzić. |
+| Ponowne rozliczenie tego samego miesiąca | Odrzucone: „Ten miesiąc jest już rozliczony”. |
+| Błąd zapisu lub serwer budzący się po uśpieniu | Komunikat „Nie udało się zapisać. Spróbuj ponownie.”; wpisane dane zostają w formularzu. Długie ładowanie pokazuje wskaźnik. |
+
+### 7.1 Walidacja pól
+
+| Pole | Reguła | Komunikat |
+| --- | --- | --- |
+| Kwoty (przychód, wartość źródła, faktyczna, docelowa, startowa) | Liczba ≥ 0, najwyżej 2 miejsca po przecinku. Separator `,` lub `.`, spacje ignorowane (`1 234,56` = `1234.56`). | „Wpisz kwotę, np. 1 234,56” |
+| Kwota przychodu | Jak wyżej i > 0; nazwa pozycji wymagana. | „Kwota przychodu musi być większa od 0” |
+| Kwota docelowa, kwota startowa | Puste = brak. | jak dla kwot |
+| Faktyczna kwota w rozliczeniu | Wymagana (może być 0). | „Wpisz kwotę albo 0” |
+| Procent puli | 0–100, najwyżej 2 miejsca po przecinku. | „Wpisz procent od 0 do 100” |
+| Procent celu | > 0 i ≤ 100, najwyżej 2 miejsca po przecinku. | „Wpisz procent większy od 0” |
+| Suma pul | ≤ 100%. | „Pule przekraczają przychód o X%” |
+| Suma celów w puli | = 100,00%. | „Suma celów: X%. Brakuje Y%” albo „…Za dużo o Y%” |
+| Kurs EUR | > 0, najwyżej 4 miejsca po przecinku. | „Wpisz kurs, np. 4,2850” |
+| Nazwy (źródło, cel, przychód) | Wymagane, najwyżej 60 znaków. | „Wpisz nazwę” |
 
 ## 8. Kierunek wizualny
 
@@ -159,7 +225,15 @@ Wybrany wariant: **B, „Przepływ pieniędzy”**
 - Typografia: Sora (nagłówki, kwoty), DM Sans (tekst). Cyfry tabelaryczne.
 - Oba motywy, kontrast tekstu co najmniej 4.5:1, cele dotyku co najmniej 44 px.
 - Responsywność: projektowane pod komputer, w pełni używalne od 360 px szerokości.
-- Język interfejsu: polski. Format liczb: `1 960,00 zł`, `220,50 €`.
+- Język interfejsu: polski. Format liczb: `1 960,00 zł`, `220,50 €`; wyjątek:
+  postęp celu bez groszy, np. `3 100 / 5 000 zł`.
+- Elementy „Ten miesiąc” nieujęte w makiecie B1:
+  - przychody jako rozwijana lista pozycji pod nagłówkiem z miesiącem, każda
+    z edycją i usuwaniem, plus przycisk „Dodaj przychód”;
+  - pusty stan opisany w 5.4;
+  - każda zaległość jako osobna pigułka nad nagłówkiem, od najstarszej;
+  - przy celu EUR druga linia kwoty, np. `≈ 51,28 €`;
+  - cel osiągnięty: pełny pasek i etykieta „osiągnięty” zamiast liczb postępu.
 - Makiety ekranów Rozliczenie i Plan podziału są w tym samym pliku makiet
   (artboardy „B2 · Rozliczenie miesiąca” i „B3 · Plan podziału”).
 - Pozostałe ekrany (Majątek, Historia, Ustawienia, Logowanie) w tym samym stylu,
@@ -214,7 +288,11 @@ plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
 - Z5: zaokrąglenie w dół na poziomie puli i celu (rozdz. 6).
 - Z6: domyślny motyw zgodny z ustawieniem systemu.
 
-**Otwarte pytania:** brak.
+**Otwarte pytania (z review etapu B):**
+- **P3:** waluta kwoty docelowej i startowej celu połączonego ze źródłem EUR.
+- **P4:** czy zarchiwizowane źródło z wartością > 0 wlicza się do majątku.
+- **P5:** jak poprawić postęp celu po błędnie wpisanej kwocie w rozliczeniu.
+- **P6:** czy można wpisać przychód za miniony miesiąc.
 
 ## 12. Scenariusze akceptacyjne
 
@@ -227,19 +305,22 @@ plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
    cele po 165,00 zł, do wydania 670,01 zł.
 3. **Walidacja:** zapis planu z celami 60% + 30% w puli jest odrzucony
    z komunikatem, że brakuje 10%.
-4. **Rozliczenie zgodne z planem:** po „Plan zrealizowany” wartości źródeł rosną
+4. **Rozliczenie zgodne z planem:** po „Tak, plan zrealizowany” i „Zatwierdź
+   rozliczenie” wartości źródeł rosną
    o zaplanowane kwoty, miesiąc ma status rozliczony i nie da się go edytować.
 5. **Rozliczenie częściowe:** wpisanie 500 zł zamiast 980 zł przy Poduszce
    zwiększa jej źródło o 500 zł, a historia pokazuje plan 980,00 i wykonanie 500,00.
-6. **Źródło w EUR:** przy kursie 4,30 i celu 220,50 zł pole rozliczenia jest
-   wstępnie wypełnione kwotą 51,28 €; po zatwierdzeniu źródło EUR rośnie
-   o wpisaną kwotę w EUR, a suma majątku w PLN uwzględnia kurs.
+6. **Źródło w EUR:** przy kursie 4,3000 i celu 220,50 zł pole rozliczenia jest
+   wstępnie wypełnione kwotą 51,28 € (51,279… zaokrąglone do najbliższego
+   centa). Źródło EUR o wartości 1 000,00 € po zatwierdzeniu ma 1 051,28 €,
+   a jego udział w majątku to 4 520,50 zł.
 7. **Zaległy miesiąc:** gdy wrzesień nie jest rozliczony, w październiku widać
-   komunikat o wrześniu, a plan października działa normalnie.
+   pigułkę „Wrzesień 2026 czeka na rozliczenie”, a po wpisaniu przychodu
+   9 800,00 zł plan października wylicza te same kwoty co w scenariuszu 1.
 8. **Zmiana planu:** zmiana procentów w październiku nie zmienia planu
    istniejącego miesiąca października ani historii; dotyczy listopada.
 9. **Wypłata:** ręczne zmniejszenie wartości źródła zmniejsza sumę majątku.
-10. **Cel osiągnięty:** cel z kwotą docelową 5 000 zł po przekroczeniu tej kwoty
+10. **Cel osiągnięty:** cel z kwotą docelową 5 000 zł po osiągnięciu tej kwoty
     pokazuje „osiągnięty”, a kolejny miesiąc nadal planuje na niego wpłatę.
 11. **Postęp celu:** cel z kwotą startową 2 000 zł i rozliczonymi wpłatami
     588 zł i 512 zł pokazuje 3 100 / 5 000 zł; ręczne zmniejszenie wartości
@@ -247,3 +328,8 @@ plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2).
 12. **Motywy i telefon:** wszystkie ekrany działają w obu motywach i przy
     szerokości 360 px bez przewijania w poziomie.
 13. **Dostęp:** bez zalogowania żaden ekran ani endpoint nie zwraca danych.
+14. **Reszta z zaokrągleń:** przy przychodzie 9 650,00 zł i planie ze scenariusza 1
+    ekran pokazuje oszczędności 1 930,00 zł, inwestycje 1 447,49 zł, do wydania
+    6 272,51 zł.
+15. **Podwójne rozliczenie:** drugie zatwierdzenie tego samego miesiąca jest
+    odrzucone, a wartości źródeł zmieniają się tylko raz.

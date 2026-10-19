@@ -9,6 +9,7 @@ Podgląd na żywo (dostęp ma właściciel): https://claude.ai/artifact/QzpWJfXN
 | `b2-rozliczenie.dc.html` | Rozliczenie miesiąca |
 | `b3-plan-podzialu.dc.html` | Plan podziału |
 
-Pliki to komponenty narzędzia do makiet: struktura HTML, kolory obu motywów
+Pliki to komponenty narzędzia do makiet (wymagają jego środowiska, m.in. `support.js`,
+więc lokalnie się nie wyświetlą; podgląd jest pod linkiem powyżej): struktura HTML, kolory obu motywów
 (obiekt `t` w skrypcie na końcu pliku) i przykładowe dane. Są wzorem wyglądu,
 nie kodem do skopiowania.
