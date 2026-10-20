@@ -12,6 +12,7 @@ describe("themeFromCookies", () => {
     expect(themeFromCookies("theme=system")).toBeUndefined();
     expect(themeFromCookies("theme=darker")).toBeUndefined();
     expect(themeFromCookies("mytheme=dark")).toBeUndefined();
+    expect(themeFromCookies("theme=dark=x")).toBeUndefined();
   });
 });
 
@@ -34,6 +35,7 @@ describe("THEME_SCRIPT", () => {
       "theme=system",
       "theme=darker",
       "mytheme=dark",
+      "theme=dark=x",
     ]) {
       expect(run(cookie)).toBe(themeFromCookies(cookie));
     }

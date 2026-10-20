@@ -80,3 +80,23 @@ test.describe("motyw systemowy jasny", () => {
     await expect.poll(() => seen).toContain(`dark|${DARK_BG}`);
   });
 });
+
+test.describe("dwie karty", () => {
+  test.use({ colorScheme: "light" });
+
+  test("przycisk kieruje się motywem widocznym w karcie, nie ciasteczkiem", async ({
+    context,
+  }) => {
+    const a = await context.newPage();
+    const b = await context.newPage();
+    await a.goto("/");
+    await b.goto("/");
+
+    await a.getByRole("button", { name: "Włącz motyw ciemny" }).click();
+    expect(await bodyBackground(a)).toBe(DARK_BG);
+
+    // Karta B nadal jest jasna, choć ciasteczko mówi już „dark”.
+    await b.getByRole("button", { name: "Włącz motyw ciemny" }).click();
+    expect(await bodyBackground(b)).toBe(DARK_BG);
+  });
+});

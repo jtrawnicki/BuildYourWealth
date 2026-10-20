@@ -11,8 +11,8 @@ import {
 import styles from "./ThemeToggle.module.css";
 
 function visibleTheme(): Theme {
-  const chosen = themeFromCookies(document.cookie);
-  if (chosen) return chosen;
+  const shown = document.documentElement.dataset.theme;
+  if (shown === "light" || shown === "dark") return shown;
   return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 

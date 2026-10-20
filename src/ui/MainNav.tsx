@@ -9,7 +9,10 @@ export function MainNav({ className }: { className?: string }) {
   const active = activeTab(usePathname());
 
   return (
-    <nav aria-label="Menu główne" className={`${styles.nav} ${className}`}>
+    <nav
+      aria-label="Menu główne"
+      className={`${styles.nav} ${className ?? ""}`}
+    >
       {NAV_TABS.map(({ href, label }) => (
         <Link
           key={href}
