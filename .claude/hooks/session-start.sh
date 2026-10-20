@@ -1,6 +1,7 @@
 #!/bin/bash
 # Sesja chmurowa agenta: zależności npm i lokalny klaster Postgres (Docker tu nie działa).
-# Tworzy rolę `byw` oraz bazy `byw_dev` i `byw_test` zgodne z `.env.example` i `.env.test`.
+# Tworzy rolę `byw` oraz bazy `byw_dev` i `byw_test` zgodne z `.env.example` i `.env.test`
+# i migruje `byw_dev` (`byw_test` migruje `npm test`).
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -40,3 +41,5 @@ done
 if [ ! -f .env ]; then
   cp .env.example .env
 fi
+
+npm run --silent db:migrate

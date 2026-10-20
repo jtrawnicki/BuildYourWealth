@@ -29,6 +29,7 @@ STACK 6). Każdy sposób uruchomienia bazy daje te same adresy:
 docker compose up -d db      # Postgres 17, tworzy byw_dev i byw_test
 cp .env.example .env
 npm ci
+npm run db:migrate           # schemat w byw_dev
 npm run dev                  # http://localhost:3000
 ```
 
@@ -38,12 +39,26 @@ wolumenem; jeśli wolumen istniał wcześniej, utwórz bazę od nowa przez
 
 **Sesja chmurowa agenta (bez Dockera):** hook `.claude/hooks/session-start.sh`
 instaluje zależności, uruchamia lokalny klaster Postgres, tworzy rolę `byw`,
-bazy `byw_dev` i `byw_test` oraz plik `.env`. Po starcie sesji wystarczy
+bazy `byw_dev` i `byw_test`, plik `.env` i migruje `byw_dev`. Po starcie sesji wystarczy
 `npm run dev`. Hook można uruchomić ponownie ręcznie:
 `CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR=$PWD .claude/hooks/session-start.sh`.
 
 **Dowolny inny Postgres:** ustaw `DATABASE_URL`. Zmienna z powłoki ma
-pierwszeństwo przed `.env` i `.env.test`, także w testach.
+pierwszeństwo przed `.env` i `.env.test`, także w testach. `npm test` przed
+uruchomieniem odtwarza schemat bazy od zera, więc odmawia pracy na bazie,
+której nazwa nie kończy się na `_test`.
+
+## Baza danych
+
+| Polecenie | Działanie |
+| --- | --- |
+| `npm run db:generate` | nowa migracja w `drizzle/` po zmianie `src/db/schema.ts` (commitowana) |
+| `npm run db:migrate` | stosuje migracje na bazie z `DATABASE_URL` |
+| `npm run user:set-password -- <email>` | tworzy konto albo zmienia hasło (wczytywane z terminala) i unieważnia sesje konta |
+| `npm run db:dump [-- <plik>]` | kopia bazy `pg_dump` do `backups/` (poza repozytorium); `pg_dump` w wersji co najmniej serwera albo wskazany przez `PG_DUMP` |
+
+Migracje tylko dodające albo z jawnym planem przejścia (STACK 6). Plików
+w `drizzle/` nie edytuj ręcznie po zmergowaniu.
 
 ## Bramka jakości
 
