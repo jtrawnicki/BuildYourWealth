@@ -90,9 +90,12 @@ Zasady:
 Kwoty to `bigint` w jednostkach minimalnych (grosze lub eurocenty), procenty
 to `integer` w setnych procenta (33,33% = 3333), kurs to `integer`
 w dziesięciotysięcznych (4,2850 = 42850). W TypeScript te wartości są typu
-`number`; zakres jest bezpieczny (do ok. 90 bilionów zł), a mnożenie kwoty
-przez procent lub kurs mieści się w `Number.MAX_SAFE_INTEGER` dla kwot do
-ok. 2 mld (zł lub €). Funkcje domeny zgłaszają błąd poza tym zakresem.
+`number`; zakres jest bezpieczny (do ok. 90 bilionów zł). Pojedyncza
+kwota wpisywana przez użytkownika ma górną granicę 2 mld (zł lub €).
+Iloczyny pośrednie (kwota × procent, kwota × kurs) domena liczy na `BigInt`,
+bo przy kursie powyżej ok. 4,5 iloczyn kwoty 2 mld przekracza
+`Number.MAX_SAFE_INTEGER`; wynik po zaokrągleniu wraca jako `number`, a
+funkcje domeny zgłaszają błąd, jeśli nie mieści się w bezpiecznym zakresie.
 
 | Tabela | Kolumny (skrót) | Uwagi |
 | --- | --- | --- |
