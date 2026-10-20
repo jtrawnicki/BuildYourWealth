@@ -20,4 +20,30 @@ describe("hasła", () => {
     expect(await verifyPassword("hasło", "")).toBe(false);
     expect(await verifyPassword("hasło", "bcrypt$abc")).toBe(false);
   });
+
+  it("odrzuca uszkodzony zapis zamiast przepuścić dowolne hasło", async () => {
+    const valid = await hashPassword("hasło");
+    const [, , , , salt, hash] = valid.split("$");
+    const damaged = [
+      `scrypt$32768$8$1$${salt}$`,
+      `scrypt$32768$8$1$${salt}$!!!`,
+      `scrypt$32768$8$1$${salt}$=`,
+      `scrypt$32768$8$1$AAAA$${hash}`,
+      `scrypt$32768$8$1$${salt}$${hash.slice(0, 10)}`,
+      `scrypt$32768$8$1$${salt}$${hash}$extra`,
+    ];
+    for (const stored of damaged) {
+      expect(await verifyPassword("dowolne", stored), stored).toBe(false);
+    }
+  });
+
+  it("odrzuca zapis z innymi parametrami scrypt bez ich wykonywania", async () => {
+    const valid = await hashPassword("hasło");
+    const [, , , , salt, hash] = valid.split("$");
+    for (const params of ["1048576$8$1", "3$8$1", "32768$8$2", "x$8$1"]) {
+      expect(
+        await verifyPassword("hasło", `scrypt$${params}$${salt}$${hash}`),
+      ).toBe(false);
+    }
+  });
 });

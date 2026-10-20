@@ -3,7 +3,7 @@
 // `pg_dump` musi mieć wersję co najmniej równą serwerowi (STACK 6);
 // inny plik wykonywalny można wskazać zmienną `PG_DUMP`.
 import { execFile } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { loadEnvConfig } from "@next/env";
@@ -13,6 +13,34 @@ loadEnvConfig(process.cwd(), false, { info: () => {}, error: console.error });
 
 const run = promisify(execFile);
 const pgDump = process.env.PG_DUMP || "pg_dump";
+
+/**
+ * Dane połączenia jako zmienne libpq dla procesu pg_dump, żeby hasło nie
+ * trafiło do argumentów (widocznych w `ps` i w komunikatach błędów).
+ */
+function libpqEnv(url: string): NodeJS.ProcessEnv {
+  const parsed = new URL(url);
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    PGHOST: decodeURIComponent(parsed.hostname),
+    PGPORT: parsed.port || "5432",
+    PGUSER: decodeURIComponent(parsed.username),
+    PGPASSWORD: decodeURIComponent(parsed.password),
+    PGDATABASE: decodeURIComponent(parsed.pathname.slice(1)),
+  };
+  const params: Record<string, string> = {
+    sslmode: "PGSSLMODE",
+    channel_binding: "PGCHANNELBINDING",
+    options: "PGOPTIONS",
+  };
+  for (const [key, value] of parsed.searchParams) {
+    if (!params[key]) {
+      throw new Error(`Nieobsługiwany parametr adresu bazy: ${key}`);
+    }
+    env[params[key]] = value;
+  }
+  return env;
+}
 
 function defaultFile(now: Date): string {
   const stamp = now
@@ -47,12 +75,18 @@ async function main(): Promise<void> {
 
   const file = process.argv[2] ?? defaultFile(new Date());
   await mkdir(dirname(file), { recursive: true });
-  await run(pgDump, [
-    "--no-owner",
-    "--no-privileges",
-    `--file=${file}`,
-    `--dbname=${url}`,
-  ]);
+  try {
+    await run(pgDump, ["--no-owner", "--no-privileges", `--file=${file}`], {
+      env: libpqEnv(url),
+    });
+  } catch (error) {
+    await rm(file, { force: true });
+    // Komunikat `execFile` powtarza całe polecenie; pokazujemy tylko wyjście pg_dump.
+    const { code, stderr } = error as { code?: unknown; stderr?: string };
+    throw new Error(
+      `pg_dump zakończył się błędem (kod ${String(code)}):\n${stderr ?? ""}`.trimEnd(),
+    );
+  }
   console.log(`Zapisano kopię bazy: ${file}`);
 }
 

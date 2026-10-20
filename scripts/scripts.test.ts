@@ -93,4 +93,25 @@ describe("npm run db:dump", () => {
     );
     await expect(readFile(file)).rejects.toThrow();
   });
+
+  it("przy błędzie pg_dump nie ujawnia hasła do bazy", async () => {
+    const fake = join(tmp, "failing-pg-dump");
+    await writeFile(
+      fake,
+      '#!/bin/sh\nif [ "$1" = --version ]; then echo "pg_dump (PostgreSQL) 99.0"; exit 0; fi\n' +
+        'echo "fake pg_dump: $* $PGDATABASE" >&2\nexit 1\n',
+    );
+    await chmod(fake, 0o755);
+    const password = new URL(process.env.DATABASE_URL ?? "").password;
+    const file = join(tmp, "failed.sql");
+    const result = await runScript("db:dump", [file], {
+      env: { PG_DUMP: fake },
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain("pg_dump zakończył się błędem (kod 1)");
+    expect(result.stderr).toContain("fake pg_dump: --no-owner");
+    expect(result.stderr).not.toContain(`:${password}@`);
+    expect(result.stderr).not.toContain("postgres://");
+    await expect(readFile(file)).rejects.toThrow();
+  });
 });
