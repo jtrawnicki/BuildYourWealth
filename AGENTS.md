@@ -91,6 +91,75 @@ sprawdź, że e2e nadal działa w sesji bez pobierania przeglądarki.
   `.env.example` i `.env.test` zawierają wyłącznie lokalne dane deweloperskie.
 - Jedno zadanie z `PLAN.md` = jeden branch i jeden PR, który zamyka swoje Issue.
 
+## Wdrożenie produkcyjne (Vercel + Neon)
+
+Aplikacja działa na Vercel (plan Hobby, region `fra1`), dane w Neon (plan Free,
+Frankfurt, Postgres 17). Decyzje i kontekst: STACK 6 i 9. Wdrożenie jest
+sterowane z repozytorium (`vercel.json`, polecenie budowania), a pierwsze
+połączenie kont wymaga rąk właściciela — kroki niżej.
+
+**Adres produkcyjny:** `https://<do-uzupełnienia>.vercel.app`
+**Projekt Neon:** `sparkling-pine-36966267` (Frankfurt, Postgres 17).
+
+### Konfiguracja w repozytorium
+
+- `vercel.json` ustawia framework Next.js, polecenie budowania
+  `npm run vercel-build` oraz `git.deploymentEnabled` tak, że deploy powstaje
+  **tylko z gałęzi `main`** (`"*": false`, `"main": true`). Pushe na inne
+  gałęzie (w tym PR) nie tworzą deploymentu, więc podglądy są wyłączone.
+- `npm run vercel-build` (`scripts/vercel-build.ts`): na produkcji
+  (`VERCEL_ENV=production`) uruchamia najpierw `npm run db:migrate`, potem
+  `next build`; na innych środowiskach tylko `next build`.
+- Migracje w produkcji łączą się **adresem bezpośrednim**
+  (`DATABASE_URL_UNPOOLED`), a aplikacja w runtime **adresem z poolerem**
+  (`DATABASE_URL`) — patrz `drizzle.config.ts` i `src/db/client.ts`.
+
+### Zmienne środowiskowe w Vercel (zakres „Production”)
+
+Ustawione tylko w zakresie **Production**, żeby żadne inne środowisko nie
+łączyło się z bazą produkcyjną. Wartości skopiuj z panelu Neon (Connection
+Details) dokładnie tak, jak je podaje:
+
+| Zmienna | Adres Neon | Użycie |
+| --- | --- | --- |
+| `DATABASE_URL` | z poolerem (`...-pooler...`) | runtime aplikacji |
+| `DATABASE_URL_UNPOOLED` | bezpośredni (bez `-pooler`) | migracje w buildzie |
+
+### Pierwsze wdrożenie (kroki właściciela)
+
+1. W Vercel: **Add New → Project → Import** repozytorium `BuildYourWealth`.
+   Framework wykryje się jako Next.js; nie zmieniaj polecenia budowania
+   (bierze się z `vercel.json`). Production Branch pozostaw `main`.
+2. W **Settings → Environment Variables** dodaj obie zmienne z tabeli wyżej
+   w zakresie **Production**.
+3. Deploy ruszy po merge’u do `main` (albo „Redeploy” z panelu). Build
+   zastosuje migracje i zbuduje aplikację.
+4. Konto właściciela (hasło nie przechodzi przez agenta): na swoim komputerze
+   z klonem repozytorium ustaw w powłoce adres **bezpośredni** jako
+   `DATABASE_URL` i uruchom
+   `npm run user:set-password -- <twój-email>` (hasło min. 12 znaków, bez echa).
+
+### Kopia zapasowa
+
+Na komputerze właściciela, z adresem **bezpośrednim** jako `DATABASE_URL`:
+`npm run db:dump`. Wymaga klienta `pg_dump` w wersji ≥ 17 (albo wskaż go
+`PG_DUMP`). Pliki trafiają do `backups/` (poza repozytorium). Odtwarzanie:
+`pg_restore`.
+
+### Wycofanie
+
+W Vercel: **Deployments → wybierz poprzedni udany → Promote to Production**.
+Migracje są dodające i zgodne wstecz (STACK 6), więc poprzedni build działa na
+bieżącym schemacie.
+
+### Smoke test po wdrożeniu (kryteria akceptacji T4)
+
+- [ ] `https://<adres>.vercel.app` otwiera się po HTTPS.
+- [ ] Strona bez sesji przekierowuje na `/logowanie`.
+- [ ] Logowanie poprawnym hasłem wpuszcza do aplikacji; wylogowanie wraca na logowanie.
+- [ ] Push na gałąź inną niż `main` nie tworzy deploymentu.
+- [ ] `npm run db:dump` na komputerze właściciela tworzy plik kopii z bazy produkcyjnej.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
