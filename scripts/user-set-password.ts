@@ -1,8 +1,8 @@
 import { hashPassword } from "@/auth/password";
 import { closePool, getDb } from "@/db/client";
 import { normalizeEmail, setUserPassword } from "@/db/users";
-import { loadEnvConfig } from "@next/env";
 import { readPassword } from "./read-password";
+import { loadEnv } from "./load-env";
 
 // Użycie: npm run user:set-password -- <email>
 // Hasło jest wczytywane z terminala (bez echa) albo ze standardowego wejścia.
@@ -22,7 +22,7 @@ function validateInput(
 }
 
 async function main(): Promise<void> {
-  loadEnvConfig(process.cwd(), false, { info: () => {}, error: console.error });
+  loadEnv();
   const email = process.argv[2];
   const emailError = validateInput(email, "x".repeat(MIN_PASSWORD_LENGTH));
   if (emailError) {

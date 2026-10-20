@@ -80,10 +80,9 @@ export const sources = pgTable(
     archivedAt: timestamptz("archived_at"),
   },
   (t) => [
-    // Cele i migawki wskazują źródło razem z użytkownikiem i typem, więc baza
-    // nie przyjmie celu połączonego ze źródłem innego konta lub innego typu.
-    unique("sources_id_user_id_kind_key").on(t.id, t.userId, t.kind),
-    unique("sources_id_kind_key").on(t.id, t.kind),
+    // Cel wskazuje źródło razem z użytkownikiem, więc baza nie przyjmie celu
+    // połączonego ze źródłem innego konta.
+    unique("sources_id_user_id_key").on(t.id, t.userId),
     check("sources_name_check", nameCheck(t.name)),
     check("sources_kind_check", sql`${t.kind} in ('savings', 'investments')`),
     check("sources_currency_check", sql`${t.currency} in ('PLN', 'EUR')`),
@@ -110,8 +109,8 @@ export const goals = pgTable(
   (t) => [
     foreignKey({
       name: "goals_source_fk",
-      columns: [t.sourceId, t.userId, t.pool],
-      foreignColumns: [sources.id, sources.userId, sources.kind],
+      columns: [t.sourceId, t.userId],
+      foreignColumns: [sources.id, sources.userId],
     }),
     index("goals_user_id_idx").on(t.userId),
     check("goals_pool_check", sql`${t.pool} in ('savings', 'investments')`),
@@ -153,6 +152,9 @@ export const months = pgTable(
   ],
 );
 
+// Klucze obce migawki do celu i źródła oraz celu do źródła są odroczone do końca
+// transakcji (migracja 0001), żeby kaskadowe usunięcie użytkownika nie
+// zatrzymało się na kolejności usuwania.
 export const monthGoals = pgTable(
   "month_goals",
   {
@@ -164,16 +166,13 @@ export const monthGoals = pgTable(
       .references(() => goals.id),
     pool: kind("pool"),
     pct: integer("pct").notNull(),
-    sourceId: integer("source_id").notNull(),
+    sourceId: integer("source_id")
+      .notNull()
+      .references(() => sources.id),
     actualAmount: amount("actual_amount"),
   },
   (t) => [
     primaryKey({ columns: [t.monthId, t.goalId] }),
-    foreignKey({
-      name: "month_goals_source_fk",
-      columns: [t.sourceId, t.pool],
-      foreignColumns: [sources.id, sources.kind],
-    }),
     index("month_goals_goal_id_idx").on(t.goalId),
     check(
       "month_goals_pool_check",

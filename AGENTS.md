@@ -43,8 +43,10 @@ bazy `byw_dev` i `byw_test`, plik `.env` i migruje `byw_dev`. Po starcie sesji w
 `npm run dev`. Hook można uruchomić ponownie ręcznie:
 `CLAUDE_CODE_REMOTE=true CLAUDE_PROJECT_DIR=$PWD .claude/hooks/session-start.sh`.
 
-**Dowolny inny Postgres:** ustaw `DATABASE_URL`. Zmienna z powłoki ma
-pierwszeństwo przed `.env` i `.env.test`, także w testach.
+**Dowolny inny Postgres:** ustaw `DATABASE_URL` (w formie URL). Zmienna
+z powłoki ma pierwszeństwo przed `.env` i `.env.test`, także w testach.
+Rola testowa potrzebuje prawa `CREATEDB`, bo test migracji tworzy na chwilę
+pustą bazę.
 
 ## Baza i skrypty administracyjne
 
@@ -55,7 +57,8 @@ pierwszeństwo przed `.env` i `.env.test`, także w testach.
 | `npm run user:set-password -- <email>` | Tworzy konto albo ustawia nowe hasło (min. 12 znaków) i unieważnia sesje. Hasło z terminala bez echa albo z wejścia standardowego. |
 | `npm run db:dump [-- <plik>]` | `pg_dump` w formacie custom do `backups/` (poza repozytorium); odtwarzanie przez `pg_restore`. `PG_DUMP` wskazuje inny program `pg_dump`. |
 
-Skrypty biorą `DATABASE_URL` z powłoki, a gdy jej brak, z `.env`.
+Skrypty i `drizzle-kit` biorą `DATABASE_URL` z powłoki, a gdy jej brak,
+wyłącznie z `.env` (nie z `.env.local` ani `.env.production*`).
 
 ## Bramka jakości
 

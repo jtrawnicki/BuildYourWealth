@@ -50,10 +50,16 @@ export async function verifyPassword(
     return false;
   }
   const expected = Buffer.from(hash, "base64");
-  const key = await derive(password, Buffer.from(salt, "base64"), {
-    N: Number(N),
-    r: Number(r),
-    p: Number(p),
-  });
+  let key: Buffer;
+  try {
+    key = await derive(password, Buffer.from(salt, "base64"), {
+      N: Number(N),
+      r: Number(r),
+      p: Number(p),
+    });
+  } catch {
+    // Uszkodzony zapis (np. nieprawidłowe parametry) nie pasuje do żadnego hasła.
+    return false;
+  }
   return key.length === expected.length && timingSafeEqual(key, expected);
 }

@@ -1,8 +1,7 @@
-import { loadEnvConfig } from "@next/env";
 import { defineConfig } from "drizzle-kit";
+import { loadEnv } from "./scripts/load-env";
 
-// Zmienna z powłoki (np. adres bazy produkcyjnej) ma pierwszeństwo przed `.env`.
-loadEnvConfig(process.cwd(), false, { info: () => {}, error: console.error });
+loadEnv();
 
 export default defineConfig({
   dialect: "postgresql",

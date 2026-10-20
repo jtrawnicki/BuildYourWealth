@@ -82,8 +82,7 @@ CREATE TABLE "sources" (
 	"value" bigint DEFAULT 0 NOT NULL,
 	"note" text,
 	"archived_at" timestamp with time zone,
-	CONSTRAINT "sources_id_user_id_kind_key" UNIQUE("id","user_id","kind"),
-	CONSTRAINT "sources_id_kind_key" UNIQUE("id","kind"),
+	CONSTRAINT "sources_id_user_id_key" UNIQUE("id","user_id"),
 	CONSTRAINT "sources_name_check" CHECK (char_length("sources"."name") between 1 and 60),
 	CONSTRAINT "sources_kind_check" CHECK ("sources"."kind" in ('savings', 'investments')),
 	CONSTRAINT "sources_currency_check" CHECK ("sources"."currency" in ('PLN', 'EUR')),
@@ -98,11 +97,11 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 ALTER TABLE "goals" ADD CONSTRAINT "goals_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "goals" ADD CONSTRAINT "goals_source_fk" FOREIGN KEY ("source_id","user_id","pool") REFERENCES "public"."sources"("id","user_id","kind") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "goals" ADD CONSTRAINT "goals_source_fk" FOREIGN KEY ("source_id","user_id") REFERENCES "public"."sources"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "incomes" ADD CONSTRAINT "incomes_month_id_months_id_fk" FOREIGN KEY ("month_id") REFERENCES "public"."months"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "month_goals" ADD CONSTRAINT "month_goals_month_id_months_id_fk" FOREIGN KEY ("month_id") REFERENCES "public"."months"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "month_goals" ADD CONSTRAINT "month_goals_goal_id_goals_id_fk" FOREIGN KEY ("goal_id") REFERENCES "public"."goals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "month_goals" ADD CONSTRAINT "month_goals_source_fk" FOREIGN KEY ("source_id","pool") REFERENCES "public"."sources"("id","kind") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "month_goals" ADD CONSTRAINT "month_goals_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "months" ADD CONSTRAINT "months_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "settings" ADD CONSTRAINT "settings_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

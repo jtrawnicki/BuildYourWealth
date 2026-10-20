@@ -1,5 +1,5 @@
 {
-  "id": "01b06252-2ba1-4a49-b5cb-fec66409367a",
+  "id": "2d3676ee-a08a-4a13-86eb-e9b42f867032",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -117,13 +117,11 @@
           "tableTo": "sources",
           "columnsFrom": [
             "source_id",
-            "user_id",
-            "pool"
+            "user_id"
           ],
           "columnsTo": [
             "id",
-            "user_id",
-            "kind"
+            "user_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -332,17 +330,15 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "month_goals_source_fk": {
-          "name": "month_goals_source_fk",
+        "month_goals_source_id_sources_id_fk": {
+          "name": "month_goals_source_id_sources_id_fk",
           "tableFrom": "month_goals",
           "tableTo": "sources",
           "columnsFrom": [
-            "source_id",
-            "pool"
+            "source_id"
           ],
           "columnsTo": [
-            "id",
-            "kind"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -703,21 +699,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "sources_id_user_id_kind_key": {
-          "name": "sources_id_user_id_kind_key",
+        "sources_id_user_id_key": {
+          "name": "sources_id_user_id_key",
           "nullsNotDistinct": false,
           "columns": [
             "id",
-            "user_id",
-            "kind"
-          ]
-        },
-        "sources_id_kind_key": {
-          "name": "sources_id_kind_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "kind"
+            "user_id"
           ]
         }
       },

@@ -321,26 +321,16 @@ describe("ograniczenia schematu", () => {
     });
   });
 
-  describe("źródła celów", () => {
-    it("odrzuca źródło innego typu niż pula celu", async () => {
-      expect(
-        await rejection(
-          `insert into goals (user_id, pool, name, pct, source_id, position)
-           values ($1, 'savings', 'Cel', 100, $2, 1)`,
-          [userId, investmentsSourceId],
-        ),
-      ).toEqual({ code: "23503", constraint: "goals_source_fk" });
-      expect(
-        await rejection(
-          `insert into month_goals (month_id, goal_id, pool, pct, source_id)
-           values ($1, $2, 'savings', 100, $3)`,
-          [monthId, goalId, investmentsSourceId],
-        ),
-      ).toEqual({ code: "23503", constraint: "month_goals_source_fk" });
-    });
+  describe("powiązania", () => {
+    // Klucze obce między celami, źródłami i migawkami są odroczone (migracja
+    // 0001); `set constraints all immediate` sprawdza je od razu.
+    async function immediate() {
+      await client.query("set constraints all immediate");
+    }
 
-    it("odrzuca źródło innego konta", async () => {
+    it("odrzuca cel ze źródłem innego konta", async () => {
       const foreignSourceId = await createSource(otherUserId, "savings");
+      await immediate();
       expect(
         await rejection(
           `insert into goals (user_id, pool, name, pct, source_id, position)
@@ -350,13 +340,61 @@ describe("ograniczenia schematu", () => {
       ).toEqual({ code: "23503", constraint: "goals_source_fk" });
     });
 
-    it("blokuje zmianę typu źródła połączonego z celem", async () => {
+    it("odrzuca twarde usunięcie celu i źródła używanych w migawce", async () => {
+      await client.query(
+        "insert into month_goals (month_id, goal_id, pool, pct, source_id) values ($1, $2, 'savings', 10000, $3)",
+        [monthId, goalId, savingsSourceId],
+      );
+      await immediate();
       expect(
-        await rejection(
-          "update sources set kind = 'investments' where id = $1",
-          [savingsSourceId],
-        ),
-      ).toEqual({ code: "23503", constraint: "goals_source_fk" });
+        await rejection("delete from goals where id = $1", [goalId]),
+      ).toEqual({
+        code: "23503",
+        constraint: "month_goals_goal_id_goals_id_fk",
+      });
+      expect(
+        await rejection("delete from sources where id = $1", [savingsSourceId]),
+      ).toMatchObject({ code: "23503" });
+    });
+
+    it("pozwala zmienić typ źródła, gdy nie wymaga tego reguła bazy", async () => {
+      await client.query("delete from goals where id = $1", [goalId]);
+      await client.query(
+        "update sources set kind = 'investments' where id = $1",
+        [savingsSourceId],
+      );
+      await immediate();
+    });
+
+    it("usunięcie użytkownika usuwa kaskadowo wszystkie jego dane", async () => {
+      await client.query("insert into settings (user_id) values ($1)", [
+        userId,
+      ]);
+      await client.query(
+        "insert into sessions (id, user_id, expires_at) values ('h', $1, now())",
+        [userId],
+      );
+      await client.query(
+        "insert into month_goals (month_id, goal_id, pool, pct, source_id) values ($1, $2, 'savings', 10000, $3)",
+        [monthId, goalId, savingsSourceId],
+      );
+      await client.query(
+        "insert into incomes (month_id, name, amount) values ($1, 'Pensja', 100)",
+        [monthId],
+      );
+      await client.query("delete from users where id = $1", [userId]);
+      await immediate();
+      const left = await one<{ count: string }>(
+        `select (select count(*) from settings where user_id = $1)
+              + (select count(*) from sessions where user_id = $1)
+              + (select count(*) from sources where user_id = $1)
+              + (select count(*) from goals where user_id = $1)
+              + (select count(*) from months where user_id = $1)
+              + (select count(*) from month_goals where month_id = $2)
+              + (select count(*) from incomes where month_id = $2) as count`,
+        [userId, monthId],
+      );
+      expect(left).toEqual({ count: "0" });
     });
   });
 

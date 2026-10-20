@@ -19,5 +19,7 @@ describe("hasła", () => {
   it("odrzuca zapis w nieznanym formacie", async () => {
     expect(await verifyPassword("x", "")).toBe(false);
     expect(await verifyPassword("x", "bcrypt$abc")).toBe(false);
+    expect(await verifyPassword("x", "scrypt$a$b$c$d$e")).toBe(false);
+    expect(await verifyPassword("x", "scrypt$1$8$1$c2Fs$aGFzaA==")).toBe(false);
   });
 });

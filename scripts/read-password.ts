@@ -24,7 +24,7 @@ function promptHidden(question: string): Promise<string> {
           resolve(value);
           return;
         }
-        if (char === "\u0003") {
+        if (char === "\u0003" || char === "\u0004") {
           finish();
           reject(new Error("Przerwano."));
           return;
