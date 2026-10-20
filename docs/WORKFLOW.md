@@ -1,7 +1,7 @@
 # Uniwersalny workflow pracy nad projektem z agentami AI
 
-> Stan procesu w tym repozytorium: **etapy A, B i C zakończone**, `SPEC.md` bez otwartych pytań,
-> `STACK.md` zatwierdzony; następny krok: etap D (plan wykonania, `PLAN.md`).
+> Stan procesu w tym repozytorium: **etapy A–E zakończone**; `SPEC.md`, `STACK.md`
+> i `PLAN.md` zatwierdzone; następny krok: etap F (implementacja od T1).
 
 ## 1. Cel
 

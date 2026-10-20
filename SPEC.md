@@ -191,7 +191,8 @@ pokazywana 1 447,49 zł, a 0,01 zł przechodzi do „do wydania”.
 | Sytuacja | Zachowanie |
 | --- | --- |
 | Miesiąc bez przychodu | Miesiąc nie powstaje i nie wymaga rozliczenia. |
-| Przychód 0 zł lub pula 0% | Kwoty 0,00 zł, rozliczenie możliwe. |
+| Pula 0% | Kwoty 0,00 zł, rozliczenie możliwe. |
+| Usunięcie wszystkich przychodów nierozliczonego miesiąca | Miesiąc jest usuwany razem z migawką planu: wraca pusty stan, znika pigułka zaległości. Ponowny przychód tworzy miesiąc z planem obowiązującym w tej chwili (o ile miesiąc wolno utworzyć, rozdz. 5.4). |
 | Procenty pul > 100% lub celów ≠ 100% | Zapis planu zablokowany, z komunikatem, co poprawić. |
 | Pula > 0%, ale bez celów | Zapis planu zablokowany. |
 | Kilka nierozliczonych miesięcy | Wszystkie widoczne na liście do rozliczenia, od najstarszego. |
@@ -291,7 +292,8 @@ wariant wizualny B; oba motywy; postęp celu liczony z rozliczonych wpłat
 plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2);
 kwoty celu w walucie źródła (P3); archiwizacja tylko źródła o wartości 0 (P4);
 korekta postępu przez kwotę startową (P5); edycja przychodów nierozliczonych
-miesięcy i utworzenie poprzedniego miesiąca (P6).
+miesięcy i utworzenie poprzedniego miesiąca (P6); usunięcie wszystkich
+przychodów usuwa nierozliczony miesiąc (P7, 2026-10-20).
 
 **Założenia (zaproponowane przez agenta, zaakceptowane razem ze specyfikacją):**
 - Z1: brak publicznej rejestracji, konto tworzone przy wdrożeniu, reset hasła

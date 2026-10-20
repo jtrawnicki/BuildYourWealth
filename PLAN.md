@@ -1,6 +1,6 @@
 # BuildYourWealth: plan wykonania MVP
 
-Status: **propozycja etapu D (2026-10-20), przed review etapu E.**
+Status: **zatwierdzony po review etapu E (2026-10-20).**
 Źródła: [`SPEC.md`](SPEC.md) (co budujemy), [`STACK.md`](STACK.md) (jak),
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (proces). Plan opisuje rezultaty,
 nie kod. Po review etapu E każde zadanie dostaje Issue na GitHub, a ten plan
@@ -217,8 +217,9 @@ który z nich korzysta. Równolegle z T2–T4.
 - **Zależy od:** T9. **Poziom:** 2 (dane, stan).
 - **Kryteria akceptacji:** scen. 8, 18; utworzenie sierpnia w październiku
   jest odrzucone; dwa równoległe pierwsze przychody nie tworzą dwóch
-  miesięcy; zachowanie po usunięciu ostatniej pozycji przychodu zgodne
-  z rozstrzygnięciem pytania 1 z rozdz. „Pytania do review”.
+  miesięcy; usunięcie ostatniej pozycji przychodu nierozliczonego miesiąca
+  usuwa miesiąc z migawką (SPEC 7, P7): wraca pusty stan, znika pigułka,
+  a ponowny przychód tworzy miesiąc z bieżącym planem.
 - **Weryfikacja:** testy integracyjne, E2E, niezależne review.
 
 ### T11 Ekran „Ten miesiąc”
@@ -297,5 +298,5 @@ czy to decyzje produktowe dla człowieka:
    nie powstaje. Nie mówi, co się dzieje po usunięciu wszystkich pozycji
    istniejącego miesiąca. Propozycja: miesiąc znika (wraca pusty stan), bo
    tak zachowuje się miesiąc, który nigdy nie miał przychodu.
-   **Status:** reviewer uznał to za decyzję produktową (wymaga też poprawki
-   wiersza „Przychód 0 zł” w SPEC 7); czeka na wybór właściciela.
+   **Rozstrzygnięte 2026-10-20 (SPEC P7):** właściciel wybrał „miesiąc
+   znika”; SPEC 7 poprawiony.
