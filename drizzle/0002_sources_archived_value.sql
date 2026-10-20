@@ -1,0 +1,1 @@
+ALTER TABLE "sources" ADD CONSTRAINT "sources_archived_value_check" CHECK ("sources"."archived_at" is null or "sources"."value" = 0);
