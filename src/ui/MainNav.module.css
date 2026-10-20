@@ -1,0 +1,28 @@
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tab {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tab[aria-current="page"] {
+  background: var(--text);
+  color: var(--bg);
+}
+
+@media (max-width: 759px) {
+  .tab {
+    padding: 0 12px;
+  }
+}

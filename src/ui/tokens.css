@@ -1,0 +1,46 @@
+/* Kolory obu motywów z makiet wariantu B (docs/design/, obiekt `t`).
+   Każdy token: light-dark(jasny, ciemny); motyw wybiera `color-scheme`. */
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(#f7f7fa, #0f1117);
+  --surface: light-dark(#ffffff, #171a23);
+  --text: light-dark(#161826, #eceef5);
+  --muted: light-dark(#5d6275, #a2a8ba);
+  --border: light-dark(#e6e7ee, #272b38);
+  --input-border: light-dark(#c9cbd6, #3a3f50);
+  --accent: light-dark(#4338ca, #8c85ff);
+
+  --save: light-dark(#0e7490, #2bb3c9);
+  --on-save: light-dark(#ffffff, #04262c);
+  --save-soft: light-dark(#e0f2f6, #11303a);
+  --save-ink: light-dark(#0b5d73, #7fdceb);
+  --invest: light-dark(#4338ca, #8c85ff);
+  --on-invest: light-dark(#ffffff, #12104a);
+  --invest-soft: light-dark(#e9e8fb, #24224f);
+  --invest-ink: light-dark(#3a30b0, #c1bdff);
+  --spend: light-dark(#e4e5ec, #2c3140);
+  --track: light-dark(#ecedf2, #2c3140);
+
+  --warn-bg: light-dark(#fff1d9, #3b2c12);
+  --warn-text: light-dark(#6b4200, #f7cf8a);
+  --info-bg: light-dark(#eef0fb, #1b2233);
+  --info-text: light-dark(#2e3570, #c7d0ea);
+  --ok-bg: light-dark(#e2f5ec, #123a2c);
+  --ok-text: light-dark(#0d5c3f, #8fe3be);
+  --err-bg: light-dark(#fce8e8, #45191c);
+  --err-text: light-dark(#8a1c1c, #ffb4b4);
+  --disabled-bg: light-dark(#e4e5ec, #2c3140);
+  --disabled-text: light-dark(#5d6275, #a2a8ba);
+
+  --dark: light-dark(#161826, #eceef5);
+  --on-dark: light-dark(#ffffff, #0f1117);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

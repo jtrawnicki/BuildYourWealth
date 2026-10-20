@@ -1,0 +1,16 @@
+.error {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--err-bg);
+  color: var(--err-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
