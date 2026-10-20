@@ -1,7 +1,7 @@
 # BuildYourWealth: decyzje techniczne
 
-Status: **propozycja etapu C (2026-10-20), czeka na bramę człowieka** w punktach
-oznaczonych w rozdz. 9. Dokument opisuje trwałe decyzje techniczne dla MVP
+Status: **zatwierdzony przez właściciela produktu (etap C, 2026-10-20)**,
+łącznie z decyzjami z rozdz. 9. Dokument opisuje trwałe decyzje techniczne dla MVP
 z [`SPEC.md`](SPEC.md). Zakres i zachowanie produktu opisuje wyłącznie `SPEC.md`;
 w razie konfliktu agent zgłasza go, zamiast wybierać wygodniejszą wersję.
 
@@ -207,7 +207,7 @@ na produkcję**: pusta aplikacja z logowaniem, jedną tabelą, migracją
 i bramką CI, działająca pod adresem `*.vercel.app`. Ten kod zostaje i jest
 rozwijany, więc nie wymaga planu usunięcia.
 
-## 9. Decyzje dla człowieka
+## 9. Decyzje człowieka (zaakceptowane 2026-10-20)
 
 1. **Hosting i dane:** aplikacja na Vercel (Hobby), dane finansowe w Neon
    (Free, Frankfurt, UE). Wymaga założenia przez właściciela dwóch darmowych
