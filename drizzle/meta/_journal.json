@@ -15,6 +15,13 @@
       "when": 1792505869486,
       "tag": "0001_month_goals_goal_fk_deferred",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792506246941,
+      "tag": "0002_sources_archived_value",
+      "breakpoints": true
     }
   ]
 }

@@ -398,6 +398,32 @@ describe("ograniczenia schematu", () => {
     });
   });
 
+  describe("archiwizacja źródeł", () => {
+    it("odrzuca archiwizację źródła o wartości > 0", async () => {
+      await client.query("update sources set value = 1 where id = $1", [
+        investmentsSourceId,
+      ]);
+      expect(
+        await rejection(
+          "update sources set archived_at = now() where id = $1",
+          [investmentsSourceId],
+        ),
+      ).toEqual({ code: "23514", constraint: "sources_archived_value_check" });
+    });
+
+    it("archiwizuje źródło o wartości 0 i nie pozwala potem zwiększyć wartości", async () => {
+      await client.query(
+        "update sources set archived_at = now() where id = $1",
+        [investmentsSourceId],
+      );
+      expect(
+        await rejection("update sources set value = value + 1 where id = $1", [
+          investmentsSourceId,
+        ]),
+      ).toEqual({ code: "23514", constraint: "sources_archived_value_check" });
+    });
+  });
+
   describe("wartości słownikowe i nazwy", () => {
     it.each([
       [

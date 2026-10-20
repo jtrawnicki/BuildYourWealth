@@ -45,6 +45,7 @@ bazy `byw_dev` i `byw_test`, plik `.env` i migruje `byw_dev`. Po starcie sesji w
 
 **Dowolny inny Postgres:** ustaw `DATABASE_URL` (w formie URL). Zmienna
 z powłoki ma pierwszeństwo przed `.env` i `.env.test`, także w testach.
+Testy odmawiają pracy na bazie, której nazwa nie kończy się na `_test`.
 Rola testowa potrzebuje prawa `CREATEDB`, bo test migracji tworzy na chwilę
 pustą bazę.
 
@@ -55,7 +56,7 @@ pustą bazę.
 | `npm run db:generate` | Nowa migracja SQL w `drizzle/` po zmianie `src/db/schema.ts` (commitowana razem ze schematem). |
 | `npm run db:migrate` | Stosuje migracje na bazie z `DATABASE_URL`. `npm test` migruje bazę testową sam. |
 | `npm run user:set-password -- <email>` | Tworzy konto albo ustawia nowe hasło (min. 12 znaków) i unieważnia sesje. Hasło z terminala bez echa albo z wejścia standardowego. |
-| `npm run db:dump [-- <plik>]` | `pg_dump` w formacie custom do `backups/` (poza repozytorium); odtwarzanie przez `pg_restore`. `PG_DUMP` wskazuje inny program `pg_dump`. |
+| `npm run db:dump [-- <plik>]` | `pg_dump` w formacie custom do `backups/` (poza repozytorium); odtwarzanie przez `pg_restore`. Odmawia, gdy `pg_dump` jest starszy niż serwer; `PG_DUMP` wskazuje inny program `pg_dump`. |
 
 Skrypty i `drizzle-kit` biorą `DATABASE_URL` z powłoki, a gdy jej brak,
 wyłącznie z `.env` (nie z `.env.local` ani `.env.production*`).

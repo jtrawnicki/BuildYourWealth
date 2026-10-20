@@ -87,6 +87,10 @@ export const sources = pgTable(
     check("sources_kind_check", sql`${t.kind} in ('savings', 'investments')`),
     check("sources_currency_check", sql`${t.currency} in ('PLN', 'EUR')`),
     check("sources_value_check", sql`${t.value} >= 0`),
+    check(
+      "sources_archived_value_check",
+      sql`${t.archivedAt} is null or ${t.value} = 0`,
+    ),
   ],
 );
 
