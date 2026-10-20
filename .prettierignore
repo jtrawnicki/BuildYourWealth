@@ -1,0 +1,5 @@
+# Dokumenty projektu formatujemy ręcznie; makiety to pliki narzędzia do makiet.
+*.md
+docs/
+drizzle/
+package-lock.json
