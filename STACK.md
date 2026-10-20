@@ -155,9 +155,11 @@ ją, gdy ustawiony jest `VERCEL_ENV` (każde środowisko Vercel).
 
 ### Motyw
 
-Wybór motywu w ciasteczku (nie w `localStorage`), więc serwer renderuje
-właściwy motyw bez mignięcia. Brak ciasteczka oznacza motyw systemowy przez
-`prefers-color-scheme`.
+Wybór motywu w ciasteczku (nie w `localStorage`). Skrypt w `<head>` czyta
+ciasteczko i ustawia motyw przed pierwszym malowaniem, więc nie ma mignięcia,
+a strony nadal mogą być prerenderowane (odczyt `cookies()` w root layoutcie
+zablokowałby to przy Cache Components). Brak ciasteczka oznacza motyw
+systemowy przez `prefers-color-scheme`.
 
 ### Usypianie
 
