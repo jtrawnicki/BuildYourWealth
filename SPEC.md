@@ -194,7 +194,7 @@ pokazywana 1 447,49 zł, a 0,01 zł przechodzi do „do wydania”.
 | Pula 0% | Kwoty 0,00 zł, rozliczenie możliwe. |
 | Usunięcie wszystkich przychodów nierozliczonego miesiąca | Miesiąc jest usuwany razem z migawką planu: wraca pusty stan, znika pigułka zaległości. Ponowny przychód tworzy miesiąc z planem obowiązującym w tej chwili (o ile miesiąc wolno utworzyć, rozdz. 5.4). |
 | Procenty pul > 100% lub celów ≠ 100% | Zapis planu zablokowany, z komunikatem, co poprawić. |
-| Pula > 0%, ale bez celów | Zapis planu zablokowany. |
+| Pula > 0%, ale bez celów | Zapis planu zablokowany komunikatem „Suma celów: 0%. Brakuje 100%” (pula bez celów ma sumę celów 0%, patrz 7.1). |
 | Kilka nierozliczonych miesięcy | Wszystkie widoczne na liście do rozliczenia, od najstarszego. |
 | Faktyczna kwota większa niż plan | Dozwolona, dodawana tak samo. |
 | Ujemna wartość źródła lub ujemna kwota | Niedozwolone. Wypłatę zapisuje się zmniejszeniem wartości źródła. |
@@ -216,7 +216,7 @@ pokazywana 1 447,49 zł, a 0,01 zł przechodzi do „do wydania”.
 | Procent puli | 0–100, najwyżej 2 miejsca po przecinku. | „Wpisz procent od 0 do 100” |
 | Procent celu | > 0 i ≤ 100, najwyżej 2 miejsca po przecinku. | „Wpisz procent większy od 0” |
 | Suma pul | ≤ 100%. | „Pule przekraczają przychód o X%” |
-| Suma celów w puli | = 100,00%. | „Suma celów: X%. Brakuje Y%” albo „…Za dużo o Y%” |
+| Suma celów w puli | = 100,00%. Pula > 0% bez celów ma sumę 0% i wpada pod tę regułę (komunikat „Suma celów: 0%. Brakuje 100%”). | „Suma celów: X%. Brakuje Y%” albo „…Za dużo o Y%” |
 | Kurs EUR | > 0, najwyżej 4 miejsca po przecinku. | „Wpisz kurs, np. 4,2850” |
 | Nazwy (źródło, cel, przychód) | Wymagane, najwyżej 60 znaków. | „Wpisz nazwę” |
 
