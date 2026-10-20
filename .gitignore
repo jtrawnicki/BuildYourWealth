@@ -38,6 +38,9 @@ yarn-error.log*
 !.env.example
 !.env.test
 
+# local agent settings
+.claude/settings.local.json
+
 # vercel
 .vercel
 

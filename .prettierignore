@@ -1,4 +1,4 @@
-# Dokumenty projektu formatujemy ręcznie; makiety to pliki narzędzia do makiet.
+# Dokumenty projektu (Markdown i makiety w docs/) formatujemy ręcznie.
 *.md
 docs/
 drizzle/

@@ -32,6 +32,10 @@ npm ci
 npm run dev                  # http://localhost:3000
 ```
 
+Skrypt tworzący `byw_test` działa tylko przy pierwszym starcie z pustym
+wolumenem; jeśli wolumen istniał wcześniej, utwórz bazę od nowa przez
+`docker compose down -v && docker compose up -d db`.
+
 **Sesja chmurowa agenta (bez Dockera):** hook `.claude/hooks/session-start.sh`
 instaluje zależności, uruchamia lokalny klaster Postgres, tworzy rolę `byw`,
 bazy `byw_dev` i `byw_test` oraz plik `.env`. Po starcie sesji wystarczy
@@ -47,7 +51,7 @@ pierwszeństwo przed `.env` i `.env.test`, także w testach.
 | --- | --- |
 | `npm run lint` | ESLint + `prettier --check` (`npm run format` poprawia formatowanie) |
 | `npm run typecheck` | `next typegen` + `tsc --noEmit` |
-| `npm test` | Vitest (`src/**/*.test.ts`) na bazie z `.env.test` |
+| `npm test` | Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`) na bazie z `.env.test` |
 | `npm run build` | build produkcyjny Next.js |
 | `npm run e2e` | Playwright (`e2e/`) na zbudowanej aplikacji; najpierw `npm run build` |
 

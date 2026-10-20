@@ -11,13 +11,8 @@ cd "$CLAUDE_PROJECT_DIR"
 
 npm install --no-audit --no-fund
 
-read -r pg_version pg_cluster pg_port pg_status _ < <(pg_lsclusters --no-header | head -n 1)
-if [ -z "${pg_version:-}" ]; then
-  echo "Brak klastra Postgres w kontenerze." >&2
-  exit 1
-fi
-if [ "$pg_port" != "5432" ]; then
-  echo "Klaster Postgres $pg_version/$pg_cluster nasłuchuje na porcie $pg_port, oczekiwano 5432." >&2
+if ! read -r pg_version pg_cluster pg_port pg_status _ < <(pg_lsclusters --no-header | awk '$3 == 5432'); then
+  echo "Brak klastra Postgres na porcie 5432 w kontenerze." >&2
   exit 1
 fi
 if [ "$pg_status" != "online" ]; then
