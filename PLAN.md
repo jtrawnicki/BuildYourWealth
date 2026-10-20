@@ -33,7 +33,7 @@ T1 ─┬─ T2 ─ T3 ─ T4 (M1)
     ├─ T5 ─ T6 (M2)            ← równolegle z T2–T4
     └─ T7a (layout, motywy)    ← równolegle z T2–T4
 
-T3 + T6 + T7a ─ T7 ─ T8 ─ T9 (M3)
+T3 + T5 + T7a ─ T7 ─ T8 ─ T9 (M3)      ← T8 wymaga też T6
 T9 ─ T10 ─ T11 (M4)
 T11 ─ T12 ─ T13, T14 (M5)      ← T13 i T14 równolegle
 wszystko ─ T15 (M6)
@@ -47,15 +47,21 @@ Vercel + Neon + migracje + logowanie).
 ### T1 Inicjalizacja repozytorium i bramka jakości
 
 - **Rezultat:** aplikacja Next.js z jedną stroną, struktura katalogów
-  z STACK 3, skrypty z STACK 7, `compose.yaml` z Postgres, workflow CI
-  uruchamiający bramkę z Postgres jako usługą, przykładowy test Vitest
+  z STACK 3, skrypty z STACK 7, `compose.yaml` z Postgres i workflow CI
+  uruchamiający bramkę z Postgres jako usługą (oba w wersji z STACK 6),
+  hook SessionStart dla sesji chmurowej, który uruchamia lokalny klaster
+  Postgres i tworzy bazy deweloperską i testową, przykładowy test Vitest
   i Playwright, `AGENTS.md` (jak uruchomić projekt, bramka, konwencje,
-  odwołania do SPEC/STACK/PLAN/WORKFLOW bez kopiowania reguł),
+  odwołania do SPEC/STACK/PLAN/WORKFLOW bez kopiowania reguł; opis obu
+  sposobów uruchomienia bazy; konwencja: każda nowa strona i Server Action
+  dostaje test „bez sesji brak danych”),
   `CLAUDE.md` z jedną linią `@AGENTS.md`, `.env.example`.
 - **Zależy od:** brak. **Poziom:** 1 (infrastruktura bez logiki produktu).
-- **Kryteria akceptacji:** każde polecenie z STACK 7 przechodzi lokalnie
-  i w CI; świeży klon + `docker compose up db` + `npm ci` + polecenia
-  z `AGENTS.md` wystarczą do uruchomienia aplikacji.
+- **Kryteria akceptacji:** każde polecenie z STACK 7 przechodzi w CI
+  i w sesji chmurowej agenta (lokalny klaster, bez Dockera); bramka działa
+  z dowolnym Postgresem wskazanym przez `DATABASE_URL`; świeży klon +
+  baza (Docker albo lokalny klaster) + `npm ci` + polecenia z `AGENTS.md`
+  wystarczą do uruchomienia aplikacji.
 - **Weryfikacja:** zielone CI na PR.
 
 ### T2 Schemat bazy, migracje i skrypty administracyjne
@@ -75,28 +81,41 @@ Vercel + Neon + migracje + logowanie).
 
 - **Rezultat:** ekran logowania w stylu wariantu B (bez makiety), sesje
   i ochrona przed zgadywaniem hasła wg STACK 5, `requireUser()`
-  w każdej stronie i akcji, wylogowanie.
+  w każdej stronie i akcji, wylogowanie. Infrastruktura danych E2E:
+  fixture Playwright „zalogowany użytkownik na czystej bazie” (konto
+  testowe, logowanie, czyszczenie bazy przed każdym testem) oraz helper
+  seedujący dane przez `db/` (źródła, cele, miesiące, rozliczenia), żeby
+  późniejsze zadania mogły przygotować stan przed powstaniem jego UI.
 - **Zależy od:** T2. **Poziom:** 2 (bezpieczeństwo).
 - **Kryteria akceptacji:** scen. 13; błędne hasło daje komunikat bez
   ujawniania, czy konto istnieje; po limicie nieudanych prób kolejne próby
   są odrzucane przez ustalony czas; wylogowanie unieważnia sesję w bazie;
-  ciasteczko ma `HttpOnly`, `Secure`, `SameSite=Lax`.
+  ciasteczko ma `HttpOnly`, `Secure`, `SameSite=Lax`; przykładowy test E2E
+  korzysta z fixture i helpera seedującego, a dwa testy uruchomione po sobie
+  nie widzą swoich danych.
 - **Weryfikacja:** testy jednostkowe haseł i sesji, E2E logowania
   i dostępu bez sesji, niezależne review bezpieczeństwa.
 
 ### T4 Wdrożenie produkcyjne
 
 - **Rezultat:** projekt Vercel połączony z repozytorium (deploy tylko
-  z `main`, podglądy PR wyłączone), baza Neon we Frankfurcie, migracje
-  w buildzie produkcyjnym, konto właściciela utworzone skryptem, procedura
+  z `main`, podglądy PR wyłączone), baza Neon we Frankfurcie w wersji
+  Postgres z STACK 6, aplikacja łączy się adresem z poolerem, a migracje
+  w buildzie produkcyjnym adresem bezpośrednim; oba adresy ustawione
+  w Vercel tylko w zakresie „Production”; konto właściciela utworzone skryptem, procedura
   wdrożenia, kopii i wycofania opisana w `AGENTS.md`.
 - **Zależy od:** T3. **Poziom:** 2.
 - **Wymaga człowieka:** założenie kont Vercel i Neon, połączenie Vercel
   z GitHub, wpisanie `DATABASE_URL` w Vercel, ustawienie hasła konta
   (agent podaje dokładne kroki; hasło nie przechodzi przez agenta).
+  Na komputerze właściciela potrzebne są: klon repozytorium, Node
+  i klient `pg_dump` w wersji co najmniej takiej jak serwer (albo Docker
+  z obrazem Postgres tej wersji); lista trafia do kroków z wyprzedzeniem.
 - **Kryteria akceptacji:** smoke test na `*.vercel.app`: HTTPS, logowanie,
-  wylogowanie, strona bez sesji przekierowuje na logowanie; `db:dump`
-  tworzy plik kopii z bazy produkcyjnej.
+  wylogowanie, strona bez sesji przekierowuje na logowanie; push na gałąź
+  inną niż `main` nie tworzy deploymentu z dostępem do bazy; `db:dump`
+  uruchomiony na komputerze właściciela tworzy plik kopii z bazy
+  produkcyjnej.
 - **Weryfikacja:** smoke test ręczny według listy w `AGENTS.md`.
 
 ## M2 Domena
@@ -121,12 +140,15 @@ który z nich korzysta. Równolegle z T2–T4.
   przeliczenia PLN↔EUR i majątek (6.7–6.8), postęp celu i „osiągnięty”
   (5.3, 6.6, 6.9), walidacja planu podziału z komunikatami (7.1: suma pul,
   suma celów, pula > 0% bez celów), bieżący miesiąc, ostatni dzień miesiąca
-  i dozwolony poprzedni miesiąc w Europe/Warsaw (5.4, 5.5).
-- **Zależy od:** T5. **Poziom:** 2.
+  i dozwolony poprzedni miesiąc w Europe/Warsaw (5.4, 5.5). Źródło
+  bieżącego czasu dla aplikacji z podmianą zegara dla E2E wg STACK 5.
+- **Zależy od:** T5. **Poziom:** 2 (podmiana zegara: bezpieczeństwo).
 - **Kryteria akceptacji:** testy odtwarzają liczby ze scen. 1, 2, 3
   (komunikat „brakuje 10%”), 6, 11, 14, 17 i oba przykłady z SPEC 6;
   testy granic czasu: 31.10 23:59 i 1.11 00:00 czasu warszawskiego, zmiana
-  czasu letniego, grudzień → styczeń.
+  czasu letniego, grudzień → styczeń; podmiana zegara działa przy jawnej
+  fladze testowej, a test potwierdza, że przy ustawionym `VERCEL_ENV`
+  flaga jest ignorowana.
 - **Weryfikacja:** testy jednostkowe, niezależne review zgodności ze SPEC 6.
 
 ## M3 Konfiguracja
@@ -153,7 +175,9 @@ który z nich korzysta. Równolegle z T2–T4.
   „systemowy”), wylogowanie.
 - **Zależy od:** T3, T5, T7a. **Poziom:** 2.
 - **Kryteria akceptacji:** walidacja kursu z SPEC 7.1; zmiana kursu nie
-  zmienia zapisanych wartości EUR; powrót do „systemowy” działa.
+  zmienia zapisanych wartości EUR; powrót do „systemowy” działa; przy
+  wymuszonym błędzie zapisu formularz pokazuje komunikat z SPEC 7
+  i zachowuje wpisaną wartość.
 - **Weryfikacja:** E2E, niezależne review.
 
 ### T8 Majątek (źródła)
@@ -173,7 +197,9 @@ który z nich korzysta. Równolegle z T2–T4.
 
 - **Rezultat:** ekran Plan podziału wg makiety B3 i SPEC 5.3: procenty pul,
   cele z procentem, źródłem tego samego typu, kwotą docelową i startową,
-  kolejnością, usuwaniem (miękkim); komunikaty walidacji na żywo.
+  usuwaniem (miękkim); komunikaty walidacji na żywo. Cele są wyświetlane
+  w kolejności dodania; zmiany kolejności nie ma (SPEC i makieta B3 jej
+  nie przewidują).
 - **Zależy od:** T8. **Poziom:** 2 (dane, złożony stan formularza).
 - **Kryteria akceptacji:** scen. 3; wszystkie blokady z SPEC 7 dla planu;
   blokada zmiany źródła celu na inną walutę wg SPEC 6.9; zapis planu jest
@@ -204,7 +230,8 @@ który z nich korzysta. Równolegle z T2–T4.
   pasek majątku z liczbą źródeł.
 - **Zależy od:** T10. **Poziom:** 2.
 - **Kryteria akceptacji:** scen. 1, 10, 14 i scen. 16 (liczba źródeł)
-  na ekranie; pusty stan z tekstem z SPEC 5.4; 360 px bez przewijania
+  na ekranie; pusty stan z tekstem z SPEC 5.4; przy źródle EUR i braku
+  kursu pasek majątku prosi o kurs zamiast sumy (SPEC 7); 360 px bez przewijania
   w poziomie w obu motywach.
 - **Weryfikacja:** E2E, zrzuty ekranu porównane z makietą B1,
   niezależne review.
@@ -270,3 +297,5 @@ czy to decyzje produktowe dla człowieka:
    nie powstaje. Nie mówi, co się dzieje po usunięciu wszystkich pozycji
    istniejącego miesiąca. Propozycja: miesiąc znika (wraca pusty stan), bo
    tak zachowuje się miesiąc, który nigdy nie miał przychodu.
+   **Status:** reviewer uznał to za decyzję produktową (wymaga też poprawki
+   wiersza „Przychód 0 zł” w SPEC 7); czeka na wybór właściciela.

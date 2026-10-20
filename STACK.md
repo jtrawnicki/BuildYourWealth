@@ -132,8 +132,10 @@ równoległe rozliczenia i sprawdza, że wartości źródeł zmieniły się raz.
 
 Bieżący miesiąc i „ostatni dzień miesiąca” są liczone przez `Intl.DateTimeFormat`
 ze strefą `Europe/Warsaw`, w jednej funkcji domeny przyjmującej `now` jako
-parametr (testowalna, w testach E2E podmienialna zmienną środowiskową
-dostępną tylko poza produkcją).
+parametr. Aplikacja bierze `now` z jednego modułu zegara. Testy E2E działają
+na buildzie produkcyjnym (`NODE_ENV=production`), więc podmiana zegara nie
+może zależeć od `NODE_ENV`: włącza ją jawna flaga testowa, a moduł ignoruje
+ją, gdy ustawiony jest `VERCEL_ENV` (każde środowisko Vercel).
 
 ### Logowanie i sesje
 
@@ -163,10 +165,17 @@ ze wskaźnikiem, a błąd połączenia przy zapisie daje komunikat z SPEC 7.
 
 | Środowisko | Baza | Uwagi |
 | --- | --- | --- |
-| Lokalne / sesja agenta | Postgres w Dockerze (`docker compose up db`) | Plik `compose.yaml` w repozytorium. |
+| Lokalne | Postgres w Dockerze (`docker compose up db`) | Plik `compose.yaml` w repozytorium. |
+| Sesja chmurowa agenta | Lokalny klaster Postgres w kontenerze | Demon Dockera nie działa; hook SessionStart uruchamia klaster. |
 | CI | Postgres jako kontener usługi GitHub Actions | Świeża baza dla każdego uruchomienia. |
 | Produkcja | Neon Free, gałąź `main` bazy | Vercel deployuje tylko gałąź `main`. |
 
+- Wersja Postgres: **17** wszędzie, gdzie da się ją wybrać (Neon przy
+  zakładaniu projektu, `compose.yaml`, CI). Kod nie używa funkcji spoza
+  Postgres 16, więc lokalny klaster 16 w sesji agenta wystarcza do testów.
+  `pg_dump` musi mieć wersję co najmniej równą serwerowi.
+- Bramka i aplikacja działają z dowolnym Postgresem wskazanym przez
+  `DATABASE_URL`.
 - Deploy produkcyjny: merge do `main` → Vercel buduje i wdraża.
 - Migracje: polecenie budowania na Vercel uruchamia `drizzle-kit migrate`
   tylko gdy `VERCEL_ENV=production`. Podglądy PR na Vercel są wyłączone, żeby
