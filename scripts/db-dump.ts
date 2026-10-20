@@ -34,7 +34,11 @@ function clientMajor(pgDump: string): number {
   } catch (error) {
     fail(`Nie udało się uruchomić pg_dump: ${(error as Error).message}`);
   }
-  return Number(/\(PostgreSQL\)\s+(\d+)/.exec(output)?.[1]);
+  const major = /\(PostgreSQL\)\s+(\d+)/.exec(output)?.[1];
+  if (!major) {
+    fail(`Nie rozpoznano wersji pg_dump: ${output.trim()}`);
+  }
+  return Number(major);
 }
 
 async function main(): Promise<void> {
@@ -45,7 +49,9 @@ async function main(): Promise<void> {
   }
   const pgDump = process.env.PG_DUMP || "pg_dump";
 
-  const server = await serverMajor(url);
+  const server = await serverMajor(url).catch((error: Error) =>
+    fail(`Nie udało się połączyć z bazą: ${error.message}`),
+  );
   const dumpVersion = clientMajor(pgDump);
   if (!(dumpVersion >= server)) {
     fail(
