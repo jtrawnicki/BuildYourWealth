@@ -50,7 +50,8 @@ Vercel + Neon + migracje + logowanie).
   z STACK 3, skrypty z STACK 7, `compose.yaml` z Postgres, workflow CI
   uruchamiający bramkę z Postgres jako usługą, przykładowy test Vitest
   i Playwright, `AGENTS.md` (jak uruchomić projekt, bramka, konwencje,
-  odwołania do SPEC/STACK/PLAN bez kopiowania reguł), `.env.example`.
+  odwołania do SPEC/STACK/PLAN/WORKFLOW bez kopiowania reguł),
+  `CLAUDE.md` z jedną linią `@AGENTS.md`, `.env.example`.
 - **Zależy od:** brak. **Poziom:** 1 (infrastruktura bez logiki produktu).
 - **Kryteria akceptacji:** każde polecenie z STACK 7 przechodzi lokalnie
   i w CI; świeży klon + `docker compose up db` + `npm ci` + polecenia
