@@ -31,6 +31,8 @@ as_postgres() {
 if [ -z "$(as_postgres -c "select 1 from pg_roles where rolname = 'byw'")" ]; then
   as_postgres -c "create role byw login password 'byw'"
 fi
+# Test migracji tworzy na chwilę pustą bazę (w Dockerze i CI `byw` jest superużytkownikiem).
+as_postgres -c "alter role byw createdb"
 for db in byw_dev byw_test; do
   if [ -z "$(as_postgres -c "select 1 from pg_database where datname = '$db'")" ]; then
     as_postgres -c "create database $db owner byw"
@@ -40,3 +42,5 @@ done
 if [ ! -f .env ]; then
   cp .env.example .env
 fi
+
+npm run db:migrate
