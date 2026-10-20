@@ -9,6 +9,10 @@ const baseURL = `http://localhost:${port}`;
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
+  // Testy współdzielą jedną bazę testową i czyszczą ją przed każdym testem
+  // (fixture logowania), więc działają po kolei, nie równolegle.
+  fullyParallel: false,
+  workers: 1,
   reporter: process.env.CI
     ? [["list"], ["html", { open: "never" }]]
     : [["list"]],

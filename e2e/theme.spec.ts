@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const LIGHT_BG = "rgb(247, 247, 250)";
 const DARK_BG = "rgb(15, 17, 23)";
