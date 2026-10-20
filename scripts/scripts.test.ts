@@ -73,7 +73,7 @@ describe("npm run db:dump", () => {
   it("zapisuje kopię schematu i danych do pliku", async () => {
     const file = join(tmp, "dump.sql");
     const result = await runScript("db:dump", [file]);
-    expect(result).toMatchObject({ code: 0 });
+    expect(result.code, result.stderr).toBe(0);
     const dump = await readFile(file, "utf8");
     expect(dump).toContain("CREATE TABLE public.months");
     expect(dump).toContain("months_user_month_unique");
