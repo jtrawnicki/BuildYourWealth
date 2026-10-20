@@ -40,7 +40,7 @@ describe("kwoty (przychód, wartość źródła, faktyczna, docelowa, startowa)"
     // 0.29 * 100 = 28.999999999999996, 1.15 * 100 = 114.99999999999999
     expect(parseAmount("0,29")).toEqual(value(29));
     expect(parseAmount("1.15")).toEqual(value(115));
-    expect(parseAmount("4 503 599 627 370,49")).toEqual(error(MESSAGES.amount));
+    expect(parseAmount("1 999 999 999,99")).toEqual(value(199999999999));
   });
 
   it.each([

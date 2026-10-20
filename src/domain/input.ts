@@ -14,7 +14,7 @@ export const MESSAGES = {
   name: "Wpisz nazwę",
 } as const;
 
-/** Największa kwota (2 mld zł lub €), dla której obliczenia mieszczą się w zakresie STACK 4. */
+/** Największa kwota (2 mld zł lub €), zakres z STACK 4. Iloczyn z kursem może go przekroczyć; pilnują tego przeliczenia (T6). */
 export const MAX_AMOUNT = 200_000_000_000;
 export const MAX_PERCENT = 10_000;
 export const MAX_NAME_LENGTH = 60;
