@@ -44,6 +44,20 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_id_idx").on(t.userId)],
 );
 
+// Licznik nieudanych prób logowania per adres e-mail, także nieistniejący:
+// blokada po limicie nie zdradza, czy konto istnieje (STACK 5, SPEC 5.1).
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    email: text("email").primaryKey(),
+    failedCount: integer("failed_count").notNull().default(0),
+    lockedUntil: timestamptz("locked_until"),
+  },
+  (t) => [
+    check("login_attempts_failed_count_check", sql`${t.failedCount} >= 0`),
+  ],
+);
+
 export const settings = pgTable(
   "settings",
   {

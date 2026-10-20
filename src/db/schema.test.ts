@@ -23,6 +23,7 @@ describe("migracja", () => {
       expect(rows.map((row) => row.table_name)).toEqual([
         "goals",
         "incomes",
+        "login_attempts",
         "month_goals",
         "months",
         "sessions",
