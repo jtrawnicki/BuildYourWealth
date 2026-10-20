@@ -1,0 +1,5 @@
+# Dokumenty projektu (Markdown i makiety w docs/) formatujemy ręcznie.
+*.md
+docs/
+drizzle/
+package-lock.json
