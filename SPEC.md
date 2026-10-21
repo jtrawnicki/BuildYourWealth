@@ -1,7 +1,8 @@
 # BuildYourWealth: specyfikacja MVP
 
 Status: **zaakceptowana przez właściciela produktu, po review etapu B
-(2026-10-19)**. Dokument powstał na podstawie wywiadu z właścicielem produktu.
+(2026-10-19)**; zmiana koncepcji wdrożenia (wersja prywatna i demo, P8)
+z 2026-10-21. Dokument powstał na podstawie wywiadu z właścicielem produktu.
 Proces pracy opisuje
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
@@ -16,9 +17,13 @@ celów, a na koniec trzeba ręcznie dopisać wpłaty do stanu majątku.
 
 - Osoba, która chce regularnie odkładać ustaloną część zmiennego przychodu
   i śledzić swój majątek w jednym miejscu.
-- MVP: jedno konto użytkownika, do osobistego użytku.
+- MVP: jedno konto użytkownika, do osobistego użytku, w wersji prywatnej
+  działającej tylko na jego komputerze (rozdz. 10).
 - Później: kolejni użytkownicy, np. rodzina i znajomi (poza MVP, patrz rozdz. 9).
-- Korzysta głównie na komputerze, czasem na telefonie.
+- Korzysta z wersji prywatnej na komputerze. Telefon i dostęp z innych
+  urządzeń są poza MVP (rozdz. 9).
+- Oglądający: osoby, którym właściciel pokazuje efekty pracy. Korzystają
+  z publicznej wersji demo (5.8) na komputerze albo telefonie.
 
 ## 3. Oczekiwany rezultat i kryteria sukcesu
 
@@ -45,8 +50,11 @@ Aplikacja jest udana, gdy:
 ## 5. Funkcje MVP
 
 ### 5.1 Logowanie
+- Dotyczy wersji prywatnej. W wersji demo zamiast logowania jest wejście
+  do piaskownicy (5.8).
 - Dostęp tylko po zalogowaniu (e-mail i hasło). Bez publicznej rejestracji.
-- Konto użytkownika tworzone jednorazowo przy wdrożeniu.
+- Konto użytkownika tworzone jednorazowo przy pierwszym uruchomieniu wersji
+  prywatnej.
 - Dane jednego użytkownika nie mogą być widoczne bez zalogowania.
 
 ### 5.2 Majątek (źródła)
@@ -150,6 +158,42 @@ Aplikacja jest udana, gdy:
   w przeglądarce. Przycisk motywu w nagłówku ustawia motyw przeciwny do
   widocznego; powrót do „systemowy” jest tylko w Ustawieniach.
 - Wylogowanie.
+
+### 5.8 Wersja demo
+Publiczna wersja aplikacji do pokazywania efektów pracy. Działa tak samo jak
+wersja prywatna (5.2–5.7), ale zawiera wyłącznie dane wygenerowane i nigdy
+nie ma dostępu do danych z wersji prywatnej.
+
+- **Wejście:** zamiast formularza logowania ekran startowy z krótkim opisem
+  aplikacji i przyciskiem „Wypróbuj wersję demo”. Logowanie e-mailem
+  i hasłem nie istnieje.
+- **Piaskownica:** każde wejście tworzy osobną kopię aplikacji z nowymi
+  danymi przykładowymi i od razu otwiera ekran „Ten miesiąc”. Oglądający może
+  robić wszystko, co użytkownik wersji prywatnej (wpisywać przychody,
+  zmieniać plan, rozliczać, archiwizować). Zmian nie widzi nikt inny.
+- **Dane przykładowe** są losowane przy każdym wejściu, z datami względem
+  dnia wejścia, i pokazują wszystkie ekrany w użyciu:
+  - ustawiony kurs EUR;
+  - kilka źródeł obu typów, w tym co najmniej jedno w EUR;
+  - plan z obiema pulami i 2–3 celami w każdej; wśród celów: co najmniej
+    jeden ze źródłem EUR, jeden z kwotą docelową i postępem w toku, jeden
+    osiągnięty i jeden bez kwoty docelowej;
+  - bieżący miesiąc z 2–3 pozycjami przychodu, nierozliczony;
+  - poprzedni miesiąc nierozliczony (widać pigułkę zaległości);
+  - kilka wcześniejszych miesięcy rozliczonych, co najmniej jeden
+    z faktycznymi kwotami innymi niż plan;
+  - wartości źródeł i postępy celów zgodne z rozliczeniami (reguły rozdz. 6).
+- **Baner** na każdym ekranie demo: „Wersja demonstracyjna. Dane są
+  przykładowe, widzisz je tylko Ty i znikną po 24 godzinach.”
+- **Czas życia:** piaskownica działa 24 godziny od wejścia. Potem jej dane są
+  usuwane, a kolejna wizyta pokazuje ekran startowy. „Wyloguj” kończy
+  piaskownicę od razu.
+- **Limity:** najwyżej 10 nowych piaskownic na godzinę z jednego adresu IP
+  i najwyżej 500 aktywnych naraz. Po przekroczeniu ekran startowy pokazuje
+  odpowiednio „Za dużo wejść do wersji demo. Spróbuj ponownie za godzinę.”
+  albo „Wersja demo jest teraz przeciążona. Spróbuj ponownie później.”
+- Demo działa na darmowym hostingu, więc pierwsze wejście po przerwie może
+  trwać kilka sekund (wskaźnik ładowania, rozdz. 7).
 
 ## 6. Reguły obliczeń
 
@@ -264,13 +308,20 @@ Wybrany wariant: **B, „Przepływ pieniędzy”**
 7. Śledzenie wydatków.
 8. Waluty inne niż PLN i EUR, przychody w EUR.
 9. Wpłata na cel wyliczana z kwoty docelowej i terminu.
-10. Własna domena (możliwa w przyszłości, nie wymagana).
+10. Własna domena dla wersji demo (możliwa w przyszłości, nie wymagana).
+11. Dostęp do wersji prywatnej z telefonu lub innego komputera (np. przez
+    prywatną sieć VPN między urządzeniami właściciela).
 
 ## 10. Ograniczenia
 
 - **Zero kosztów:** hosting, baza danych i domena mieszczą się w darmowych
   planach. Akceptujemy ograniczenia darmowych planów (np. usypianie serwera).
-- Aplikacja webowa dostępna przez internet, HTTPS.
+- **Wersja prywatna** (prawdziwe dane): działa wyłącznie na komputerze
+  właściciela, uruchamiana przez niego ręcznie, dostępna tylko z tego
+  komputera (nie z sieci lokalnej ani z internetu). Dane w lokalnej bazie
+  danych, kopia zapasowa ręczna.
+- **Wersja demo:** aplikacja webowa dostępna publicznie przez internet,
+  HTTPS, wyłącznie z danymi wygenerowanymi (5.8).
 - Dane trwałe w bazie danych.
 - Wybór stosu technologicznego: etap C (`STACK.md`), bez preferencji właściciela produktu.
 
@@ -293,17 +344,28 @@ plus kwoty startowej (P1); makiety Rozliczenia i Planu podziału (P2);
 kwoty celu w walucie źródła (P3); archiwizacja tylko źródła o wartości 0 (P4);
 korekta postępu przez kwotę startową (P5); edycja przychodów nierozliczonych
 miesięcy i utworzenie poprzedniego miesiąca (P6); usunięcie wszystkich
-przychodów usuwa nierozliczony miesiąc (P7, 2026-10-20).
+przychodów usuwa nierozliczony miesiąc (P7, 2026-10-20); prawdziwe dane
+tylko w wersji prywatnej uruchamianej lokalnie, publicznie demo
+z piaskownicą dla każdego odwiedzającego (P8, 2026-10-21).
 
 **Założenia (zaproponowane przez agenta, zaakceptowane razem ze specyfikacją):**
-- Z1: brak publicznej rejestracji, konto tworzone przy wdrożeniu, reset hasła
-  bez e-maila (operacja administracyjna).
+- Z1: brak publicznej rejestracji, konto tworzone przy pierwszym
+  uruchomieniu wersji prywatnej, reset hasła bez e-maila (operacja
+  administracyjna).
 - Z2: miesiąc powstaje przy pierwszym przychodzie i dostaje plan podziału
   obowiązujący w tej chwili.
 - Z3: rozliczenie możliwe od ostatniego dnia miesiąca.
 - Z4: przychody zawsze w PLN; EUR dotyczy tylko źródeł.
 - Z5: zaokrąglenie w dół na poziomie puli i celu (rozdz. 6).
 - Z6: domyślny motyw zgodny z ustawieniem systemu.
+
+**Założenia wersji demo (zaproponowane przez agenta, zaakceptowane przez
+właściciela produktu razem z P8, 2026-10-21):**
+- Z7: piaskownica żyje 24 godziny; „Wyloguj” kończy ją od razu.
+- Z8: limity 10 piaskownic na godzinę z jednego adresu IP i 500 aktywnych
+  naraz (ochrona darmowej bazy).
+- Z9: wersja prywatna zachowuje logowanie hasłem (ochrona przed innymi
+  użytkownikami tego samego komputera).
 
 **Otwarte pytania:** brak.
 
@@ -340,7 +402,8 @@ przychodów usuwa nierozliczony miesiąc (P7, 2026-10-20).
     połączonego źródła nie zmienia tego postępu.
 12. **Motywy i telefon:** wszystkie ekrany działają w obu motywach i przy
     szerokości 360 px bez przewijania w poziomie.
-13. **Dostęp:** bez zalogowania żaden ekran ani endpoint nie zwraca danych.
+13. **Dostęp:** bez zalogowania (w demo: bez aktywnej piaskownicy) żaden
+    ekran ani endpoint nie zwraca danych.
 14. **Reszta z zaokrągleń:** przy przychodzie 9 650,00 zł i planie ze scenariusza 1
     ekran pokazuje oszczędności 1 930,00 zł, inwestycje 1 447,49 zł, do wydania
     6 272,51 zł.
@@ -356,3 +419,16 @@ przychodów usuwa nierozliczony miesiąc (P7, 2026-10-20).
     użytkownik wpisuje przychód za wrzesień; wrzesień powstaje z bieżącym
     planem i pojawia się pigułka „Wrzesień 2026 czeka na rozliczenie”.
     Utworzenie sierpnia nie jest możliwe.
+19. **Wejście do demo:** po kliknięciu „Wypróbuj wersję demo” widać ekran
+    „Ten miesiąc” z przychodami, planem, pigułką zaległego miesiąca
+    i banerem demo; Majątek, Plan podziału i Historia też mają dane.
+    Drugi oglądający w innej przeglądarce dostaje inne dane, a zmiana
+    wprowadzona przez pierwszego (np. nowy przychód) nie jest u niego widoczna.
+20. **Wygaśnięcie demo:** po 24 godzinach od wejścia (albo po „Wyloguj”)
+    odświeżenie strony pokazuje ekran startowy demo, a dane piaskownicy
+    zostają usunięte przy kolejnym wejściu do demo kogokolwiek.
+21. **Separacja wersji:** wersja demo nie ma formularza logowania, a próba
+    logowania hasłem wysłana bezpośrednio do serwera jest odrzucona;
+    wersja prywatna nie ma przycisku „Wypróbuj wersję demo” i nie tworzy
+    piaskownic; wersja prywatna jest niedostępna z innego komputera w tej
+    samej sieci.
