@@ -31,6 +31,7 @@ const pairs: [text: string, background: string][] = [
   ["muted", "surface"],
   ["accent", "bg"],
   ["accent", "surface"],
+  ["on-accent", "accent"], // przycisk główny formularza
   ["bg", "text"], // aktywna zakładka
   ["muted", "track"], // nieaktywna opcja przełącznika w Ustawieniach
   ["err-text", "surface"], // błąd pola formularza
