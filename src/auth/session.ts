@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { getDb } from "@/db/client";
+import { isDemo } from "@/demo/mode";
 import { SESSION_COOKIE, SESSION_TTL_MS } from "./constants";
 import {
   deleteSession,
@@ -32,7 +33,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!token) {
     return null;
   }
-  return userForToken(getDb(), token);
+  return userForToken(getDb(), token, isDemo());
 }
 
 /** Unieważnia sesję w bazie i usuwa ciasteczko. */

@@ -189,8 +189,14 @@ reszta kodu pyta go, zamiast czytać zmienną.
   aplikację i uruchamia `next start -H 127.0.0.1 -p 4000`. Adres:
   `http://127.0.0.1:4000`. Port inny niż `npm run dev` (3000) i E2E (3100),
   więc wersja prywatna może działać równolegle z pracą nad kodem.
-- `npm run private:set-password -- <email>` i `npm run private:dump`:
-  te same skrypty co `user:set-password` i `db:dump`, z bazą z `.env.private`.
+- `npm run private:set-password -- <email>`: ten sam skrypt co
+  `user:set-password`, z bazą z `.env.private`.
+- `npm run private:dump`: `pg_dump` uruchamiany w kontenerze bazy, więc
+  wersja klienta zawsze pasuje do serwera i na komputerze nie trzeba
+  instalować klienta Postgres.
+- `private:start` buduje do osobnego katalogu `.next-private`, więc build
+  do testów (`.next`) nie podmienia plików działającej wersji prywatnej.
+  Tworzy też bazę `byw_private`, jeśli wolumen Dockera powstał wcześniej.
 - `compose.yaml` publikuje port Postgresa tylko na `127.0.0.1`.
 - Ciasteczko `Secure` działa na `http://127.0.0.1`, bo przeglądarki traktują
   adres pętli zwrotnej jak bezpieczny kontekst (E2E już z tego korzysta).

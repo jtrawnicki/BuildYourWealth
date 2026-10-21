@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { sessions, users } from "@/db/schema";
 import { hashToken } from "./token";
@@ -23,6 +23,7 @@ export async function storeSession(
 export async function userForToken(
   db: Db,
   token: string,
+  demo: boolean,
 ): Promise<SessionUser | null> {
   const [row] = await db
     .select({ id: users.id, email: users.email })
@@ -32,6 +33,9 @@ export async function userForToken(
       and(
         eq(sessions.id, hashToken(token)),
         gt(sessions.expiresAt, sql`now()`),
+        // Tryb demo wpuszcza tylko konta demo, a prywatny tylko zwykłe
+        // (STACK 5 „Tryby aplikacji”).
+        demo ? isNotNull(users.demoExpiresAt) : isNull(users.demoExpiresAt),
       ),
     )
     .limit(1);

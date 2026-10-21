@@ -15,7 +15,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:dump": "tsx scripts/db-dump.ts",
-    "user:set-password": "tsx scripts/user-set-password.ts"
+    "user:set-password": "tsx scripts/user-set-password.ts",
+    "private:start": "tsx scripts/private.ts start",
+    "private:set-password": "tsx scripts/private.ts set-password",
+    "private:dump": "tsx scripts/private.ts dump"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
