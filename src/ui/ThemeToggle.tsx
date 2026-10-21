@@ -1,13 +1,7 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import {
-  THEME_COOKIE,
-  THEME_COOKIE_MAX_AGE,
-  applyTheme,
-  themeFromCookies,
-  type Theme,
-} from "./theme";
+import { applyTheme, saveTheme, themeFromCookies, type Theme } from "./theme";
 import styles from "./ThemeToggle.module.css";
 
 function visibleTheme(): Theme {
@@ -22,9 +16,7 @@ export function ThemeToggle() {
   useLayoutEffect(() => applyTheme(themeFromCookies(document.cookie)), []);
 
   function toggle() {
-    const next: Theme = visibleTheme() === "dark" ? "light" : "dark";
-    document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=${THEME_COOKIE_MAX_AGE}; samesite=lax`;
-    applyTheme(next);
+    saveTheme(visibleTheme() === "dark" ? "light" : "dark");
   }
 
   // Etykieta zależy od widocznego motywu, który przy motywie systemowym zna

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_AMOUNT,
+  MAX_EUR_RATE,
   MESSAGES,
   parseActualAmount,
   parseAmount,
@@ -158,11 +159,12 @@ describe("kurs EUR", () => {
     ["4.3", 43000],
     ["4", 40000],
     ["0,0001", 1],
+    ["214 748,3647", MAX_EUR_RATE],
   ])("„%s” → %i", (input, rate) => {
     expect(parseEurRate(input)).toEqual(value(rate));
   });
 
-  it.each(["", "0", "0,0000", "4,28501", "-4,28", "abc"])(
+  it.each(["", "0", "0,0000", "4,28501", "-4,28", "abc", "214748,3648"])(
     "„%s” → wpisz kurs",
     (input) => {
       expect(parseEurRate(input)).toEqual(error(MESSAGES.eurRate));

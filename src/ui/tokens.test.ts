@@ -32,6 +32,9 @@ const pairs: [text: string, background: string][] = [
   ["accent", "bg"],
   ["accent", "surface"],
   ["bg", "text"], // aktywna zakładka
+  ["muted", "track"], // nieaktywna opcja przełącznika w Ustawieniach
+  ["err-text", "surface"], // błąd pola formularza
+  ["ok-text", "surface"], // potwierdzenie zapisu
   ["on-save", "save"],
   ["on-invest", "invest"],
   ["text", "spend"],
