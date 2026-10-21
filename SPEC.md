@@ -359,8 +359,8 @@ z piaskownicą dla każdego odwiedzającego (P8, 2026-10-21).
 - Z5: zaokrąglenie w dół na poziomie puli i celu (rozdz. 6).
 - Z6: domyślny motyw zgodny z ustawieniem systemu.
 
-**Założenia wersji demo (zaproponowane przez agenta 2026-10-21, do
-akceptacji razem z P8):**
+**Założenia wersji demo (zaproponowane przez agenta, zaakceptowane przez
+właściciela produktu razem z P8, 2026-10-21):**
 - Z7: piaskownica żyje 24 godziny; „Wyloguj” kończy ją od razu.
 - Z8: limity 10 piaskownic na godzinę z jednego adresu IP i 500 aktywnych
   naraz (ochrona darmowej bazy).
