@@ -14,10 +14,13 @@ export const TEST_PASSWORD = "haslo-testowe-123";
 
 /** Usuwa wszystkie dane; `restart identity` zeruje liczniki id między testami. */
 export async function resetDatabase(): Promise<void> {
-  // Wyzwalacz wymuszający błąd zapisu (ustawienia.spec.ts) mógł zostać po
-  // przerwanym teście i blokowałby zakładanie konta testowego.
+  // Wyzwalacze wymuszające błąd zapisu (ustawienia, majatek) mogły zostać po
+  // przerwanym teście i blokowałyby zakładanie konta testowego.
   await getDb().execute(
     sql`drop trigger if exists e2e_fail_settings on settings`,
+  );
+  await getDb().execute(
+    sql`drop trigger if exists e2e_fail_sources on sources`,
   );
   await getDb().execute(
     sql`truncate table users, sessions, settings, sources, goals, months, month_goals, incomes, login_attempts restart identity cascade`,

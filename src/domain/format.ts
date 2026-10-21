@@ -68,3 +68,12 @@ export function formatEurRate(rate: number): string {
   const { sign, whole, fraction } = splitScaled(rate, 4);
   return `${sign}${whole},${fraction}`;
 }
+
+const SOURCE_FORMS = { one: "źródło", few: "źródła", many: "źródeł" } as const;
+const plural = new Intl.PluralRules("pl-PL");
+
+/** Liczba źródeł z polską odmianą: `1 źródło`, `3 źródła`, `6 źródeł`. */
+export function formatSourceCount(count: number): string {
+  const form = plural.select(count) as keyof typeof SOURCE_FORMS;
+  return `${count}${NBSP}${SOURCE_FORMS[form] ?? SOURCE_FORMS.many}`;
+}

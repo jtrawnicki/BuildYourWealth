@@ -6,6 +6,7 @@ import {
   formatMoney,
   formatPercent,
   formatProgress,
+  formatSourceCount,
 } from "./format";
 import { parseAmount } from "./input";
 
@@ -91,5 +92,20 @@ describe("kurs EUR", () => {
     [123456, "12,3456"],
   ])("%i → %s", (rate, text) => {
     expect(formatEurRate(rate)).toBe(text);
+  });
+});
+
+describe("liczba źródeł", () => {
+  it.each([
+    [0, "0 źródeł"],
+    [1, "1 źródło"],
+    [2, "2 źródła"],
+    [4, "4 źródła"],
+    [5, "5 źródeł"],
+    [12, "12 źródeł"],
+    [22, "22 źródła"],
+    [25, "25 źródeł"],
+  ])("%i → %s", (count, text) => {
+    expect(formatSourceCount(count)).toBe(spec(text));
   });
 });
