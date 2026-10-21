@@ -2,7 +2,7 @@ import { test as base, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
 import { SESSION_COOKIE } from "@/auth/constants";
 import { getDb } from "@/db/client";
-import { sources } from "@/db/schema";
+import { goals, settings, sources } from "@/db/schema";
 import {
   TEST_EMAIL,
   createSessionToken,
@@ -22,6 +22,11 @@ export type Seed = {
   userId: number;
   addSource(input: SourceInput): Promise<number>;
   countSources(): Promise<number>;
+  /** Cel bieżącego planu połączony ze źródłem (bez walidacji planu). */
+  addGoal(sourceId: number): Promise<number>;
+  /** Usuwa cel z planu (miękko, jak SPEC 5.3). */
+  removeGoal(goalId: number): Promise<void>;
+  setEurRate(rate: number): Promise<void>;
 };
 
 function makeSeed(userId: number): Seed {
@@ -40,6 +45,36 @@ function makeSeed(userId: number): Seed {
         .from(sources)
         .where(eq(sources.userId, userId));
       return rows.length;
+    },
+    async addGoal(sourceId) {
+      const [source] = await getDb()
+        .select({ kind: sources.kind })
+        .from(sources)
+        .where(eq(sources.id, sourceId));
+      const [row] = await getDb()
+        .insert(goals)
+        .values({
+          userId,
+          pool: source.kind,
+          name: "Cel testowy",
+          pct: 10000,
+          sourceId,
+          position: 0,
+        })
+        .returning({ id: goals.id });
+      return row.id;
+    },
+    async removeGoal(goalId) {
+      await getDb()
+        .update(goals)
+        .set({ removedAt: new Date() })
+        .where(eq(goals.id, goalId));
+    },
+    async setEurRate(rate) {
+      await getDb()
+        .update(settings)
+        .set({ eurRate: rate })
+        .where(eq(settings.userId, userId));
     },
   };
 }

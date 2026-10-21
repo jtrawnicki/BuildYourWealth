@@ -10,6 +10,7 @@
   --border: light-dark(#e6e7ee, #272b38);
   --input-border: light-dark(#c9cbd6, #3a3f50);
   --accent: light-dark(#4338ca, #8c85ff);
+  --on-accent: light-dark(#ffffff, #12104a);
 
   --save: light-dark(#0e7490, #2bb3c9);
   --on-save: light-dark(#ffffff, #04262c);
