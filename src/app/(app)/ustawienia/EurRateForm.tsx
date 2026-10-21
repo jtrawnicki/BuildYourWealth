@@ -14,13 +14,16 @@ export function EurRateForm({ initial }: { initial: string }) {
   return (
     <form action={formAction} className={styles.form} noValidate>
       {state.saveFailed && <SaveError />}
-      <label className={styles.field}>
-        <span className={styles.label}>Kurs EUR→PLN</span>
+      <div className={styles.field}>
+        <label htmlFor="eur-rate" className={styles.label}>
+          Kurs EUR→PLN
+        </label>
         <span className={styles.hint} id="eur-rate-hint">
           Ile złotych kosztuje 1 €, np. 4,2850
         </span>
-        <span className={styles.row}>
+        <div className={styles.row}>
           <input
+            id="eur-rate"
             name="eurRate"
             inputMode="decimal"
             autoComplete="off"
@@ -38,8 +41,8 @@ export function EurRateForm({ initial }: { initial: string }) {
           <button type="submit" className={styles.submit} disabled={pending}>
             {pending ? "Zapisywanie…" : "Zapisz kurs"}
           </button>
-        </span>
-      </label>
+        </div>
+      </div>
       {state.fieldError && (
         <p id="eur-rate-error" className={styles.fieldError}>
           {state.fieldError}

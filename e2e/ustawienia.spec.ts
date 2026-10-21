@@ -13,6 +13,9 @@ const bodyBackground = (page: Page) =>
   page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
 const rateField = (page: Page) => page.getByLabel("Kurs EUR→PLN");
+// Next ma własny ogłaszacz tras z rolą `alert`, więc szukamy w sekcji kursu.
+const rateSection = (page: Page) =>
+  page.getByRole("region", { name: "Kurs euro" });
 
 async function saveRate(page: Page, value: string) {
   await rateField(page).fill(value);
@@ -100,29 +103,31 @@ test.describe("kurs EUR", () => {
     page,
     authUserId,
   }) => {
-    // Wymuszony błąd bazy: wyzwalacz odrzuca każdą zmianę ustawień.
+    // Wymuszony błąd bazy: wyzwalacz odrzuca każdą zmianę ustawień. Gdyby
+    // został po przerwanym teście, usuwa go `resetDatabase`.
     const db = getDb();
     await db.execute(sql`
       create or replace function e2e_fail_write() returns trigger
       language plpgsql as $$ begin raise exception 'wymuszony błąd zapisu'; end $$`);
     await db.execute(sql`
-      create trigger e2e_fail_settings before insert or update on settings
+      create or replace trigger e2e_fail_settings before insert or update on settings
       for each row execute function e2e_fail_write()`);
     try {
       await page.goto("/ustawienia");
       await saveRate(page, "4,2850");
-      await expect(page.getByRole("alert")).toHaveText(SAVE_ERROR_MESSAGE);
+      await expect(rateSection(page).getByRole("alert")).toHaveText(
+        SAVE_ERROR_MESSAGE,
+      );
       await expect(rateField(page)).toHaveValue("4,2850");
       expect(await storedRate(authUserId)).toBeNull();
     } finally {
       await db.execute(sql`drop trigger e2e_fail_settings on settings`);
-      await db.execute(sql`drop function e2e_fail_write()`);
     }
 
     // Po ustąpieniu błędu ponowny zapis tej samej wartości się udaje.
     await page.getByRole("button", { name: "Zapisz kurs" }).click();
     await expect(page.getByRole("status")).toHaveText("Zapisano kurs.");
-    await expect(page.getByRole("alert")).toBeHidden();
+    await expect(rateSection(page).getByRole("alert")).toBeHidden();
     expect(await storedRate(authUserId)).toBe(42850);
   });
 });

@@ -102,10 +102,6 @@
   font-weight: 600;
 }
 
-.saved:empty {
-  display: none;
-}
-
 .fieldset {
   margin: 0;
   padding: 0;
