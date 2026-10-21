@@ -18,6 +18,8 @@ export const MESSAGES = {
 export const MAX_AMOUNT = 200_000_000_000;
 export const MAX_PERCENT = 10_000;
 export const MAX_NAME_LENGTH = 60;
+/** Największy kurs, jaki mieści kolumna `integer` (STACK 4): 214 748,3647. */
+export const MAX_EUR_RATE = 2_147_483_647;
 
 const ok = <T>(value: T): Parsed<T> => ({ ok: true, value });
 const fail = <T>(error: string): Parsed<T> => ({ ok: false, error });
@@ -78,7 +80,9 @@ export function parseGoalPercent(input: string): Parsed<number> {
 
 export function parseEurRate(input: string): Parsed<number> {
   const value = parseScaled(input, 4);
-  if (value === null || value === 0) return fail(MESSAGES.eurRate);
+  if (value === null || value === 0 || value > MAX_EUR_RATE) {
+    return fail(MESSAGES.eurRate);
+  }
   return ok(value);
 }
 

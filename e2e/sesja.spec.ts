@@ -6,7 +6,7 @@ test("fixture loguje użytkownika i pokazuje jego e-mail", async ({ page }) => {
 });
 
 test("wylogowanie unieważnia sesję i wraca na logowanie", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/ustawienia");
   await page.getByRole("button", { name: "Wyloguj się" }).click();
   await expect(page).toHaveURL(/\/logowanie$/);
 
