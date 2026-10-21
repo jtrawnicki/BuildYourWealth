@@ -468,5 +468,16 @@ describe("ograniczenia schematu", () => {
         ),
       ).toEqual({ code: "23505", constraint: "users_email_unique" });
     });
+
+    it("skrót IP ma tylko konto demo (z czasem wygaśnięcia)", async () => {
+      expect(
+        await rejection(
+          "insert into users (email, password_hash, demo_ip_hash) values ('demo-ip@example.invalid', 'y', 'h')",
+        ),
+      ).toEqual({ code: "23514", constraint: "users_demo_ip_hash_check" });
+      await client.query(
+        "insert into users (email, password_hash, demo_expires_at, demo_ip_hash) values ('demo@example.invalid', 'y', now() + interval '1 day', 'h')",
+      );
+    });
   });
 });

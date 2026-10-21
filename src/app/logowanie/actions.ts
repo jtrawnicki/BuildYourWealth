@@ -5,6 +5,7 @@ import { INVALID_CREDENTIALS_MESSAGE, LOCKED_MESSAGE } from "@/auth/constants";
 import { createSession } from "@/auth/session";
 import { getDb } from "@/db/client";
 import { normalizeEmail } from "@/db/users";
+import { isDemo } from "@/demo/mode";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
 import type { LoginState } from "./state";
 
@@ -12,6 +13,10 @@ export async function login(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  // W demo nie ma logowania hasłem (SPEC 5.8): odrzucamy bez dotykania bazy.
+  if (isDemo()) {
+    return { error: INVALID_CREDENTIALS_MESSAGE };
+  }
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   if (!email || !password) {

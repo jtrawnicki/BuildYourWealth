@@ -6,7 +6,8 @@ services:
       POSTGRES_PASSWORD: byw
       POSTGRES_DB: byw_dev
     ports:
-      - "5432:5432"
+      # Tylko z tego komputera: baza wersji prywatnej nie jest dostępna z sieci.
+      - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./scripts/db-init:/docker-entrypoint-initdb.d:ro

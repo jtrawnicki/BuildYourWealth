@@ -9,8 +9,8 @@ i praktyczne kroki.
 | Dokument | Po co |
 | --- | --- |
 | [`SPEC.md`](SPEC.md) | Co budujemy: zachowanie, komunikaty, scenariusze akceptacyjne (rozdz. 12). |
-| [`STACK.md`](STACK.md) | Stos, architektura (`src/domain`, `src/db`, `src/auth`, `src/app`, `src/ui`), model danych, środowiska, bramka jakości. |
-| [`PLAN.md`](PLAN.md) | Kolejność zadań T1–T15, zależności, kryteria akceptacji. Każde zadanie ma Issue na GitHub. |
+| [`STACK.md`](STACK.md) | Stos, architektura (`src/domain`, `src/db`, `src/auth`, `src/demo`, `src/app`, `src/ui`), model danych, środowiska, bramka jakości. |
+| [`PLAN.md`](PLAN.md) | Kolejność zadań T1–T16 (z T4a), zależności, kryteria akceptacji. Każde zadanie ma Issue na GitHub. |
 | [`docs/WORKFLOW.md`](docs/WORKFLOW.md) | Proces: poziomy weryfikacji, niezależne review, warunki merge'u. |
 | [`docs/design/`](docs/design/README.md) | Makiety wariantu B (wzór wyglądu, nie kod). |
 
@@ -79,7 +79,7 @@ wyłącznie z `.env` (nie z `.env.local` ani `.env.production*`).
 | `npm run typecheck` | `next typegen` + `tsc --noEmit` |
 | `npm test` | Vitest (`src/**/*.test.ts`, `scripts/**/*.test.ts`) na bazie z `.env.test` |
 | `npm run build` | build produkcyjny Next.js |
-| `npm run e2e` | Playwright (`e2e/`) na zbudowanej aplikacji; najpierw `npm run build` |
+| `npm run e2e` | Playwright (`e2e/`) na zbudowanej aplikacji w obu trybach (projekty `chromium` i `demo`, porty 3100 i 3101); najpierw `npm run build` |
 
 CI (`.github/workflows/ci.yml`) uruchamia całą bramkę przy każdym PR na
 Postgres 17. Które polecenia uruchomić lokalnie, wynika z poziomu zadania
@@ -103,26 +103,27 @@ sprawdź, że e2e nadal działa w sesji bez pobierania przeglądarki.
 
 ## Wersja prywatna (komputer właściciela)
 
-> Polecenia `private:*`, baza `byw_private` i plik `.env.private` powstają
-> w zadaniu T4a. Do jego merge'u nie wprowadzaj prawdziwych danych do
-> żadnej bazy.
+Wymaga Node 22 i Docker Desktop (baza działa w kontenerze z `compose.yaml`,
+port tylko na `127.0.0.1`). Skrypty same uruchamiają kontener, tworzą bazę
+`byw_private`, jeśli jej brakuje, i stosują migracje (STACK 5 „Wersja
+prywatna”).
 
-Pierwsze uruchomienie (raz):
+Pierwsze uruchomienie (raz), w klonie repozytorium po `npm ci`:
 
-1. `docker compose up -d db` (tworzy też `byw_private`; przy istniejącym
-   wolumenie patrz uwaga w „Uruchomienie”).
-2. `cp .env.private.example .env.private`.
-3. `npm run private:set-password -- <twój-email>` (hasło min. 12 znaków,
+1. `cp .env.private.example .env.private`.
+2. `npm run private:set-password -- <twój-email>` (hasło min. 12 znaków,
    bez echa; nie przechodzi przez agenta).
 
-Codzienne użycie: `docker compose up -d db`, potem `npm run private:start`
-i adres `http://127.0.0.1:4000`. Po `git pull` to samo polecenie stosuje
-nowe migracje. Zatrzymanie: Ctrl+C.
+| Polecenie | Działanie |
+| --- | --- |
+| `npm run private:start` | Buduje aplikację (do `.next-private`) i uruchamia ją na `http://127.0.0.1:4000`. Po `git pull` stosuje nowe migracje. Zatrzymanie: Ctrl+C. |
+| `npm run private:set-password -- <email>` | Konto albo nowe hasło w wersji prywatnej. |
+| `npm run private:dump [-- <plik>]` | Kopia `byw_private` do `backups/` przez `pg_dump` z kontenera bazy. |
 
-Kopia zapasowa: `npm run private:dump` (np. po każdym rozliczeniu). Plik
-w `backups/` zawiera prawdziwe dane: przenieś go na osobny nośnik, nie
-wysyłaj do repozytorium ani niezaszyfrowanej chmury. Przed aktualizacją
-z nową migracją zrób kopię. Odtwarzanie: `pg_restore`.
+Kopia zapasowa: np. po każdym rozliczeniu i zawsze przed aktualizacją
+z nową migracją. Plik zawiera prawdziwe dane: przenieś go na osobny nośnik,
+nie wysyłaj do repozytorium ani niezaszyfrowanej chmury. Odtwarzanie:
+`pg_restore` (np. `docker compose exec -T db pg_restore -U byw -d <pusta_baza> < plik`).
 
 ## Wersja demo (Vercel + Neon)
 
@@ -130,8 +131,8 @@ Demo działa na Vercel (plan Hobby, region `fra1`), dane w Neon (plan Free,
 Frankfurt, Postgres 17), wyłącznie wygenerowane. Decyzje i kontekst: STACK 6
 i 9. Wdrożenie jest sterowane z repozytorium (`vercel.json`, polecenie
 budowania), a pierwsze połączenie kont wymaga rąk właściciela — kroki niżej.
-Do czasu T4a i T16 na Vercel działa jeszcze tryb z logowaniem hasłem
-(stan z T4); nie twórz w Neon konta z prawdziwymi danymi.
+Do czasu T16 ekran startowy demo informuje tylko, że demo jest
+w przygotowaniu.
 
 **Adres demo:** `https://<do-uzupełnienia>.vercel.app`
 **Projekt Neon:** `sparkling-pine-36966267` (Frankfurt, Postgres 17).
@@ -161,7 +162,7 @@ Details) dokładnie tak, jak je podaje:
 | --- | --- | --- |
 | `DATABASE_URL` | z poolerem (`...-pooler...`) | runtime aplikacji |
 | `DATABASE_URL_UNPOOLED` | bezpośredni (bez `-pooler`) | migracje w buildzie |
-| `APP_MODE` | — (wartość `demo`, od T4a) | tryb aplikacji; inny blokuje build |
+| `APP_MODE` | — (wartość `demo`) | tryb aplikacji; inny blokuje build |
 | `DEMO_IP_SECRET` | — (losowy sekret, od T16) | skrót adresu IP do limitów demo |
 
 ### Pierwsze wdrożenie (kroki właściciela)
@@ -191,7 +192,7 @@ bieżącym schemacie.
 - [ ] Druga przeglądarka dostaje inne dane; „Wyloguj” wraca na ekran startowy.
 - [ ] Push na gałąź inną niż `main` nie tworzy deploymentu.
 
-### Smoke test wersji prywatnej (od T4a)
+### Smoke test wersji prywatnej
 
 - [ ] `npm run private:start` startuje, `http://127.0.0.1:4000` pokazuje logowanie.
 - [ ] Adres komputera w sieci lokalnej (np. z telefonu) nie odpowiada.

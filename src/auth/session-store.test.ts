@@ -8,11 +8,13 @@ import { hashToken } from "./token";
 
 afterAll(closePool);
 
-async function createUser(): Promise<{ id: number; email: string }> {
+async function createUser(
+  demoExpiresAt: Date | null = null,
+): Promise<{ id: number; email: string }> {
   const email = `sesja_${randomBytes(4).toString("hex")}@example.com`;
   const [user] = await getDb()
     .insert(users)
-    .values({ email, passwordHash: "x" })
+    .values({ email, passwordHash: "x", demoExpiresAt })
     .returning({ id: users.id });
   return { id: user.id, email };
 }
@@ -37,13 +39,13 @@ describe("sesje w bazie", () => {
     try {
       const valid = token();
       await storeSession(db, valid, user.id, new Date(Date.now() + 10_000));
-      expect(await userForToken(db, valid)).toEqual(user);
+      expect(await userForToken(db, valid, false)).toEqual(user);
 
-      expect(await userForToken(db, token())).toBeNull();
+      expect(await userForToken(db, token(), false)).toBeNull();
 
       const expired = token();
       await storeSession(db, expired, user.id, new Date(Date.now() - 1_000));
-      expect(await userForToken(db, expired)).toBeNull();
+      expect(await userForToken(db, expired, false)).toBeNull();
     } finally {
       // Kaskada usuwa też sesje użytkownika.
       await db.delete(users).where(eq(users.id, user.id));
@@ -56,12 +58,33 @@ describe("sesje w bazie", () => {
     try {
       const value = token();
       await storeSession(db, value, user.id, new Date(Date.now() + 10_000));
-      expect(await userForToken(db, value)).not.toBeNull();
+      expect(await userForToken(db, value, false)).not.toBeNull();
 
       await deleteSession(db, value);
-      expect(await userForToken(db, value)).toBeNull();
+      expect(await userForToken(db, value, false)).toBeNull();
     } finally {
       await db.delete(users).where(eq(users.id, user.id));
+    }
+  });
+
+  it("tryb demo wpuszcza tylko konta demo, prywatny tylko zwykłe", async () => {
+    const db = getDb();
+    const owner = await createUser();
+    const visitor = await createUser(new Date(Date.now() + 86_400_000));
+    try {
+      const ownerToken = token();
+      const visitorToken = token();
+      const later = new Date(Date.now() + 10_000);
+      await storeSession(db, ownerToken, owner.id, later);
+      await storeSession(db, visitorToken, visitor.id, later);
+
+      expect(await userForToken(db, ownerToken, false)).toEqual(owner);
+      expect(await userForToken(db, ownerToken, true)).toBeNull();
+      expect(await userForToken(db, visitorToken, true)).toEqual(visitor);
+      expect(await userForToken(db, visitorToken, false)).toBeNull();
+    } finally {
+      await db.delete(users).where(eq(users.id, owner.id));
+      await db.delete(users).where(eq(users.id, visitor.id));
     }
   });
 });

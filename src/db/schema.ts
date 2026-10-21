@@ -26,11 +26,24 @@ const nameCheck = (column: AnyPgColumn) =>
   sql`char_length(${column}) between 1 and 60`;
 const pctRange = (column: AnyPgColumn) => sql`${column} between 0 and 10000`;
 
-export const users = pgTable("users", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
-});
+// `demo_*` są puste dla konta wersji prywatnej; konto demo to piaskownica
+// z czasem wygaśnięcia i skrótem adresu IP (STACK 4, SPEC 5.8).
+export const users = pgTable(
+  "users",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    demoExpiresAt: timestamptz("demo_expires_at"),
+    demoIpHash: text("demo_ip_hash"),
+  },
+  (t) => [
+    check(
+      "users_demo_ip_hash_check",
+      sql`${t.demoIpHash} is null or ${t.demoExpiresAt} is not null`,
+    ),
+  ],
+);
 
 export const sessions = pgTable(
   "sessions",
