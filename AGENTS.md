@@ -17,6 +17,16 @@ i praktyczne kroki.
 Nie kopiuj reguł z tych dokumentów do kodu ani komentarzy. W razie konfliktu
 między dokumentami zgłoś go zamiast wybierać wygodniejszą wersję.
 
+## Dwie wersje aplikacji
+
+Ten sam kod działa jako **wersja prywatna** (prawdziwe dane właściciela,
+tylko lokalnie, baza `byw_private`) i jako **demo** (Vercel + Neon, dane
+wygenerowane, piaskownica dla każdego odwiedzającego). Decyzja: SPEC P8,
+szczegóły: STACK 5 „Tryby aplikacji” i STACK 6.
+
+Agent **nigdy** nie czyta `.env.private`, nie łączy się z bazą `byw_private`
+i nie uruchamia skryptów `private:*`. Do pracy służą `byw_dev` i `byw_test`.
+
 ## Uruchomienie
 
 Wymagany Node 22 (`.nvmrc`) i Postgres 17 (w sesji chmurowej wystarczy 16,
@@ -91,14 +101,39 @@ sprawdź, że e2e nadal działa w sesji bez pobierania przeglądarki.
   `.env.example` i `.env.test` zawierają wyłącznie lokalne dane deweloperskie.
 - Jedno zadanie z `PLAN.md` = jeden branch i jeden PR, który zamyka swoje Issue.
 
-## Wdrożenie produkcyjne (Vercel + Neon)
+## Wersja prywatna (komputer właściciela)
 
-Aplikacja działa na Vercel (plan Hobby, region `fra1`), dane w Neon (plan Free,
-Frankfurt, Postgres 17). Decyzje i kontekst: STACK 6 i 9. Wdrożenie jest
-sterowane z repozytorium (`vercel.json`, polecenie budowania), a pierwsze
-połączenie kont wymaga rąk właściciela — kroki niżej.
+> Polecenia `private:*`, baza `byw_private` i plik `.env.private` powstają
+> w zadaniu T4a. Do jego merge'u nie wprowadzaj prawdziwych danych do
+> żadnej bazy.
 
-**Adres produkcyjny:** `https://<do-uzupełnienia>.vercel.app`
+Pierwsze uruchomienie (raz):
+
+1. `docker compose up -d db` (tworzy też `byw_private`; przy istniejącym
+   wolumenie patrz uwaga w „Uruchomienie”).
+2. `cp .env.private.example .env.private`.
+3. `npm run private:set-password -- <twój-email>` (hasło min. 12 znaków,
+   bez echa; nie przechodzi przez agenta).
+
+Codzienne użycie: `docker compose up -d db`, potem `npm run private:start`
+i adres `http://127.0.0.1:4000`. Po `git pull` to samo polecenie stosuje
+nowe migracje. Zatrzymanie: Ctrl+C.
+
+Kopia zapasowa: `npm run private:dump` (np. po każdym rozliczeniu). Plik
+w `backups/` zawiera prawdziwe dane: przenieś go na osobny nośnik, nie
+wysyłaj do repozytorium ani niezaszyfrowanej chmury. Przed aktualizacją
+z nową migracją zrób kopię. Odtwarzanie: `pg_restore`.
+
+## Wersja demo (Vercel + Neon)
+
+Demo działa na Vercel (plan Hobby, region `fra1`), dane w Neon (plan Free,
+Frankfurt, Postgres 17), wyłącznie wygenerowane. Decyzje i kontekst: STACK 6
+i 9. Wdrożenie jest sterowane z repozytorium (`vercel.json`, polecenie
+budowania), a pierwsze połączenie kont wymaga rąk właściciela — kroki niżej.
+Do czasu T4a i T16 na Vercel działa jeszcze tryb z logowaniem hasłem
+(stan z T4); nie twórz w Neon konta z prawdziwymi danymi.
+
+**Adres demo:** `https://<do-uzupełnienia>.vercel.app`
 **Projekt Neon:** `sparkling-pine-36966267` (Frankfurt, Postgres 17).
 
 ### Konfiguracja w repozytorium
@@ -117,34 +152,28 @@ połączenie kont wymaga rąk właściciela — kroki niżej.
 ### Zmienne środowiskowe w Vercel (zakres „Production”)
 
 Ustawione tylko w zakresie **Production**, żeby żadne inne środowisko nie
-łączyło się z bazą produkcyjną. Wartości skopiuj z panelu Neon (Connection
+łączyło się z bazą demo. Adresy bazy skopiuj z panelu Neon (Connection
 Details) dokładnie tak, jak je podaje:
 
 | Zmienna | Adres Neon | Użycie |
 | --- | --- | --- |
 | `DATABASE_URL` | z poolerem (`...-pooler...`) | runtime aplikacji |
 | `DATABASE_URL_UNPOOLED` | bezpośredni (bez `-pooler`) | migracje w buildzie |
+| `APP_MODE` | — (wartość `demo`, od T4a) | tryb aplikacji; inny blokuje build |
+| `DEMO_IP_SECRET` | — (losowy sekret, od T16) | skrót adresu IP do limitów demo |
 
 ### Pierwsze wdrożenie (kroki właściciela)
 
 1. W Vercel: **Add New → Project → Import** repozytorium `BuildYourWealth`.
    Framework wykryje się jako Next.js; nie zmieniaj polecenia budowania
    (bierze się z `vercel.json`). Production Branch pozostaw `main`.
-2. W **Settings → Environment Variables** dodaj obie zmienne z tabeli wyżej
-   w zakresie **Production**.
+2. W **Settings → Environment Variables** dodaj zmienne z tabeli wyżej
+   w zakresie **Production** (każdą od zadania podanego w tabeli).
 3. Deploy ruszy po merge’u do `main` (albo „Redeploy” z panelu). Build
    zastosuje migracje i zbuduje aplikację.
-4. Konto właściciela (hasło nie przechodzi przez agenta): na swoim komputerze
-   z klonem repozytorium ustaw w powłoce adres **bezpośredni** jako
-   `DATABASE_URL` i uruchom
-   `npm run user:set-password -- <twój-email>` (hasło min. 12 znaków, bez echa).
 
-### Kopia zapasowa
-
-Na komputerze właściciela, z adresem **bezpośrednim** jako `DATABASE_URL`:
-`npm run db:dump`. Wymaga klienta `pg_dump` w wersji ≥ 17 (albo wskaż go
-`PG_DUMP`). Pliki trafiają do `backups/` (poza repozytorium). Odtwarzanie:
-`pg_restore`.
+Demo nie ma konta właściciela ani kopii zapasowej: dane są wygenerowane
+i odtwarzalne. Konto utworzone w Neon w ramach T4 usuwa właściciel w T4a.
 
 ### Wycofanie
 
@@ -152,13 +181,20 @@ W Vercel: **Deployments → wybierz poprzedni udany → Promote to Production**.
 Migracje są dodające i zgodne wstecz (STACK 6), więc poprzedni build działa na
 bieżącym schemacie.
 
-### Smoke test po wdrożeniu (kryteria akceptacji T4)
+### Smoke test demo po wdrożeniu (od T16)
 
 - [ ] `https://<adres>.vercel.app` otwiera się po HTTPS.
-- [ ] Strona bez sesji przekierowuje na `/logowanie`.
-- [ ] Logowanie poprawnym hasłem wpuszcza do aplikacji; wylogowanie wraca na logowanie.
+- [ ] Strona bez piaskownicy pokazuje ekran startowy demo, bez formularza logowania.
+- [ ] „Wypróbuj wersję demo” otwiera „Ten miesiąc” z danymi i banerem demo.
+- [ ] Druga przeglądarka dostaje inne dane; „Wyloguj” wraca na ekran startowy.
 - [ ] Push na gałąź inną niż `main` nie tworzy deploymentu.
-- [ ] `npm run db:dump` na komputerze właściciela tworzy plik kopii z bazy produkcyjnej.
+
+### Smoke test wersji prywatnej (od T4a)
+
+- [ ] `npm run private:start` startuje, `http://127.0.0.1:4000` pokazuje logowanie.
+- [ ] Adres komputera w sieci lokalnej (np. z telefonu) nie odpowiada.
+- [ ] Logowanie poprawnym hasłem wpuszcza do aplikacji; wylogowanie wraca na logowanie.
+- [ ] `npm run private:dump` tworzy plik kopii w `backups/`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

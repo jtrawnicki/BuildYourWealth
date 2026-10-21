@@ -1,6 +1,8 @@
 # BuildYourWealth: plan wykonania MVP
 
-Status: **zatwierdzony po review etapu E (2026-10-20).**
+Status: **zatwierdzony po review etapu E (2026-10-20)**; zmiana koncepcji
+wdrożenia z 2026-10-21 (SPEC P8, STACK 9.4): nowe zadania T4a i T16,
+zmienione T4 (opis historyczny) i T15.
 Źródła: [`SPEC.md`](SPEC.md) (co budujemy), [`STACK.md`](STACK.md) (jak),
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (proces). Plan opisuje rezultaty,
 nie kod. Po review etapu E każde zadanie dostaje Issue na GitHub, a ten plan
@@ -19,30 +21,35 @@ Oznaczenia:
 
 | Milestone | Działający przyrost | Zadania |
 | --- | --- | --- |
-| M1 Szkielet produkcyjny | Pusta aplikacja z logowaniem działa pod adresem `*.vercel.app`, CI pilnuje jakości. | T1–T4 |
+| M1 Szkielet | Pusta aplikacja z logowaniem działa lokalnie jako wersja prywatna, Vercel przyjmuje tylko tryb demo, CI pilnuje jakości. | T1–T4, T4a |
 | M2 Domena | Wszystkie reguły obliczeń i walidacji z SPEC 6–7 jako przetestowane funkcje. | T5–T6 |
 | M3 Konfiguracja | Można ustawić kurs, motyw, źródła i plan podziału. | T7–T9 |
 | M4 Ten miesiąc | Po wpisaniu przychodów widać plan przelewów (cel 1 ze SPEC 3). | T10–T11 |
 | M5 Rozliczenie i historia | Rozliczenie dopisuje wpłaty do majątku, historia je pokazuje (cele 2–3 ze SPEC 3). MVP kompletne. | T12–T14 |
-| M6 Wydanie | Pełna weryfikacja poziomu 3 na produkcji. | T15 |
+| M6 Demo i wydanie | Publiczne demo z piaskownicami; pełna weryfikacja poziomu 3 wersji prywatnej i demo. | T16, T15 |
 
 Graf zależności:
 
 ```
-T1 ─┬─ T2 ─ T3 ─ T4 (M1)
+T1 ─┬─ T2 ─ T3 ─ T4 ─ T4a (M1)
     ├─ T5 ─ T6 (M2)            ← równolegle z T2–T4
     └─ T7a (layout, motywy)    ← równolegle z T2–T4
 
 T3 + T5 + T7a ─ T7 ─ T8 ─ T9 (M3)      ← T8 wymaga też T6
 T9 ─ T10 ─ T11 (M4)
 T11 ─ T12 ─ T13, T14 (M5)      ← T13 i T14 równolegle
+T4a + T13 + T14 ─ T16 (M6)
 wszystko ─ T15 (M6)
+
+T4a jest pilne: do jego merge'u nie wprowadzamy prawdziwych danych
+do żadnej bazy.
 ```
 
-## M1 Szkielet produkcyjny
+## M1 Szkielet
 
 Cel: najwcześniej zredukować największe ryzyko z STACK 8 (integracja
-Vercel + Neon + migracje + logowanie).
+Vercel + Neon + migracje + logowanie) i ustalić, że prawdziwe dane żyją
+tylko w wersji prywatnej.
 
 ### T1 Inicjalizacja repozytorium i bramka jakości
 
@@ -98,6 +105,11 @@ Vercel + Neon + migracje + logowanie).
 
 ### T4 Wdrożenie produkcyjne
 
+> **Zrealizowane** (PR #25) według koncepcji sprzed 2026-10-21. Po zmianie
+> koncepcji Vercel i Neon hostują tylko demo; konto właściciela w Neon
+> i procedura kopii z bazy Neon przestają obowiązywać (T4a). Opis niżej
+> zostaje jako zapis tego, co powstało.
+
 - **Rezultat:** projekt Vercel połączony z repozytorium (deploy tylko
   z `main`, podglądy PR wyłączone), baza Neon we Frankfurcie w wersji
   Postgres z STACK 6, aplikacja łączy się adresem z poolerem, a migracje
@@ -117,6 +129,36 @@ Vercel + Neon + migracje + logowanie).
   uruchomiony na komputerze właściciela tworzy plik kopii z bazy
   produkcyjnej.
 - **Weryfikacja:** smoke test ręczny według listy w `AGENTS.md`.
+
+### T4a Tryby aplikacji i wersja prywatna
+
+- **Rezultat:** moduł trybu `APP_MODE` (`private` / `demo`) wg STACK 5
+  „Tryby aplikacji”: blokada trybu innego niż demo na Vercel (build
+  i serwer), w trybie demo brak formularza logowania i odrzucanie logowania
+  hasłem po stronie serwera; ekran startowy demo na razie tylko z opisem
+  aplikacji i informacją, że demo jest w przygotowaniu (przycisk dodaje
+  T16). Wersja prywatna wg STACK 5 „Wersja prywatna”: baza `byw_private`
+  tworzona przez `compose.yaml`, porty tylko na `127.0.0.1`, plik
+  `.env.private` z `.env.private.example`, skrypty `private:start`,
+  `private:set-password`, `private:dump`. Kolumny `demo_expires_at`
+  i `demo_ip_hash` w `users` (migracja dodająca, używa ich T16).
+  Aktualizacja `AGENTS.md` (uruchomienie wersji prywatnej, kopia, smoke test
+  demo zamiast produkcji).
+- **Zależy od:** T4. **Poziom:** 2 (bezpieczeństwo, dane).
+- **Wymaga człowieka:** usunięcie konta właściciela z bazy Neon (agent
+  podaje polecenie), dodanie `APP_MODE=demo` w Vercel (zakres Production),
+  utworzenie konta w wersji prywatnej skryptem (hasło nie przechodzi przez
+  agenta), ponowne utworzenie wolumenu Dockera albo ręczne utworzenie bazy
+  `byw_private`, jeśli wolumen już istnieje.
+- **Kryteria akceptacji:** scen. 21 w części dotyczącej logowania i dostępu
+  z sieci; build z `VERCEL_ENV` i bez `APP_MODE=demo` kończy się błędem
+  (test); `private:start` na czystej bazie stosuje migracje i startuje na
+  `127.0.0.1:4000`; `private:dump` tworzy kopię `byw_private`; żaden skrypt
+  poza `private:*` nie czyta `.env.private` (test); po wdrożeniu
+  na Vercel strona startowa demo nie ma formularza logowania.
+- **Weryfikacja:** testy jednostkowe modułu trybu, E2E logowania w obu
+  trybach, ręczna próba połączenia z innego urządzenia w sieci, niezależne
+  review bezpieczeństwa.
 
 ## M2 Domena
 
@@ -274,19 +316,47 @@ który z nich korzysta. Równolegle z T2–T4.
   w starszych miesiącach.
 - **Weryfikacja:** E2E, niezależne review.
 
-## M6 Wydanie
+## M6 Demo i wydanie
+
+### T16 Wersja demo z piaskownicami
+
+- **Rezultat:** wg SPEC 5.8 i STACK 5 „Piaskownice demo”: generator danych
+  przykładowych (czysta funkcja z wstrzykniętym `now` i losowością, zapis
+  przez `db/`), przycisk „Wypróbuj wersję demo” tworzący piaskownicę
+  z sesją, baner demo, wygaśnięcie po 24 h, leniwe sprzątanie, limity
+  z komunikatami, sekret `DEMO_IP_SECRET`, skrypt `demo:seed` dla `byw_dev`,
+  projekt Playwright w trybie demo.
+- **Zależy od:** T4a, T13, T14 (demo pokazuje wszystkie ekrany).
+  **Poziom:** 2 (bezpieczeństwo, dane).
+- **Wymaga człowieka:** dodanie `DEMO_IP_SECRET` w Vercel (agent podaje,
+  jak wygenerować wartość).
+- **Kryteria akceptacji:** scen. 19, 20, 21 (część demo); testy generatora:
+  dla wielu ziaren losowości i dat `now` (1. i ostatni dzień miesiąca,
+  przełom roku, zmiana czasu) dane przechodzą walidację planu z SPEC 7.1,
+  ograniczenia bazy i spełniają reguły SPEC 6 (wartości źródeł = początek +
+  rozliczone wpłaty, postęp celów); zawartość danych zgodna z listą SPEC 5.8;
+  test limitów (11. wejście z jednego IP w godzinie odrzucone, 501. aktywna
+  piaskownica odrzucona); w bazie nie ma jawnego adresu IP; piaskownica
+  po wygaśnięciu nie ma ważnej sesji, a jej dane znikają przy kolejnym
+  wejściu.
+- **Weryfikacja:** testy jednostkowe generatora, testy integracyjne limitów
+  i sprzątania, E2E w trybie demo, smoke test na `*.vercel.app`, niezależne
+  review bezpieczeństwa.
 
 ### T15 Zamknięcie MVP
 
 - **Rezultat:** wydanie zgodne z WORKFLOW etap G.
 - **Zależy od:** wszystkie. **Poziom:** 3.
-- **Kryteria akceptacji:** wszystkie 18 scenariuszy z SPEC 12 mają
+- **Kryteria akceptacji:** wszystkie 21 scenariuszy z SPEC 12 mają
   zielony test (STACK 7) lub odhaczony krok ręczny; scen. 12 sprawdzony
   na każdym ekranie; niezależne review zgodności ze SPEC i audyt
-  bezpieczeństwa (dane finansowe w internecie); smoke test produkcji
-  i próbna kopia `db:dump`; backlog SPEC 9 zapisany jako Issues.
+  bezpieczeństwa (wersja prywatna niedostępna z sieci, demo bez dostępu do
+  danych prywatnych, izolacja piaskownic, publiczne demo odporne na
+  nadużycia); smoke test demo na Vercel i wersji prywatnej lokalnie;
+  próbna kopia `private:dump` odtworzona przez `pg_restore` do pustej bazy;
+  backlog SPEC 9 zapisany jako Issues.
 - **Weryfikacja:** pełna bramka, ręczny scenariusz akceptacyjny
-  właściciela produktu na produkcji.
+  właściciela produktu na wersji prywatnej, przegląd demo przez właściciela.
 
 ## Pytania do review
 
