@@ -140,8 +140,10 @@ Do czasu T4a i T16 na Vercel działa jeszcze tryb z logowaniem hasłem
 
 - `vercel.json` ustawia framework Next.js, polecenie budowania
   `npm run vercel-build` oraz `git.deploymentEnabled` tak, że deploy powstaje
-  **tylko z gałęzi `main`** (`"*": false`, `"main": true`). Pushe na inne
-  gałęzie (w tym PR) nie tworzą deploymentu, więc podglądy są wyłączone.
+  **tylko z gałęzi `main`** (`"**": false`, `"main": true`). Wzorce to
+  minimatch: `*` nie obejmuje nazw gałęzi z `/` (np. `docs/...`), stąd `**`.
+  Pushe na inne gałęzie (w tym PR) nie tworzą deploymentu, więc podglądy są
+  wyłączone.
 - `npm run vercel-build` (`scripts/vercel-build.ts`): na produkcji
   (`VERCEL_ENV=production`) uruchamia najpierw `npm run db:migrate`, potem
   `next build`; na innych środowiskach tylko `next build`.
