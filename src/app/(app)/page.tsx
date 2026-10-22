@@ -1,35 +1,238 @@
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
-import { getMonth, type MonthData } from "@/db/months";
+import { getMonth, getMonthSnapshot, type MonthData } from "@/db/months";
+import { getEurRate } from "@/db/settings";
+import { listSources } from "@/db/sources";
 import { now } from "@/domain/clock";
-import { formatMoney } from "@/domain/format";
+import {
+  convertEurToPln,
+  convertPlnToEur,
+  netWorthPln,
+} from "@/domain/currency";
+import {
+  formatMoney,
+  formatPercent,
+  formatProgress,
+  formatSourceCount,
+} from "@/domain/format";
 import { formatMonthTitle, monthGenitive } from "@/domain/month-name";
+import {
+  computeMonthPlan,
+  type Pool,
+  type MonthPlan as MonthPlanResult,
+} from "@/domain/plan";
+import { isGoalReached } from "@/domain/progress";
 import { currentMonth, previousMonth } from "@/domain/time";
 import { AddIncomeForm } from "./AddIncomeForm";
 import { IncomeItem, type IncomeView } from "./IncomeItem";
+import {
+  MonthPlan,
+  type MonthPlanView,
+  type PoolGroup,
+  type TransferItem,
+} from "./MonthPlan";
+import { WealthBar, type WealthView } from "./WealthBar";
 import styles from "./page.module.css";
 
 // Zawartość zależy od sesji (guard czyta ciasteczko), więc strona jest
 // dynamiczna i streamuje się za granicą `loading.tsx` (Cache Components).
-// T10 obsługuje przychody i tworzenie miesięcy; pełny ekran „Ten miesiąc"
-// z planem przelewów (makieta B1) powstaje w T11.
+// Ekran „Ten miesiąc" (makieta B1, SPEC 5.4, 8): przychody (T10), plan podziału
+// z kartami przelewów i pasek majątku. Plan liczy się z migawki miesiąca
+// (`month_goals`) przy każdym odczycie, nie jest zapisywany (STACK 3).
 export default async function Home() {
   const user = await requireUser();
   const db = getDb();
   const current = currentMonth(now());
   const previous = previousMonth(current);
-  const [currentData, previousData] = await Promise.all([
+  const [currentData, previousData, sources, eurRate] = await Promise.all([
     getMonth(db, user.id, current),
     getMonth(db, user.id, previous),
+    listSources(db, user.id),
+    getEurRate(db, user.id),
   ]);
+
+  const hasIncome = currentData !== null && currentData.incomes.length > 0;
+  const planView = hasIncome
+    ? await buildPlanView(db, currentData, eurRate)
+    : null;
+
+  const wealthView = buildWealthView(sources, eurRate);
 
   return (
     <>
       <h1 className={styles.title}>Ten miesiąc</h1>
       <CurrentMonth month={current} data={currentData} />
+      {planView !== null && <MonthPlan view={planView} />}
       {previousData === null && <PreviousMonth month={previous} />}
+      <WealthBar view={wealthView} />
     </>
   );
+}
+
+const POOL_TITLE: Record<Pool, string> = {
+  savings: "Oszczędności",
+  investments: "Inwestycje",
+};
+
+/** Składa widok planu z migawki miesiąca i obliczeń domeny (SPEC 5.4, 6). */
+async function buildPlanView(
+  db: ReturnType<typeof getDb>,
+  data: MonthData,
+  eurRate: number | null,
+): Promise<MonthPlanView> {
+  const snapshot = await getMonthSnapshot(db, data.id);
+  const income = data.incomes.reduce((sum, item) => sum + item.amount, 0);
+  const plan = computeMonthPlan({
+    income,
+    savingsPct: data.savingsPct,
+    investmentsPct: data.investmentsPct,
+    goals: snapshot.map((goal) => ({
+      id: goal.goalId,
+      pool: goal.pool,
+      pct: goal.pct,
+    })),
+  });
+  const amountByGoal = new Map(
+    plan.goals.map((goal) => [goal.id, goal.amount]),
+  );
+
+  const groups: PoolGroup[] = [];
+  for (const pool of ["savings", "investments"] as const) {
+    const items = snapshot
+      .filter((goal) => goal.pool === pool)
+      .map((goal) =>
+        buildItem(goal, amountByGoal.get(goal.goalId) ?? 0, data, eurRate),
+      );
+    if (items.length > 0) {
+      groups.push({
+        pool,
+        title: POOL_TITLE[pool],
+        totalLabel: formatMoney(plan.pools[pool], "PLN"),
+        items,
+      });
+    }
+  }
+
+  return {
+    setAsideLabel: formatMoney(income - plan.toSpend, "PLN"),
+    toSpendLabel: formatMoney(plan.toSpend, "PLN"),
+    segments: buildSegments(plan, income),
+    legend: [
+      {
+        key: "savings",
+        label: "Oszczędności",
+        amountLabel: formatMoney(plan.pools.savings, "PLN"),
+      },
+      {
+        key: "investments",
+        label: "Inwestycje",
+        amountLabel: formatMoney(plan.pools.investments, "PLN"),
+      },
+      {
+        key: "spend",
+        label: "Do wydania",
+        amountLabel: formatMoney(plan.toSpend, "PLN"),
+      },
+    ],
+    groups,
+  };
+}
+
+/** Szerokości pasków w procentach przychodu; zerowe segmenty pomijamy. */
+function buildSegments(plan: MonthPlanResult, income: number) {
+  const parts: { key: "savings" | "investments" | "spend"; amount: number }[] =
+    [
+      { key: "savings", amount: plan.pools.savings },
+      { key: "investments", amount: plan.pools.investments },
+      { key: "spend", amount: plan.toSpend },
+    ];
+  return parts
+    .filter((part) => part.amount > 0)
+    .map((part) => {
+      const widthPct = (part.amount * 100) / income;
+      return {
+        key: part.key,
+        pctLabel: `${Math.round(widthPct)}%`,
+        widthPct,
+      };
+    });
+}
+
+function buildItem(
+  goal: Awaited<ReturnType<typeof getMonthSnapshot>>[number],
+  amount: number,
+  data: MonthData,
+  eurRate: number | null,
+): TransferItem {
+  // `goal.progress` z bazy to kwota startowa + wpłaty z rozliczonych miesięcy
+  // (reguła `goalProgress`, SPEC 6.6). Postęp pokazujemy tylko dla celu z kwotą
+  // docelową; „osiągnięty" zastępuje liczby (SPEC 5.3, scen. 10).
+  const target = goal.targetAmount;
+  const progress: TransferItem["progress"] =
+    target === null
+      ? null
+      : isGoalReached(goal.progress, target)
+        ? { reached: true }
+        : {
+            reached: false,
+            label: formatProgress(goal.progress, target, goal.currency),
+            widthPct:
+              target > 0 ? Math.min(100, (goal.progress * 100) / target) : 100,
+          };
+
+  return {
+    goalId: goal.goalId,
+    pool: goal.pool,
+    name: goal.name,
+    sourceName: goal.sourceName,
+    pctLabel: formatPercent(goal.pct),
+    amountLabel: formatMoney(amount, "PLN"),
+    eur: buildEurLine(goal, amount, data.settled, eurRate),
+    progress,
+    actualLabel: data.settled
+      ? buildActualLabel(goal, data.settledEurRate)
+      : null,
+  };
+}
+
+/** Druga linia kwoty celu EUR w otwartym miesiącu (SPEC 5.4). */
+function buildEurLine(
+  goal: { currency: "PLN" | "EUR" },
+  amount: number,
+  settled: boolean,
+  eurRate: number | null,
+): TransferItem["eur"] {
+  if (goal.currency !== "EUR" || settled) return null;
+  if (eurRate === null) return { kind: "rate" };
+  return {
+    kind: "amount",
+    text: `≈ ${formatMoney(convertPlnToEur(amount, eurRate), "EUR")}`,
+  };
+}
+
+/** Wykonanie celu w rozliczonym miesiącu; EUR po kursie z rozliczenia (SPEC 6.9). */
+function buildActualLabel(
+  goal: { currency: "PLN" | "EUR"; actualAmount: number | null },
+  settledEurRate: number | null,
+): string {
+  const actual = goal.actualAmount ?? 0;
+  if (goal.currency === "PLN") {
+    return `wykonanie: ${formatMoney(actual, "PLN")}`;
+  }
+  const eur = formatMoney(actual, "EUR");
+  if (settledEurRate === null) return `wykonanie: ${eur}`;
+  const pln = formatMoney(convertEurToPln(actual, settledEurRate), "PLN");
+  return `wykonanie: ${eur} (${pln})`;
+}
+
+function buildWealthView(
+  sources: { currency: "PLN" | "EUR"; value: number }[],
+  eurRate: number | null,
+): WealthView {
+  const countLabel = formatSourceCount(sources.length);
+  const worth = netWorthPln(sources, eurRate);
+  if (!worth.ok) return { ok: false, countLabel };
+  return { ok: true, countLabel, totalLabel: formatMoney(worth.pln, "PLN") };
 }
 
 function toView(income: MonthData["incomes"][number]): IncomeView {

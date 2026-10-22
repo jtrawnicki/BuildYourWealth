@@ -2,9 +2,15 @@ import { randomBytes } from "node:crypto";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closePool, getDb, getPool } from "./client";
-import { addIncome, deleteIncome, getMonth, updateIncome } from "./months";
+import {
+  addIncome,
+  deleteIncome,
+  getMonth,
+  getMonthSnapshot,
+  updateIncome,
+} from "./months";
 import { savePlan } from "./plan";
-import { incomes, monthGoals, months, sources, users } from "./schema";
+import { goals, incomes, monthGoals, months, sources, users } from "./schema";
 import { setUserPassword } from "./users";
 
 afterAll(closePool);
@@ -395,5 +401,126 @@ describe("usunięcie przychodu i miesiąca (SPEC 7, P7)", () => {
     ).length;
     expect(removed).toBe(1);
     expect(await getMonth(getDb(), userId, "2026-10")).toBeNull();
+  });
+});
+
+describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
+  it("zwraca cel z żywą nazwą, źródłem i postępem z rozliczonych miesięcy", async () => {
+    const sourceId = await addSource("savings");
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        {
+          id: null,
+          pool: "savings",
+          name: "Wakacje",
+          pct: 10000,
+          sourceId,
+          targetAmount: 500000,
+          startAmount: 200000,
+        },
+      ],
+    });
+    const [goal] = await getDb()
+      .select({ id: goals.id })
+      .from(goals)
+      .where(eq(goals.userId, userId));
+
+    // Rozliczony wrzesień z wpłatą 58 800 groszy na ten cel.
+    const [september] = await getDb()
+      .insert(months)
+      .values({
+        userId,
+        month: "2026-09",
+        savingsPct: 2000,
+        investmentsPct: 0,
+        settledAt: new Date(),
+      })
+      .returning({ id: months.id });
+    await getDb().insert(monthGoals).values({
+      monthId: september.id,
+      goalId: goal.id,
+      pool: "savings",
+      pct: 10000,
+      sourceId,
+      actualAmount: 58800,
+    });
+
+    // Bieżący październik dostaje migawkę przez pierwszy przychód.
+    await addIncome(
+      getDb(),
+      userId,
+      "2026-10",
+      { name: "Pensja", amount: 850000 },
+      NOW,
+    );
+    const october = await getMonth(getDb(), userId, "2026-10");
+
+    expect(await getMonthSnapshot(getDb(), october!.id)).toEqual([
+      {
+        goalId: goal.id,
+        pool: "savings",
+        pct: 10000,
+        name: "Wakacje",
+        sourceName: "Źródło",
+        currency: "PLN",
+        targetAmount: 500000,
+        startAmount: 200000,
+        // Otwarty październik nie liczy się do postępu, tylko rozliczony wrzesień.
+        actualAmount: null,
+        progress: 200000 + 58800,
+      },
+    ]);
+  });
+
+  it("pokazuje nową nazwę celu także w starszych miesiącach (scen. 8)", async () => {
+    const sourceId = await addSource("savings");
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        {
+          id: null,
+          pool: "savings",
+          name: "Stara nazwa",
+          pct: 10000,
+          sourceId,
+          targetAmount: null,
+          startAmount: null,
+        },
+      ],
+    });
+    const [goal] = await getDb()
+      .select({ id: goals.id })
+      .from(goals)
+      .where(eq(goals.userId, userId));
+    await addIncome(
+      getDb(),
+      userId,
+      "2026-10",
+      { name: "Pensja", amount: 850000 },
+      NOW,
+    );
+    const october = await getMonth(getDb(), userId, "2026-10");
+
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        {
+          id: goal.id,
+          pool: "savings",
+          name: "Nowa nazwa",
+          pct: 10000,
+          sourceId,
+          targetAmount: null,
+          startAmount: null,
+        },
+      ],
+    });
+
+    const [snap] = await getMonthSnapshot(getDb(), october!.id);
+    expect(snap.name).toBe("Nowa nazwa");
   });
 });
