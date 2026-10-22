@@ -304,7 +304,7 @@ function GoalRow({
       />
       <Field
         id={`${id}-target`}
-        label="Kwota docelowa (opcjonalnie)"
+        label="Kwota docelowa"
         value={row.target}
         onChange={(target) => onChange({ target })}
         error={errors?.target}
@@ -314,7 +314,7 @@ function GoalRow({
       />
       <Field
         id={`${id}-start`}
-        label="Już uzbierane (opcjonalnie)"
+        label="Już uzbierane"
         value={row.start}
         onChange={(start) => onChange({ start })}
         error={errors?.start}
@@ -322,14 +322,19 @@ function GoalRow({
         inputMode="decimal"
         className={styles.goalAmount}
       />
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Usuń cel ${label}`}
-        className={styles.remove}
-      >
-        Usuń
-      </button>
+      <div className={`${styles.field} ${styles.goalAction}`}>
+        <span className={styles.fieldLabel} aria-hidden="true">
+          &nbsp;
+        </span>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Usuń cel ${label}`}
+          className={styles.remove}
+        >
+          Usuń
+        </button>
+      </div>
     </div>
   );
 }

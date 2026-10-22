@@ -157,6 +157,11 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--muted);
+  /* Jedna linia dla każdej etykiety: pola startują na tej samej wysokości,
+     więc kolumny się nie rozjeżdżają, gdy etykieta jest dłuższa. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .input {
@@ -191,8 +196,13 @@
   font-weight: 600;
 }
 
+/* Kolumna przycisku „Usuń”: pusta etykieta-dystans wyrównuje przycisk
+   do pól w wierszu. */
+.goalAction {
+  flex: 0 0 auto;
+}
+
 .remove {
-  align-self: flex-end;
   min-height: 44px;
   padding: 0 16px;
   border: 1px solid var(--input-border);

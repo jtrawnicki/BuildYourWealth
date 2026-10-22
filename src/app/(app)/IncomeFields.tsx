@@ -23,7 +23,7 @@ export function IncomeFields({
         id={`${prefix}-amount`}
         name="amount"
         label="Kwota netto (PLN)"
-        hint="np. 8 500,00"
+        placeholder="np. 8 500,00"
         value={values.amount}
         error={errors?.amount}
         inputMode="decimal"
@@ -36,7 +36,7 @@ function Field({
   id,
   name,
   label,
-  hint,
+  placeholder,
   value,
   error,
   inputMode,
@@ -44,34 +44,27 @@ function Field({
   id: string;
   name: string;
   label: string;
-  hint?: string;
+  placeholder?: string;
   value: string;
   error?: string;
   inputMode?: "decimal";
 }) {
-  const describedBy = [hint && `${id}-hint`, error && `${id}-error`]
-    .filter(Boolean)
-    .join(" ");
   return (
     <div className={styles.field}>
       <label htmlFor={id} className={styles.label}>
         {label}
       </label>
-      {hint && (
-        <span id={`${id}-hint`} className={styles.hint}>
-          {hint}
-        </span>
-      )}
       <input
         id={id}
         name={name}
         inputMode={inputMode}
+        placeholder={placeholder}
         autoComplete="off"
         // Po akcji React czyści formularz do `defaultValue` ze stanu,
         // więc wpisana wartość zostaje w polu.
         defaultValue={value}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy || undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
         className={styles.input}
       />
       {error && (
