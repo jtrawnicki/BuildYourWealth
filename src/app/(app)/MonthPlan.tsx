@@ -49,6 +49,8 @@ export type LegendEntry = {
 };
 
 export type MonthPlanView = {
+  /** Rozliczony miesiąc jest tylko do odczytu: kopia w czasie przeszłym. */
+  settled: boolean;
   setAsideLabel: string;
   toSpendLabel: string;
   segments: Segment[];
@@ -66,9 +68,9 @@ export function MonthPlan({ view }: { view: MonthPlanView }) {
   return (
     <section className={styles.plan} aria-label="Plan miesiąca">
       <p className={styles.lead}>
-        W tym miesiącu odkładasz{" "}
+        {view.settled ? "W tym miesiącu odłożono" : "W tym miesiącu odkładasz"}{" "}
         <span className={styles.leadSet}>{view.setAsideLabel}</span>, a do
-        wydania zostaje {view.toSpendLabel}.
+        wydania {view.settled ? "zostało" : "zostaje"} {view.toSpendLabel}.
       </p>
 
       <div className={styles.split}>
@@ -105,10 +107,14 @@ export function MonthPlan({ view }: { view: MonthPlanView }) {
       {view.groups.length > 0 && (
         <div className={styles.transfers}>
           <div className={styles.transfersHead}>
-            <h2 className={styles.transfersTitle}>Przelewy do wykonania</h2>
-            <span className={styles.transfersHint}>
-              Na koniec miesiąca potwierdzisz, ile faktycznie przelałeś.
-            </span>
+            <h2 className={styles.transfersTitle}>
+              {view.settled ? "Przelewy" : "Przelewy do wykonania"}
+            </h2>
+            {!view.settled && (
+              <span className={styles.transfersHint}>
+                Na koniec miesiąca potwierdzisz, ile faktycznie przelałeś.
+              </span>
+            )}
           </div>
           <div className={styles.cards}>
             {view.groups.map((group) => (

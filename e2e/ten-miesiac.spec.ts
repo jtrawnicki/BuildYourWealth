@@ -440,6 +440,12 @@ test("rozliczony miesiąc pokazuje plan tylko do odczytu z wykonaniem (SPEC 5.4)
   await expect(currentRegion(page)).toContainText("Miesiąc rozliczony");
   const row = item(card(page, "Oszczędności"), "Poduszka");
   await expect(row).toContainText(text("wykonanie: 1 500,00 zł"));
+
+  // Rozliczony miesiąc opisujemy w czasie przeszłym, bez zapowiedzi rozliczenia.
+  const plan = planRegion(page);
+  await expect(plan).toContainText("odłożono");
+  await expect(plan).not.toContainText("odkładasz");
+  await expect(plan).not.toContainText("potwierdzisz");
 });
 
 for (const colorScheme of ["light", "dark"] as const) {

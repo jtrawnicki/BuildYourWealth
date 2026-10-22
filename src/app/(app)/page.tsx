@@ -114,6 +114,7 @@ async function buildPlanView(
   }
 
   return {
+    settled: data.settled,
     setAsideLabel: formatMoney(income - plan.toSpend, "PLN"),
     toSpendLabel: formatMoney(plan.toSpend, "PLN"),
     segments: buildSegments(plan, income),
