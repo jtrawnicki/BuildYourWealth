@@ -1,5 +1,5 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
-import type { Db } from "./client";
+import type { Db, Tx } from "./client";
 import { goals, months, monthGoals, sources } from "./schema";
 
 export type SourceKind = "savings" | "investments";
@@ -49,8 +49,6 @@ const inAnyMonth = sql<boolean>`exists (
 
 const active = (userId: number) =>
   and(eq(sources.userId, userId), isNull(sources.archivedAt));
-
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /**
  * Blokuje wiersz źródła do końca transakcji. Powiązania sprawdzamy dopiero

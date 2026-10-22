@@ -11,6 +11,7 @@ import {
 } from "@/domain/input";
 import { validatePlan } from "@/domain/plan";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { field } from "@/app/form-data";
 import {
   PLAN_MESSAGES,
   type GoalDraft,
@@ -113,7 +114,7 @@ export async function savePlanAction(
   formData: FormData,
 ): Promise<PlanState> {
   const user = await requireUser();
-  const draft = parseDraft(String(formData.get("plan") ?? ""));
+  const draft = parseDraft(field(formData, "plan"));
   if (!draft) return { formError: PLAN_MESSAGES.invalid };
   const input = toInput(draft);
   if (!input) return { formError: PLAN_MESSAGES.invalid };
