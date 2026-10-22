@@ -27,7 +27,7 @@ async function addGoal(
   await section.getByLabel("% puli").nth(index).fill(fields.pct);
   if (fields.target !== undefined) {
     await section
-      .getByLabel("Kwota docelowa (opcjonalnie)")
+      .getByLabel("Kwota docelowa")
       .nth(index)
       .fill(fields.target);
   }
@@ -144,7 +144,7 @@ test("cel z kwotą docelową nie pozwala wybrać źródła w innej walucie (SPEC
   await expect(savings).toContainText("Waluty nie można zmienić");
 
   // Po wyczyszczeniu kwoty docelowej źródło EUR staje się dostępne.
-  await savings.getByLabel("Kwota docelowa (opcjonalnie)").fill("");
+  await savings.getByLabel("Kwota docelowa").fill("");
   await expect(sourceSelect.locator("option")).toHaveText([
     "Wybierz źródło…",
     "Konto PLN (PLN)",
