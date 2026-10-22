@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { canCreateMonth } from "@/domain/time";
 import type { Db } from "./client";
 import {
@@ -25,7 +25,30 @@ export type MonthData = {
   savingsPct: number;
   investmentsPct: number;
   settled: boolean;
+  /** Kurs zapisany przy rozliczeniu (SPEC 6.9); `null`, dopóki miesiąc otwarty. */
+  settledEurRate: number | null;
   incomes: IncomeRow[];
+};
+
+/**
+ * Cel z migawki planu miesiąca (`month_goals`) do ekranu „Ten miesiąc" (SPEC 5.4).
+ * Pula i procent pochodzą z migawki (stan planu w chwili utworzenia miesiąca),
+ * a nazwa, kwota docelowa i startowa z żywego celu, więc zmiana nazwy widać też
+ * w starszych miesiącach (SPEC 8, scen. 8). Waluta to waluta źródła migawki.
+ */
+export type SnapshotGoal = {
+  goalId: number;
+  pool: "savings" | "investments";
+  pct: number;
+  name: string;
+  sourceName: string;
+  currency: "PLN" | "EUR";
+  targetAmount: number | null;
+  startAmount: number | null;
+  /** Faktyczna wpłata tego miesiąca (SPEC 5.5); `null`, dopóki nierozliczony. */
+  actualAmount: number | null;
+  /** Postęp celu (SPEC 6.6): kwota startowa + suma wpłat z rozliczonych miesięcy. */
+  progress: number;
 };
 
 export type AddIncomeResult =
@@ -57,6 +80,7 @@ export async function getMonth(
       savingsPct: months.savingsPct,
       investmentsPct: months.investmentsPct,
       settledAt: months.settledAt,
+      settledEurRate: months.settledEurRate,
     })
     .from(months)
     .where(and(eq(months.userId, userId), eq(months.month, month)))
@@ -73,8 +97,48 @@ export async function getMonth(
     savingsPct: row.savingsPct,
     investmentsPct: row.investmentsPct,
     settled: row.settledAt !== null,
+    settledEurRate: row.settledEurRate,
     incomes: items,
   };
+}
+
+/**
+ * Cele z migawki planu miesiąca w kolejności dodania (SPEC 5.3). Postęp każdego
+ * celu liczy się z kwoty startowej i sumy faktycznych wpłat z rozliczonych
+ * miesięcy — ręczne zmiany wartości źródła do niego nie wchodzą (SPEC 6.6).
+ */
+export async function getMonthSnapshot(
+  db: Db,
+  monthId: number,
+): Promise<SnapshotGoal[]> {
+  // Suma faktycznych wpłat na ten cel ze wszystkich rozliczonych miesięcy,
+  // skorelowana z zewnętrznym wierszem po `month_goals.goal_id`.
+  const settledPaid = sql<number>`coalesce((
+    select sum(mg2.actual_amount)
+    from month_goals mg2
+    join months m2 on m2.id = mg2.month_id
+    where mg2.goal_id = month_goals.goal_id and m2.settled_at is not null
+  ), 0)`;
+  const rows = await db
+    .select({
+      goalId: monthGoals.goalId,
+      pool: monthGoals.pool,
+      pct: monthGoals.pct,
+      name: goals.name,
+      sourceName: sources.name,
+      currency: sources.currency,
+      targetAmount: goals.targetAmount,
+      startAmount: goals.startAmount,
+      actualAmount: monthGoals.actualAmount,
+      // Suma `bigint` wraca ze sterownika jako string; rzutujemy na liczbę.
+      progress: sql<string>`coalesce(${goals.startAmount}, 0) + ${settledPaid}`,
+    })
+    .from(monthGoals)
+    .innerJoin(goals, eq(goals.id, monthGoals.goalId))
+    .innerJoin(sources, eq(sources.id, monthGoals.sourceId))
+    .where(eq(monthGoals.monthId, monthId))
+    .orderBy(asc(goals.position), asc(goals.id));
+  return rows.map((row) => ({ ...row, progress: Number(row.progress) }));
 }
 
 /**

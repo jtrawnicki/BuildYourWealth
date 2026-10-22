@@ -1,0 +1,278 @@
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lead {
+  margin: 0;
+  font-family: var(--font-sora), sans-serif;
+  font-size: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -1px;
+  max-width: 820px;
+}
+
+.leadSet {
+  color: var(--accent);
+}
+
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar {
+  display: flex;
+  height: 56px;
+  gap: 4px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.segment {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+}
+
+.segSavings {
+  background: var(--save);
+  color: var(--on-save);
+}
+
+.segInvestments {
+  background: var(--invest);
+  color: var(--on-invest);
+}
+
+.segSpend {
+  background: var(--spend);
+  color: var(--text);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  font-size: 0.9375rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+
+.transfers {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.transfersHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.transfersTitle {
+  margin: 0;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.transfersHint {
+  font-size: 0.9375rem;
+  color: var(--muted);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 24px 16px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0 12px;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+
+.cardDot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+.cardTotal {
+  font-weight: 700;
+  font-size: 1.0625rem;
+  white-space: nowrap;
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.itemMain {
+  flex-grow: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pct {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.pctSavings {
+  background: var(--save-soft);
+  color: var(--save-ink);
+}
+
+.pctInvestments {
+  background: var(--invest-soft);
+  color: var(--invest-ink);
+}
+
+.itemName {
+  font-weight: 600;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.itemSource {
+  font-size: 0.875rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.track {
+  flex-grow: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.fill {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.fillSavings {
+  background: var(--save);
+}
+
+.fillInvestments {
+  background: var(--invest);
+}
+
+.progressLabel {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.reached {
+  padding-top: 4px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--ok-text);
+}
+
+.actual {
+  padding-top: 4px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.itemAmount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.amount {
+  font-family: var(--font-sora), sans-serif;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.eur {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.rateLink {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent);
+}

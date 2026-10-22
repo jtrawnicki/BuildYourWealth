@@ -2,7 +2,14 @@ import { test as base, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
 import { SESSION_COOKIE } from "@/auth/constants";
 import { getDb } from "@/db/client";
-import { goals, incomes, months, settings, sources } from "@/db/schema";
+import {
+  goals,
+  incomes,
+  monthGoals,
+  months,
+  settings,
+  sources,
+} from "@/db/schema";
 import {
   TEST_EMAIL,
   createSessionToken,
@@ -33,12 +40,20 @@ export type Seed = {
   addMonth(input: MonthInput): Promise<number>;
 };
 
+/**
+ * Migawka celu w miesiącu (`month_goals`): pulę, procent i źródło kopiujemy
+ * z żywego celu, a `actualAmount` to faktyczna wpłata rozliczonego miesiąca.
+ */
+type SnapshotInput = { goalId: number; actualAmount?: number };
+
 type MonthInput = {
   month: string;
   settled?: boolean;
   savingsPct?: number;
   investmentsPct?: number;
+  settledEurRate?: number;
   incomes?: { name: string; amount: number }[];
+  snapshot?: SnapshotInput[];
 };
 
 type GoalOptions = {
@@ -108,7 +123,9 @@ function makeSeed(userId: number): Seed {
       settled = false,
       savingsPct = 0,
       investmentsPct = 0,
+      settledEurRate,
       incomes: items = [],
+      snapshot = [],
     }) {
       const [row] = await getDb()
         .insert(months)
@@ -118,12 +135,33 @@ function makeSeed(userId: number): Seed {
           savingsPct,
           investmentsPct,
           settledAt: settled ? new Date() : null,
+          settledEurRate: settled ? (settledEurRate ?? null) : null,
         })
         .returning({ id: months.id });
       if (items.length > 0) {
         await getDb()
           .insert(incomes)
           .values(items.map((item) => ({ monthId: row.id, ...item })));
+      }
+      for (const entry of snapshot) {
+        const [goal] = await getDb()
+          .select({
+            pool: goals.pool,
+            pct: goals.pct,
+            sourceId: goals.sourceId,
+          })
+          .from(goals)
+          .where(eq(goals.id, entry.goalId));
+        await getDb()
+          .insert(monthGoals)
+          .values({
+            monthId: row.id,
+            goalId: entry.goalId,
+            pool: goal.pool,
+            pct: goal.pct,
+            sourceId: goal.sourceId,
+            actualAmount: entry.actualAmount ?? null,
+          });
       }
       return row.id;
     },

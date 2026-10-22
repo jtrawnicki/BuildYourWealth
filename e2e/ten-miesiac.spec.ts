@@ -7,7 +7,7 @@ import { MESSAGES } from "@/domain/input";
 import { formatMonthTitle } from "@/domain/month-name";
 import { currentMonth, previousMonth } from "@/domain/time";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
-import { expect, test } from "./fixtures";
+import { expect, test, type Seed } from "./fixtures";
 
 // Kwoty na ekranie mają twarde spacje (SPEC 8); w oczekiwaniach piszemy zwykłe.
 const text = (value: string) => value.replace(/ /g, " ");
@@ -19,8 +19,41 @@ const currentRegion = (page: Page) =>
   page.getByRole("region", { name: formatMonthTitle(current) });
 const previousRegion = (page: Page) =>
   page.getByRole("region", { name: "Poprzedni miesiąc" });
+const planRegion = (page: Page) =>
+  page.getByRole("region", { name: "Plan miesiąca" });
+const wealthRegion = (page: Page) =>
+  page.getByRole("region", { name: "Majątek", exact: true });
+const card = (page: Page, title: string) =>
+  page.getByRole("region", { name: title, exact: true });
 const item = (region: Locator, name: string) =>
   region.getByRole("listitem", { name, exact: true });
+
+/**
+ * Plan ze scenariusza 1: Oszczędności 20% (Poduszka 50%, Wakacje 30%,
+ * Rezerwa 20%), Inwestycje 15% (ETF 60%, Obligacje 25%, Akcje 15%). Zwraca
+ * identyfikatory celów w kolejności dodania dla migawki miesiąca.
+ */
+async function seedScenarioOnePlan(seed: Seed): Promise<number[]> {
+  const savings = await seed.addSource({
+    name: "Konto oszczędnościowe",
+    kind: "savings",
+  });
+  const invest = await seed.addSource({
+    name: "Konto maklerskie",
+    kind: "investments",
+  });
+  await seed.setPools(2000, 1500);
+  // Cele dodajemy po kolei: wszystkie mają pozycję 0, więc o kolejności
+  // wyświetlania decyduje id, a to zależy od kolejności wstawienia.
+  const ids: number[] = [];
+  ids.push(await seed.addGoal(savings, { name: "Poduszka", pct: 5000 }));
+  ids.push(await seed.addGoal(savings, { name: "Wakacje", pct: 3000 }));
+  ids.push(await seed.addGoal(savings, { name: "Rezerwa", pct: 2000 }));
+  ids.push(await seed.addGoal(invest, { name: "ETF globalny", pct: 6000 }));
+  ids.push(await seed.addGoal(invest, { name: "Obligacje", pct: 2500 }));
+  ids.push(await seed.addGoal(invest, { name: "Akcje", pct: 1500 }));
+  return ids;
+}
 
 async function submit(button: Locator) {
   await Promise.all([
@@ -207,22 +240,274 @@ test("przy błędzie zapisu widać komunikat, a wpis zostaje (SPEC 7)", async ({
   );
 });
 
+test("plan miesiąca pokazuje pule, karty i do wydania (makieta B1, scen. 1)", async ({
+  page,
+  seed,
+}) => {
+  const goalIds = await seedScenarioOnePlan(seed);
+  await seed.addMonth({
+    month: current,
+    savingsPct: 2000,
+    investmentsPct: 1500,
+    incomes: [
+      { name: "Pensja", amount: 850000 },
+      { name: "Premia", amount: 130000 },
+    ],
+    snapshot: goalIds.map((goalId) => ({ goalId })),
+  });
+  await page.goto("/");
+
+  const plan = planRegion(page);
+  await expect(plan).toContainText(text("odkładasz 3 430,00 zł"));
+  await expect(plan).toContainText(text("do wydania zostaje 6 370,00 zł"));
+
+  const savings = card(page, "Oszczędności");
+  await expect(savings).toContainText(text("1 960,00 zł"));
+  await expect(item(savings, "Poduszka")).toContainText(text("980,00 zł"));
+  await expect(item(savings, "Wakacje")).toContainText(text("588,00 zł"));
+  await expect(item(savings, "Rezerwa")).toContainText(text("392,00 zł"));
+
+  const invest = card(page, "Inwestycje");
+  await expect(invest).toContainText(text("1 470,00 zł"));
+  await expect(item(invest, "ETF globalny")).toContainText(text("882,00 zł"));
+  await expect(item(invest, "Obligacje")).toContainText(text("367,50 zł"));
+  await expect(item(invest, "Akcje")).toContainText(text("220,50 zł"));
+});
+
+test("reszta z zaokrągleń trafia do do wydania (scen. 14)", async ({
+  page,
+  seed,
+}) => {
+  const goalIds = await seedScenarioOnePlan(seed);
+  await seed.addMonth({
+    month: current,
+    savingsPct: 2000,
+    investmentsPct: 1500,
+    incomes: [{ name: "Pensja", amount: 965000 }],
+    snapshot: goalIds.map((goalId) => ({ goalId })),
+  });
+  await page.goto("/");
+
+  const plan = planRegion(page);
+  await expect(card(page, "Oszczędności")).toContainText(text("1 930,00 zł"));
+  await expect(card(page, "Inwestycje")).toContainText(text("1 447,49 zł"));
+  await expect(plan).toContainText(text("do wydania zostaje 6 272,51 zł"));
+});
+
+test("cel z osiągniętą kwotą docelową pokazuje osiągnięty, a plan dalej liczy wpłatę (scen. 10)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({
+    name: "Konto celowe",
+    kind: "savings",
+  });
+  await seed.setPools(2000, 0);
+  const goalId = await seed.addGoal(source, {
+    name: "Wakacje",
+    pct: 10000,
+    targetAmount: 500000,
+  });
+  // Rozliczony wrzesień wpłacił całą kwotę docelową na cel.
+  await seed.addMonth({
+    month: previous,
+    settled: true,
+    savingsPct: 2000,
+    snapshot: [{ goalId, actualAmount: 500000 }],
+  });
+  await seed.addMonth({
+    month: current,
+    savingsPct: 2000,
+    incomes: [{ name: "Pensja", amount: 850000 }],
+    snapshot: [{ goalId }],
+  });
+  await page.goto("/");
+
+  const row = item(card(page, "Oszczędności"), "Wakacje");
+  await expect(row).toContainText("osiągnięty");
+  await expect(row).not.toContainText("/");
+  // Pula 20% z 8 500 zł, cel 100% → nadal planuje 1 700,00 zł.
+  await expect(row).toContainText(text("1 700,00 zł"));
+});
+
+test("cel bez osiągnięcia pokazuje postęp z rozliczonych wpłat (scen. 11)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({
+    name: "Konto celowe",
+    kind: "savings",
+  });
+  await seed.setPools(2000, 0);
+  const goalId = await seed.addGoal(source, {
+    name: "Wakacje",
+    pct: 10000,
+    targetAmount: 500000,
+    startAmount: 200000,
+  });
+  await seed.addMonth({
+    month: previous,
+    settled: true,
+    savingsPct: 2000,
+    snapshot: [{ goalId, actualAmount: 58800 }],
+  });
+  await seed.addMonth({
+    month: current,
+    savingsPct: 2000,
+    incomes: [{ name: "Pensja", amount: 850000 }],
+    snapshot: [{ goalId }],
+  });
+  await page.goto("/");
+
+  // 200 000 start + 58 800 wpłata = 258 800 groszy → 2 588 / 5 000 zł.
+  await expect(item(card(page, "Oszczędności"), "Wakacje")).toContainText(
+    text("2 588 / 5 000 zł"),
+  );
+});
+
+test("cel w EUR ma drugą linię kwoty, a bez kursu link do ustawień (SPEC 5.4)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({
+    name: "Konto maklerskie EUR",
+    kind: "investments",
+    currency: "EUR",
+  });
+  await seed.setPools(0, 1500);
+  const goalId = await seed.addGoal(source, { name: "Akcje", pct: 10000 });
+  await seed.addMonth({
+    month: current,
+    investmentsPct: 1500,
+    incomes: [{ name: "Pensja", amount: 980000 }],
+    snapshot: [{ goalId }],
+  });
+
+  // Bez kursu: zamiast kwoty EUR link „Ustaw kurs EUR".
+  await page.goto("/");
+  const row = item(card(page, "Inwestycje"), "Akcje");
+  await expect(row.getByRole("link", { name: "Ustaw kurs EUR" })).toBeVisible();
+
+  // Z kursem 4,3000: 1 470,00 zł ≈ 341,86 €.
+  await seed.setEurRate(43000);
+  await page.reload();
+  await expect(item(card(page, "Inwestycje"), "Akcje")).toContainText(
+    text("≈ 341,86 €"),
+  );
+});
+
+test("pasek majątku pokazuje sumę i liczbę źródeł, a bez kursu prosi o kurs (scen. 16, SPEC 7)", async ({
+  page,
+  seed,
+}) => {
+  await seed.addSource({ name: "Konto", kind: "savings", value: 1000000 });
+  await seed.addSource({ name: "Lokata", kind: "savings", value: 42380000 });
+  await page.goto("/");
+  await expect(wealthRegion(page)).toContainText("2 źródła");
+  await expect(wealthRegion(page)).toContainText(text("433 800,00 zł"));
+
+  // Dodanie źródła EUR bez kursu: pasek prosi o kurs zamiast sumy.
+  await seed.addSource({
+    name: "Konto EUR",
+    kind: "investments",
+    currency: "EUR",
+    value: 100000,
+  });
+  await page.reload();
+  await expect(wealthRegion(page)).toContainText("3 źródła");
+  await expect(
+    wealthRegion(page).getByRole("link", { name: "Ustaw kurs EUR" }),
+  ).toBeVisible();
+  await expect(wealthRegion(page)).not.toContainText("zł");
+});
+
+test("rozliczony miesiąc pokazuje kwoty faktyczne jako główne, plan niżej (SPEC 5.4)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({ name: "Konto", kind: "savings" });
+  await seed.setPools(2000, 0);
+  const goalId = await seed.addGoal(source, { name: "Poduszka", pct: 10000 });
+  await seed.addMonth({
+    month: current,
+    settled: true,
+    savingsPct: 2000,
+    incomes: [{ name: "Pensja", amount: 850000 }],
+    snapshot: [{ goalId, actualAmount: 150000 }],
+  });
+  await page.goto("/");
+
+  await expect(currentRegion(page)).toContainText("Miesiąc rozliczony");
+
+  // Główna liczba celu i suma puli to wykonanie (1 500,00 zł), plan w drugiej linii.
+  const savings = card(page, "Oszczędności");
+  await expect(savings).toContainText(text("1 500,00 zł"));
+  const row = item(savings, "Poduszka");
+  await expect(row).toContainText(text("1 500,00 zł"));
+  await expect(row).toContainText("plan:");
+  await expect(row).toContainText(text("1 700,00 zł"));
+
+  // Zdanie z faktycznymi kwotami w czasie przeszłym, bez zapowiedzi rozliczenia.
+  const plan = planRegion(page);
+  await expect(plan).toContainText(text("odłożono 1 500,00 zł"));
+  await expect(plan).toContainText(text("zostało 7 000,00 zł"));
+  await expect(plan).not.toContainText("odkładasz");
+  await expect(plan).not.toContainText("potwierdzisz");
+});
+
+test("rozliczony miesiąc z celem EUR: wpłata w EUR z przelicznikiem i suma w PLN (SPEC 5.4, 6.8)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({
+    name: "Konto EUR",
+    kind: "investments",
+    currency: "EUR",
+  });
+  await seed.setPools(0, 1500);
+  const goalId = await seed.addGoal(source, { name: "Akcje", pct: 10000 });
+  // Kurs rozliczenia 4,3000: wpłata 90,00 € = 387,00 zł.
+  await seed.addMonth({
+    month: current,
+    settled: true,
+    investmentsPct: 1500,
+    settledEurRate: 43000,
+    incomes: [{ name: "Pensja", amount: 980000 }],
+    snapshot: [{ goalId, actualAmount: 9000 }],
+  });
+  await page.goto("/");
+
+  const row = item(card(page, "Inwestycje"), "Akcje");
+  await expect(row).toContainText(text("90,00 €"));
+  await expect(row).toContainText(text("387,00 zł"));
+  // Suma puli i zdanie liczą się z wpłaty przeliczonej kursem rozliczenia.
+  await expect(card(page, "Inwestycje")).toContainText(text("387,00 zł"));
+  await expect(planRegion(page)).toContainText(text("odłożono 387,00 zł"));
+});
+
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`360 px, motyw ${colorScheme}`, () => {
     test.use({ viewport: { width: 360, height: 740 }, colorScheme });
 
-    test("Ten miesiąc bez przewijania w poziomie", async ({ page, seed }) => {
+    test("Ten miesiąc z planem bez przewijania w poziomie", async ({
+      page,
+      seed,
+    }) => {
+      const goalIds = await seedScenarioOnePlan(seed);
       await seed.addMonth({
         month: current,
         savingsPct: 2000,
+        investmentsPct: 1500,
         incomes: [
           {
             name: "Wynagrodzenie z bardzo długą nazwą pozycji",
             amount: 850000,
           },
         ],
+        snapshot: goalIds.map((goalId) => ({ goalId })),
       });
       await page.goto("/");
+      await expect(planRegion(page)).toBeVisible();
       await page.getByRole("button", { name: "Edytuj" }).first().click();
       await expect(
         page.getByRole("button", { name: "Zapisz zmiany" }),
