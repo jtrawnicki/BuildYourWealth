@@ -312,6 +312,50 @@ describe("jednorazowość i współbieżność (SPEC 5.5, scen. 15)", () => {
     }
     expect(await sourceValue(src.poduszka)).toBe(98000);
   });
+
+  it("równoległe rozliczenie blokuje dopisanie przychodu do miesiąca", async () => {
+    await seedScenario1();
+    const client = await getPool().connect();
+    try {
+      await client.query("begin");
+      // Rozliczenie (inne połączenie) trzyma blokadę wiersza miesiąca.
+      await client.query(
+        `select id from months where user_id = $1 and month = '2026-10' for update`,
+        [userId],
+      );
+      const concurrent = addIncome(
+        getDb(),
+        userId,
+        "2026-10",
+        { name: "Spóźniony", amount: 10000 },
+        NOW,
+      );
+      // addIncome musi poczekać na blokadę wiersza miesiąca (nowy `for update`).
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const { rows } = await getPool().query(
+          `select 1 from pg_stat_activity
+           where datname = current_database() and wait_event_type = 'Lock'`,
+        );
+        if (rows.length > 0) break;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      // Rozliczenie commituje: miesiąc staje się rozliczony.
+      await client.query(
+        `update months set settled_at = now() where user_id = $1 and month = '2026-10'`,
+        [userId],
+      );
+      await client.query("commit");
+      // Po odblokowaniu addIncome widzi rozliczony miesiąc i odmawia.
+      expect(await concurrent).toEqual({ status: "settled" });
+    } finally {
+      client.release();
+    }
+    // Spóźniony przychód nie trafił do rozliczonego miesiąca.
+    const month = await getMonth(getDb(), userId, "2026-10");
+    expect(month?.incomes.some((item) => item.name === "Spóźniony")).toBe(
+      false,
+    );
+  });
 });
 
 describe("miesiąc nieistniejący", () => {
