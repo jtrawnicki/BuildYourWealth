@@ -26,10 +26,7 @@ async function addGoal(
     .selectOption({ label: fields.source });
   await section.getByLabel("% puli").nth(index).fill(fields.pct);
   if (fields.target !== undefined) {
-    await section
-      .getByLabel("Kwota docelowa")
-      .nth(index)
-      .fill(fields.target);
+    await section.getByLabel("Kwota docelowa").nth(index).fill(fields.target);
   }
 }
 
