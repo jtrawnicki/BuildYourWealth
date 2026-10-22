@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
 import { getMonth, getMonthSnapshot, type MonthData } from "@/db/months";
@@ -18,7 +19,7 @@ import {
 import { formatMonthTitle, monthGenitive } from "@/domain/month-name";
 import { computeMonthPlan, type Pool } from "@/domain/plan";
 import { isGoalReached } from "@/domain/progress";
-import { currentMonth, previousMonth } from "@/domain/time";
+import { canSettleMonth, currentMonth, previousMonth } from "@/domain/time";
 import { AddIncomeForm } from "./AddIncomeForm";
 import { IncomeItem, type IncomeView } from "./IncomeItem";
 import {
@@ -53,12 +54,21 @@ export default async function Home() {
     ? await buildPlanView(db, currentData, eurRate)
     : null;
 
+  // Rozliczenie bieżącego miesiąca jest dostępne od jego ostatniego dnia
+  // (SPEC 5.5). Zaległe miesiące dostają osobne pigułki w T13.
+  const canSettle =
+    hasIncome && !currentData.settled && canSettleMonth(current, now());
+
   const wealthView = buildWealthView(sources, eurRate);
 
   return (
     <>
       <h1 className={styles.title}>Ten miesiąc</h1>
-      <CurrentMonth month={current} data={currentData} />
+      <CurrentMonth
+        month={current}
+        data={currentData}
+        settleHref={canSettle ? `/rozliczenie/${current}` : null}
+      />
       {planView !== null && <MonthPlan view={planView} />}
       {previousData === null && <PreviousMonth month={previous} />}
       <WealthBar view={wealthView} />
@@ -295,9 +305,11 @@ function formatAmountField(amount: number): string {
 function CurrentMonth({
   month,
   data,
+  settleHref,
 }: {
   month: string;
   data: MonthData | null;
+  settleHref: string | null;
 }) {
   const title = formatMonthTitle(month);
   const settled = data?.settled ?? false;
@@ -338,6 +350,11 @@ function CurrentMonth({
         </ul>
       )}
       {!settled && <AddIncomeForm key="add-income" month={month} />}
+      {settleHref !== null && (
+        <Link href={settleHref} className={styles.settleLink}>
+          Rozlicz miesiąc
+        </Link>
+      )}
     </section>
   );
 }

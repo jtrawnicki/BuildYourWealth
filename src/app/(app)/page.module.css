@@ -224,3 +224,20 @@
   font-size: 0.875rem;
   font-weight: 600;
 }
+
+.settleLink {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.settleLink:hover {
+  opacity: 0.9;
+}
