@@ -23,6 +23,9 @@ export async function resetDatabase(): Promise<void> {
     sql`drop trigger if exists e2e_fail_sources on sources`,
   );
   await getDb().execute(
+    sql`drop trigger if exists e2e_fail_incomes on incomes`,
+  );
+  await getDb().execute(
     sql`truncate table users, sessions, settings, sources, goals, months, month_goals, incomes, login_attempts restart identity cascade`,
   );
 }

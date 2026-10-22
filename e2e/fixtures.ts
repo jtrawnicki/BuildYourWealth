@@ -2,7 +2,7 @@ import { test as base, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
 import { SESSION_COOKIE } from "@/auth/constants";
 import { getDb } from "@/db/client";
-import { goals, settings, sources } from "@/db/schema";
+import { goals, incomes, months, settings, sources } from "@/db/schema";
 import {
   TEST_EMAIL,
   createSessionToken,
@@ -29,6 +29,16 @@ export type Seed = {
   /** Ustawia procenty pul w bieżącym planie (w setnych procenta). */
   setPools(savingsPct: number, investmentsPct: number): Promise<void>;
   setEurRate(rate: number): Promise<void>;
+  /** Miesiąc z pozycjami przychodu; `settled` oznacza rozliczony (SPEC 5.4). */
+  addMonth(input: MonthInput): Promise<number>;
+};
+
+type MonthInput = {
+  month: string;
+  settled?: boolean;
+  savingsPct?: number;
+  investmentsPct?: number;
+  incomes?: { name: string; amount: number }[];
 };
 
 type GoalOptions = {
@@ -92,6 +102,30 @@ function makeSeed(userId: number): Seed {
         .update(settings)
         .set({ eurRate: rate })
         .where(eq(settings.userId, userId));
+    },
+    async addMonth({
+      month,
+      settled = false,
+      savingsPct = 0,
+      investmentsPct = 0,
+      incomes: items = [],
+    }) {
+      const [row] = await getDb()
+        .insert(months)
+        .values({
+          userId,
+          month,
+          savingsPct,
+          investmentsPct,
+          settledAt: settled ? new Date() : null,
+        })
+        .returning({ id: months.id });
+      if (items.length > 0) {
+        await getDb()
+          .insert(incomes)
+          .values(items.map((item) => ({ monthId: row.id, ...item })));
+      }
+      return row.id;
     },
   };
 }
