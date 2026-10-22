@@ -23,10 +23,19 @@ export type Seed = {
   addSource(input: SourceInput): Promise<number>;
   countSources(): Promise<number>;
   /** Cel bieżącego planu połączony ze źródłem (bez walidacji planu). */
-  addGoal(sourceId: number): Promise<number>;
+  addGoal(sourceId: number, options?: GoalOptions): Promise<number>;
   /** Usuwa cel z planu (miękko, jak SPEC 5.3). */
   removeGoal(goalId: number): Promise<void>;
+  /** Ustawia procenty pul w bieżącym planie (w setnych procenta). */
+  setPools(savingsPct: number, investmentsPct: number): Promise<void>;
   setEurRate(rate: number): Promise<void>;
+};
+
+type GoalOptions = {
+  name?: string;
+  pct?: number;
+  targetAmount?: number;
+  startAmount?: number;
 };
 
 function makeSeed(userId: number): Seed {
@@ -46,7 +55,7 @@ function makeSeed(userId: number): Seed {
         .where(eq(sources.userId, userId));
       return rows.length;
     },
-    async addGoal(sourceId) {
+    async addGoal(sourceId, options = {}) {
       const [source] = await getDb()
         .select({ kind: sources.kind })
         .from(sources)
@@ -56,9 +65,11 @@ function makeSeed(userId: number): Seed {
         .values({
           userId,
           pool: source.kind,
-          name: "Cel testowy",
-          pct: 10000,
+          name: options.name ?? "Cel testowy",
+          pct: options.pct ?? 10000,
           sourceId,
+          targetAmount: options.targetAmount ?? null,
+          startAmount: options.startAmount ?? null,
           position: 0,
         })
         .returning({ id: goals.id });
@@ -69,6 +80,12 @@ function makeSeed(userId: number): Seed {
         .update(goals)
         .set({ removedAt: new Date() })
         .where(eq(goals.id, goalId));
+    },
+    async setPools(savingsPct, investmentsPct) {
+      await getDb()
+        .update(settings)
+        .set({ savingsPct, investmentsPct })
+        .where(eq(settings.userId, userId));
     },
     async setEurRate(rate) {
       await getDb()

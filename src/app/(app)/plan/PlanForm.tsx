@@ -1,0 +1,558 @@
+"use client";
+
+import Link from "next/link";
+import { useActionState, useEffect, useRef, useState } from "react";
+import type { PlanData, PlanSource } from "@/db/plan";
+import { formatAmount, formatPercent } from "@/domain/format";
+import {
+  parseGoalPercent,
+  parseName,
+  parseOptionalAmount,
+  parsePoolPercent,
+} from "@/domain/input";
+import { validatePlan, type Pool } from "@/domain/plan";
+import { SaveError } from "@/ui/SaveError";
+import { savePlanAction } from "./actions";
+import type { GoalDraft, PlanState } from "./state";
+import styles from "./page.module.css";
+
+const FULL = 10_000;
+
+const POOLS: { pool: Pool; title: string; dot: string }[] = [
+  { pool: "savings", title: "Oszczędności", dot: styles.dotSave },
+  { pool: "investments", title: "Inwestycje", dot: styles.dotInvest },
+];
+
+type Row = GoalDraft & { key: string };
+
+type FormValues = {
+  savingsPct: string;
+  investmentsPct: string;
+  rows: Row[];
+};
+
+/** Procent bez znaku `%` do pola tekstowego: `2000` → `20`, `3333` → `33,33`. */
+const pctField = (hundredths: number) =>
+  formatPercent(hundredths).replace("%", "");
+const amountField = (minor: number | null) =>
+  minor === null ? "" : formatAmount(minor);
+
+function toForm(data: PlanData): FormValues {
+  return {
+    savingsPct: pctField(data.savingsPct),
+    investmentsPct: pctField(data.investmentsPct),
+    rows: data.goals.map((goal) => ({
+      key: `g-${goal.id}`,
+      id: goal.id,
+      pool: goal.pool,
+      name: goal.name,
+      pct: pctField(goal.pct),
+      sourceId: String(goal.sourceId),
+      target: amountField(goal.targetAmount),
+      start: amountField(goal.startAmount),
+    })),
+  };
+}
+
+/** Lock waluty źródła celu (SPEC 6.9): persystentna waluta i rozliczone wpłaty. */
+type Lock = { currency: "PLN" | "EUR"; hasSettled: boolean };
+
+type GoalErrors = {
+  name?: string;
+  pct?: string;
+  source?: string;
+  target?: string;
+  start?: string;
+};
+
+type Validation = {
+  savings: number | null;
+  investments: number | null;
+  poolErrors: { savings?: string; investments?: string; poolsSum?: string };
+  poolStatus: Record<Pool, { ok: boolean; text: string }>;
+  goalErrors: Record<string, GoalErrors>;
+  canSave: boolean;
+};
+
+function validate(form: FormValues): Validation {
+  const savings = parsePoolPercent(form.savingsPct);
+  const investments = parsePoolPercent(form.investmentsPct);
+  const poolErrors: Validation["poolErrors"] = {};
+  if (!savings.ok) poolErrors.savings = savings.error;
+  if (!investments.ok) poolErrors.investments = investments.error;
+
+  const goalErrors: Record<string, GoalErrors> = {};
+  let allGoalsOk = true;
+  const parsedPct = new Map<string, number>();
+  for (const row of form.rows) {
+    const errors: GoalErrors = {};
+    const name = parseName(row.name);
+    const pct = parseGoalPercent(row.pct);
+    const target = parseOptionalAmount(row.target);
+    const start = parseOptionalAmount(row.start);
+    if (!name.ok) errors.name = name.error;
+    if (!pct.ok) errors.pct = pct.error;
+    else parsedPct.set(row.key, pct.value);
+    if (!target.ok) errors.target = target.error;
+    if (!start.ok) errors.start = start.error;
+    if (row.sourceId === "") errors.source = "Wybierz źródło celu.";
+    if (Object.keys(errors).length > 0) {
+      goalErrors[row.key] = errors;
+      allGoalsOk = false;
+    }
+  }
+
+  // Reguły sumy (SPEC 7.1) tylko, gdy procenty dają się policzyć; inaczej pola
+  // mają już własne błędy i zapis i tak jest zablokowany.
+  const canRunPlan =
+    savings.ok &&
+    investments.ok &&
+    form.rows.every((r) => parsedPct.has(r.key));
+  const issues = canRunPlan
+    ? validatePlan({
+        savingsPct: savings.value,
+        investmentsPct: investments.value,
+        goals: form.rows.map((r) => ({
+          pool: r.pool,
+          pct: parsedPct.get(r.key)!,
+        })),
+      })
+    : [];
+  for (const issue of issues) {
+    if (issue.target === "pools") poolErrors.poolsSum = issue.message;
+  }
+
+  const poolStatus = {} as Record<Pool, { ok: boolean; text: string }>;
+  for (const { pool } of POOLS) {
+    const rows = form.rows.filter((r) => r.pool === pool);
+    const poolPct = pool === "savings" ? savings : investments;
+    const issue = issues.find((i) => i.target === pool);
+    if (issue) {
+      poolStatus[pool] = { ok: false, text: issue.message };
+    } else if (rows.length === 0 && poolPct.ok && poolPct.value === 0) {
+      poolStatus[pool] = { ok: true, text: "Bez celów" };
+    } else if (rows.every((r) => parsedPct.has(r.key))) {
+      const sum = rows.reduce((s, r) => s + parsedPct.get(r.key)!, 0);
+      poolStatus[pool] = {
+        ok: true,
+        text: `Suma celów: ${formatPercent(sum)}`,
+      };
+    } else {
+      poolStatus[pool] = { ok: false, text: "Popraw procenty celów" };
+    }
+  }
+
+  const canSave =
+    savings.ok &&
+    investments.ok &&
+    allGoalsOk &&
+    poolErrors.poolsSum === undefined &&
+    issues.length === 0;
+
+  return {
+    savings: savings.ok ? savings.value : null,
+    investments: investments.ok ? investments.value : null,
+    poolErrors,
+    poolStatus,
+    goalErrors,
+    canSave,
+  };
+}
+
+function SplitBar({
+  savings,
+  investments,
+}: {
+  savings: number;
+  investments: number;
+}) {
+  const s = Math.max(0, Math.min(100, savings / 100));
+  const i = Math.max(0, Math.min(100 - s, investments / 100));
+  const spend = Math.max(0, 100 - s - i);
+  return (
+    <div className={styles.bar} aria-hidden="true">
+      <span className={styles.barSave} style={{ width: `${s}%` }} />
+      <span className={styles.barInvest} style={{ width: `${i}%` }} />
+      <span className={styles.barSpend} style={{ width: `${spend}%` }} />
+    </div>
+  );
+}
+
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+  inputMode,
+  placeholder,
+  className,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  hint?: string;
+  inputMode?: "decimal";
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`${styles.field} ${className ?? ""}`}>
+      <label htmlFor={id} className={styles.fieldLabel}>
+        {label}
+      </label>
+      <input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        autoComplete="off"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={styles.input}
+      />
+      {hint && <span className={styles.hint}>{hint}</span>}
+      {error && (
+        <p id={`${id}-error`} className={styles.fieldError}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function GoalRow({
+  row,
+  sources,
+  lock,
+  errors,
+  onChange,
+  onRemove,
+}: {
+  row: Row;
+  sources: PlanSource[];
+  lock: Lock | undefined;
+  errors: GoalErrors | undefined;
+  onChange: (patch: Partial<GoalDraft>) => void;
+  onRemove: () => void;
+}) {
+  const id = `goal-${row.key}`;
+  // Zablokowana zmiana waluty (SPEC 6.9): pokazujemy tylko źródła tej samej waluty.
+  const locked =
+    lock !== undefined &&
+    (lock.hasSettled || row.target.trim() !== "" || row.start.trim() !== "");
+  const options = sources.filter(
+    (source) =>
+      source.kind === row.pool &&
+      (!locked || source.currency === lock!.currency),
+  );
+  const label = row.name.trim() === "" ? "bez nazwy" : row.name.trim();
+
+  return (
+    <div className={styles.goal} aria-label={`Cel: ${label}`}>
+      <Field
+        id={`${id}-name`}
+        label="Nazwa celu"
+        value={row.name}
+        onChange={(name) => onChange({ name })}
+        error={errors?.name}
+        className={styles.goalName}
+      />
+      <div className={`${styles.field} ${styles.goalSource}`}>
+        <label htmlFor={`${id}-source`} className={styles.fieldLabel}>
+          Źródło
+        </label>
+        <select
+          id={`${id}-source`}
+          value={row.sourceId}
+          onChange={(event) => onChange({ sourceId: event.target.value })}
+          aria-invalid={errors?.source ? true : undefined}
+          aria-describedby={errors?.source ? `${id}-source-error` : undefined}
+          className={styles.input}
+        >
+          <option value="">Wybierz źródło…</option>
+          {options.map((source) => (
+            <option key={source.id} value={String(source.id)}>
+              {source.name} ({source.currency})
+            </option>
+          ))}
+        </select>
+        {locked && (
+          <span className={styles.hint}>
+            Waluty nie można zmienić, bo cel ma kwotę docelową, startową albo
+            rozliczone wpłaty.
+          </span>
+        )}
+        {errors?.source && (
+          <p id={`${id}-source-error`} className={styles.fieldError}>
+            {errors.source}
+          </p>
+        )}
+      </div>
+      <Field
+        id={`${id}-pct`}
+        label="% puli"
+        value={row.pct}
+        onChange={(pct) => onChange({ pct })}
+        error={errors?.pct}
+        inputMode="decimal"
+        className={styles.goalPct}
+      />
+      <Field
+        id={`${id}-target`}
+        label="Kwota docelowa (opcjonalnie)"
+        value={row.target}
+        onChange={(target) => onChange({ target })}
+        error={errors?.target}
+        placeholder="brak"
+        inputMode="decimal"
+        className={styles.goalAmount}
+      />
+      <Field
+        id={`${id}-start`}
+        label="Już uzbierane (opcjonalnie)"
+        value={row.start}
+        onChange={(start) => onChange({ start })}
+        error={errors?.start}
+        placeholder="0,00"
+        inputMode="decimal"
+        className={styles.goalAmount}
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Usuń cel ${label}`}
+        className={styles.remove}
+      >
+        Usuń
+      </button>
+    </div>
+  );
+}
+
+export function PlanForm({
+  initial,
+  sources,
+}: {
+  initial: PlanData;
+  sources: PlanSource[];
+}) {
+  const [form, setForm] = useState<FormValues>(() => toForm(initial));
+  const nextKey = useRef(0);
+
+  // Po udanym zapisie serwer odświeża stronę i przysyła nowe dane (nowe id
+  // celów); przestawiamy formularz na nie, żeby ponowny zapis aktualizował
+  // cele, a nie tworzył ich drugi raz.
+  const signature = JSON.stringify(initial);
+  const lastSignature = useRef(signature);
+  useEffect(() => {
+    if (lastSignature.current !== signature) {
+      lastSignature.current = signature;
+      setForm(toForm(initial));
+    }
+  }, [signature, initial]);
+
+  const [state, formAction, pending] = useActionState(savePlanAction, {
+    saved: false,
+  } satisfies PlanState);
+
+  const locks = new Map<number, Lock>();
+  for (const goal of initial.goals) {
+    locks.set(goal.id, {
+      currency: goal.currency,
+      hasSettled: goal.hasSettled,
+    });
+  }
+
+  const v = validate(form);
+
+  const setPool = (pool: Pool, value: string) =>
+    setForm((f) =>
+      pool === "savings"
+        ? { ...f, savingsPct: value }
+        : { ...f, investmentsPct: value },
+    );
+  const addGoal = (pool: Pool) =>
+    setForm((f) => {
+      const first = sources.find((s) => s.kind === pool);
+      return {
+        ...f,
+        rows: [
+          ...f.rows,
+          {
+            key: `n-${nextKey.current++}`,
+            id: null,
+            pool,
+            name: "",
+            pct: "",
+            sourceId: first ? String(first.id) : "",
+            target: "",
+            start: "",
+          },
+        ],
+      };
+    });
+  const changeGoal = (key: string, patch: Partial<GoalDraft>) =>
+    setForm((f) => ({
+      ...f,
+      rows: f.rows.map((r) => (r.key === key ? { ...r, ...patch } : r)),
+    }));
+  const removeGoal = (key: string) =>
+    setForm((f) => ({ ...f, rows: f.rows.filter((r) => r.key !== key) }));
+
+  const payload = JSON.stringify({
+    savingsPct: form.savingsPct,
+    investmentsPct: form.investmentsPct,
+    goals: form.rows.map((r) => ({
+      id: r.id,
+      pool: r.pool,
+      name: r.name,
+      pct: r.pct,
+      sourceId: r.sourceId,
+      target: r.target,
+      start: r.start,
+    })),
+  });
+
+  const totalPools =
+    v.savings !== null && v.investments !== null
+      ? v.savings + v.investments
+      : null;
+
+  return (
+    <form action={formAction} className={styles.form} noValidate>
+      <section className={styles.intro}>
+        <h1 className={styles.title}>Plan podziału</h1>
+        {totalPools !== null && totalPools <= FULL ? (
+          <p className={styles.sentence}>
+            Odkładasz <strong>{formatPercent(totalPools)} przychodu</strong>:{" "}
+            {formatPercent(v.savings!)} na oszczędności i{" "}
+            {formatPercent(v.investments!)} na inwestycje. Do wydania zostaje{" "}
+            {formatPercent(FULL - totalPools)}.
+          </p>
+        ) : (
+          <p className={styles.sentence}>
+            Ustaw procent przychodu dla oszczędności i inwestycji. Razem mogą
+            zająć najwyżej 100%.
+          </p>
+        )}
+        <SplitBar savings={v.savings ?? 0} investments={v.investments ?? 0} />
+        <p role="note" className={styles.infoNote}>
+          Zmiany obowiązują od kolejnego miesiąca, który utworzysz. Istniejące
+          miesiące i historia zachowują swój plan.
+        </p>
+      </section>
+
+      {state.saveFailed && <SaveError />}
+      {state.formError && (
+        <p role="alert" className={styles.formError}>
+          {state.formError}
+        </p>
+      )}
+
+      {POOLS.map(({ pool, title, dot }) => {
+        const rows = form.rows.filter((r) => r.pool === pool);
+        const poolError =
+          pool === "savings" ? v.poolErrors.savings : v.poolErrors.investments;
+        const hasSource = sources.some((s) => s.kind === pool);
+        const status = v.poolStatus[pool];
+        return (
+          <section key={pool} className={styles.card} aria-label={title}>
+            <div className={styles.cardHead}>
+              <h2 className={styles.groupTitle}>
+                <span className={`${styles.dot} ${dot}`} />
+                {title}
+              </h2>
+              <div className={styles.poolPct}>
+                <label htmlFor={`pool-${pool}`} className={styles.fieldLabel}>
+                  Procent przychodu
+                </label>
+                <input
+                  id={`pool-${pool}`}
+                  value={
+                    pool === "savings" ? form.savingsPct : form.investmentsPct
+                  }
+                  onChange={(event) => setPool(pool, event.target.value)}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  aria-invalid={poolError ? true : undefined}
+                  aria-describedby={
+                    poolError ? `pool-${pool}-error` : undefined
+                  }
+                  className={`${styles.input} ${styles.pctInput}`}
+                />
+                <span aria-hidden="true">%</span>
+              </div>
+            </div>
+            {poolError && (
+              <p id={`pool-${pool}-error`} className={styles.fieldError}>
+                {poolError}
+              </p>
+            )}
+
+            {rows.map((row) => (
+              <GoalRow
+                key={row.key}
+                row={row}
+                sources={sources}
+                lock={row.id !== null ? locks.get(row.id) : undefined}
+                errors={v.goalErrors[row.key]}
+                onChange={(patch) => changeGoal(row.key, patch)}
+                onRemove={() => removeGoal(row.key)}
+              />
+            ))}
+
+            <div className={styles.cardFoot}>
+              {hasSource ? (
+                <button
+                  type="button"
+                  onClick={() => addGoal(pool)}
+                  aria-label={`Dodaj cel w puli ${title}`}
+                  className={styles.addGoal}
+                >
+                  + Dodaj cel
+                </button>
+              ) : (
+                <p className={styles.hint}>
+                  Najpierw dodaj źródło tej puli w zakładce{" "}
+                  <Link href="/majatek" className={styles.inlineLink}>
+                    Majątek
+                  </Link>
+                  .
+                </p>
+              )}
+              <span
+                role="status"
+                className={`${styles.chip} ${status.ok ? styles.chipOk : styles.chipBad}`}
+              >
+                {status.text}
+              </span>
+            </div>
+          </section>
+        );
+      })}
+
+      <input type="hidden" name="plan" value={payload} />
+
+      <div className={styles.saveBar}>
+        {!v.canSave && (
+          <span className={styles.saveHint}>Popraw plan, aby zapisać.</span>
+        )}
+        <p role="status" className={styles.saved}>
+          {state.saved && !pending ? "Zapisano plan." : ""}
+        </p>
+        <button
+          type="submit"
+          className={styles.submit}
+          disabled={!v.canSave || pending}
+        >
+          {pending ? "Zapisywanie…" : "Zapisz plan"}
+        </button>
+      </div>
+    </form>
+  );
+}
