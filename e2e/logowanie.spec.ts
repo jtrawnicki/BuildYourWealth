@@ -34,7 +34,9 @@ test("poprawne dane logują i prowadzą na stronę główną", async ({ page }) 
   await page.goto("/logowanie");
   await submitLogin(page, TEST_EMAIL, TEST_PASSWORD);
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText(`Zalogowano jako ${TEST_EMAIL}`)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Ten miesiąc" }),
+  ).toBeVisible();
 });
 
 test("błędne hasło nie zdradza, czy konto istnieje", async ({ page }) => {

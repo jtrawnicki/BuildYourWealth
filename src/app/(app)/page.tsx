@@ -57,47 +57,44 @@ function CurrentMonth({
   data: MonthData | null;
 }) {
   const title = formatMonthTitle(month);
+  const settled = data?.settled ?? false;
+  const incomes = data?.incomes ?? [];
+  const total = incomes.reduce((sum, income) => sum + income.amount, 0);
 
-  if (data === null) {
-    return (
-      <section className={styles.card} aria-labelledby="biezacy">
-        <h2 id="biezacy" className={styles.cardTitle}>
-          {title}
-        </h2>
-        <p className={styles.empty}>Wpisz przychód z {monthGenitive(month)}.</p>
-        <AddIncomeForm month={month} />
-      </section>
-    );
-  }
-
-  const total = data.incomes.reduce((sum, income) => sum + income.amount, 0);
-
+  // Formularz dodawania ma stałą pozycję i `key`, więc przejście pusty →
+  // wypełniony nie odmontowuje go i zachowuje stan (potwierdzenie „Dodano").
   return (
     <section className={styles.card} aria-labelledby="biezacy">
       <div className={styles.cardHead}>
         <h2 id="biezacy" className={styles.cardTitle}>
           {title}
         </h2>
-        <p className={styles.total}>
-          <span className={styles.totalLabel}>Przychód łącznie</span>
-          <span className={styles.totalAmount}>
-            {formatMoney(total, "PLN")}
-          </span>
-        </p>
+        {data !== null && (
+          <p className={styles.total}>
+            <span className={styles.totalLabel}>Przychód łącznie</span>
+            <span className={styles.totalAmount}>
+              {formatMoney(total, "PLN")}
+            </span>
+          </p>
+        )}
       </div>
-      {data.settled && (
+      {settled && (
         <p className={styles.note}>Miesiąc rozliczony — tylko do odczytu.</p>
       )}
-      <ul className={styles.list}>
-        {data.incomes.map((income) => (
-          <IncomeItem
-            key={income.id}
-            income={toView(income)}
-            readOnly={data.settled}
-          />
-        ))}
-      </ul>
-      {!data.settled && <AddIncomeForm month={month} />}
+      {data === null ? (
+        <p className={styles.empty}>Wpisz przychód z {monthGenitive(month)}.</p>
+      ) : (
+        <ul className={styles.list}>
+          {incomes.map((income) => (
+            <IncomeItem
+              key={income.id}
+              income={toView(income)}
+              readOnly={settled}
+            />
+          ))}
+        </ul>
+      )}
+      {!settled && <AddIncomeForm key="add-income" month={month} />}
     </section>
   );
 }

@@ -1,8 +1,12 @@
-import { TEST_EMAIL, expect, test } from "./fixtures";
+import { expect, test } from "./fixtures";
 
-test("fixture loguje użytkownika i pokazuje jego e-mail", async ({ page }) => {
+test("fixture loguje użytkownika i wpuszcza na stronę główną", async ({
+  page,
+}) => {
   await page.goto("/");
-  await expect(page.getByText(`Zalogowano jako ${TEST_EMAIL}`)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Ten miesiąc" }),
+  ).toBeVisible();
 });
 
 test("wylogowanie unieważnia sesję i wraca na logowanie", async ({ page }) => {
