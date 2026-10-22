@@ -28,8 +28,11 @@ for (const colorScheme of ["light", "dark"] as const) {
       );
       expect(overflow).toBe(0);
 
+      // Zakładki szukamy w nawigacji i dokładną nazwą: „Zobacz majątek" w pasku
+      // majątku zawiera „Majątek" i rozjechałby dopasowanie podłańcuchem.
+      const nav = page.getByRole("navigation", { name: "Menu główne" });
       for (const name of TABS) {
-        const link = page.getByRole("link", { name });
+        const link = nav.getByRole("link", { name, exact: true });
         await expect(link).toBeInViewport({ ratio: 1 });
         expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       }
