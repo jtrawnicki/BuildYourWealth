@@ -25,6 +25,9 @@ export function getDb(): NodePgDatabase<typeof schema> {
 
 export type Db = NodePgDatabase<typeof schema>;
 
+/** Transakcja Drizzle: typ argumentu callbacku `db.transaction`. */
+export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
 export async function closePool(): Promise<void> {
   await pool?.end();
   pool = undefined;

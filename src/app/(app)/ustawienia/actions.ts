@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { setEurRate } from "@/db/settings";
 import { parseEurRate } from "@/domain/input";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { field } from "@/app/form-data";
 import type { EurRateState } from "./state";
 
 export async function saveEurRate(
@@ -11,7 +12,7 @@ export async function saveEurRate(
   formData: FormData,
 ): Promise<EurRateState> {
   const user = await requireUser();
-  const input = String(formData.get("eurRate") ?? "");
+  const input = field(formData, "eurRate");
   const rate = parseEurRate(input);
   if (!rate.ok) {
     return { input, fieldError: rate.error };

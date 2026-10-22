@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { canCreateMonth } from "@/domain/time";
-import type { Db } from "./client";
+import type { Db, Tx } from "./client";
 import {
   goals,
   incomes,
@@ -64,8 +64,6 @@ export type DeleteIncomeResult =
   | { status: "ok"; monthRemoved: boolean }
   | { status: "not-found" }
   | { status: "settled" };
-
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /** Miesiąc użytkownika z pozycjami przychodu w kolejności dodania albo `null`. */
 export async function getMonth(

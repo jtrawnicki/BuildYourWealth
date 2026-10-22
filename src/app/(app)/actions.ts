@@ -11,6 +11,7 @@ import {
 import { now } from "@/domain/clock";
 import { parseIncomeAmount, parseName } from "@/domain/input";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { field, readId } from "@/app/form-data";
 import {
   EMPTY_INCOME,
   INCOME_MESSAGES,
@@ -19,18 +20,10 @@ import {
   type IncomeFormValues,
 } from "./state";
 
-const field = (formData: FormData, name: string) =>
-  String(formData.get(name) ?? "");
-
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 function readValues(formData: FormData): IncomeFormValues {
   return { name: field(formData, "name"), amount: field(formData, "amount") };
-}
-
-function readId(formData: FormData): number | null {
-  const id = Number(field(formData, "id"));
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 /** Waliduje nazwę i kwotę przychodu (SPEC 7.1). */

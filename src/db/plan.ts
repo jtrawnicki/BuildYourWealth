@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
-import type { Db } from "./client";
+import type { Db, Tx } from "./client";
 import { goals, months, monthGoals, settings, sources } from "./schema";
 
 export type Pool = "savings" | "investments";
@@ -115,8 +115,6 @@ export type SavePlanResult =
   | { status: "source-missing"; goalName: string }
   | { status: "currency-locked"; goalName: string }
   | { status: "stale" };
-
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 /**
  * Zapisuje cały plan atomowo: procenty pul i cele razem albo nic (SPEC 5.3).

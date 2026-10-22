@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { normalizeEmail } from "@/db/users";
 import { isDemo } from "@/demo/mode";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { field } from "@/app/form-data";
 import type { LoginState } from "./state";
 
 export async function login(
@@ -17,8 +18,8 @@ export async function login(
   if (isDemo()) {
     return { error: INVALID_CREDENTIALS_MESSAGE };
   }
-  const email = normalizeEmail(String(formData.get("email") ?? ""));
-  const password = String(formData.get("password") ?? "");
+  const email = normalizeEmail(field(formData, "email"));
+  const password = field(formData, "password");
   if (!email || !password) {
     return { error: INVALID_CREDENTIALS_MESSAGE };
   }

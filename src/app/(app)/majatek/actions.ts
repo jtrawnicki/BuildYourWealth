@@ -10,6 +10,7 @@ import {
 } from "@/db/sources";
 import { parseAmount, parseName } from "@/domain/input";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { field, readId } from "@/app/form-data";
 import {
   EMPTY_SOURCE,
   SOURCE_MESSAGES,
@@ -21,9 +22,6 @@ import {
 const KINDS = ["savings", "investments"] as const;
 const CURRENCIES = ["PLN", "EUR"] as const;
 
-const field = (formData: FormData, name: string) =>
-  String(formData.get(name) ?? "");
-
 function readValues(formData: FormData): SourceFormValues {
   return {
     name: field(formData, "name"),
@@ -32,11 +30,6 @@ function readValues(formData: FormData): SourceFormValues {
     value: field(formData, "value"),
     note: field(formData, "note"),
   };
-}
-
-function readId(formData: FormData): number | null {
-  const id = Number(field(formData, "id"));
-  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
 const includes = <T extends string>(list: readonly T[], value: string) =>
