@@ -16,11 +16,7 @@ import {
   formatSourceCount,
 } from "@/domain/format";
 import { formatMonthTitle, monthGenitive } from "@/domain/month-name";
-import {
-  computeMonthPlan,
-  type Pool,
-  type MonthPlan as MonthPlanResult,
-} from "@/domain/plan";
+import { computeMonthPlan, type Pool } from "@/domain/plan";
 import { isGoalReached } from "@/domain/progress";
 import { currentMonth, previousMonth } from "@/domain/time";
 import { AddIncomeForm } from "./AddIncomeForm";
@@ -29,6 +25,7 @@ import {
   MonthPlan,
   type MonthPlanView,
   type PoolGroup,
+  type Segment,
   type TransferItem,
 } from "./MonthPlan";
 import { WealthBar, type WealthView } from "./WealthBar";
@@ -74,7 +71,15 @@ const POOL_TITLE: Record<Pool, string> = {
   investments: "Inwestycje",
 };
 
-/** Składa widok planu z migawki miesiąca i obliczeń domeny (SPEC 5.4, 6). */
+type SnapshotGoalRow = Awaited<ReturnType<typeof getMonthSnapshot>>[number];
+
+/**
+ * Składa widok ekranu „Ten miesiąc" z migawki miesiąca i obliczeń domeny.
+ * Miesiąc otwarty pokazuje plan (SPEC 6.1–6.5); rozliczony — kwoty faktyczne
+ * jako główne liczby (SPEC 5.4), a pule, „do wydania" i pasek liczy z wpłat
+ * sprowadzonych do PLN kursem rozliczenia (SPEC 6.8). Gdy wpłaty w EUR nie mają
+ * kursu rozliczenia (`summable` = false), zdanie z kwotami i pasek znikają.
+ */
 async function buildPlanView(
   db: ReturnType<typeof getDb>,
   data: MonthData,
@@ -92,22 +97,38 @@ async function buildPlanView(
       pct: goal.pct,
     })),
   });
-  const amountByGoal = new Map(
-    plan.goals.map((goal) => [goal.id, goal.amount]),
-  );
+  const planByGoal = new Map(plan.goals.map((goal) => [goal.id, goal.amount]));
+
+  // Każdą wpłatę faktyczną sprowadzamy do PLN kursem rozliczenia; cel w EUR bez
+  // kursu uniemożliwia sumowanie (pule, pasek, zdanie z kwotami).
+  const summable =
+    !data.settled ||
+    snapshot.every(
+      (goal) => goal.currency === "PLN" || data.settledEurRate !== null,
+    );
+  const poolAmount = (pool: Pool) =>
+    data.settled
+      ? sumActualPln(
+          snapshot.filter((goal) => goal.pool === pool),
+          data.settledEurRate,
+        )
+      : plan.pools[pool];
+  const spend = data.settled
+    ? income - poolAmount("savings") - poolAmount("investments")
+    : plan.toSpend;
 
   const groups: PoolGroup[] = [];
   for (const pool of ["savings", "investments"] as const) {
     const items = snapshot
       .filter((goal) => goal.pool === pool)
       .map((goal) =>
-        buildItem(goal, amountByGoal.get(goal.goalId) ?? 0, data, eurRate),
+        buildItem(goal, planByGoal.get(goal.goalId) ?? 0, data, eurRate),
       );
     if (items.length > 0) {
       groups.push({
         pool,
         title: POOL_TITLE[pool],
-        totalLabel: formatMoney(plan.pools[pool], "PLN"),
+        totalLabel: summable ? formatMoney(poolAmount(pool), "PLN") : "—",
         items,
       });
     }
@@ -115,53 +136,76 @@ async function buildPlanView(
 
   return {
     settled: data.settled,
-    setAsideLabel: formatMoney(income - plan.toSpend, "PLN"),
-    toSpendLabel: formatMoney(plan.toSpend, "PLN"),
-    segments: buildSegments(plan, income),
-    legend: [
-      {
-        key: "savings",
-        label: "Oszczędności",
-        amountLabel: formatMoney(plan.pools.savings, "PLN"),
-      },
-      {
-        key: "investments",
-        label: "Inwestycje",
-        amountLabel: formatMoney(plan.pools.investments, "PLN"),
-      },
-      {
-        key: "spend",
-        label: "Do wydania",
-        amountLabel: formatMoney(plan.toSpend, "PLN"),
-      },
-    ],
+    summable,
+    setAsideLabel: formatMoney(income - spend, "PLN"),
+    toSpendLabel: formatMoney(spend, "PLN"),
+    segments: summable
+      ? buildSegments(
+          poolAmount("savings"),
+          poolAmount("investments"),
+          spend,
+          income,
+        )
+      : [],
+    legend: summable
+      ? [
+          {
+            key: "savings",
+            label: "Oszczędności",
+            amountLabel: formatMoney(poolAmount("savings"), "PLN"),
+          },
+          {
+            key: "investments",
+            label: "Inwestycje",
+            amountLabel: formatMoney(poolAmount("investments"), "PLN"),
+          },
+          {
+            key: "spend",
+            label: "Do wydania",
+            amountLabel: formatMoney(spend, "PLN"),
+          },
+        ]
+      : [],
     groups,
   };
 }
 
+/** Suma wpłat celów w PLN; EUR przeliczone kursem rozliczenia (SPEC 6.8). */
+function sumActualPln(
+  goals: SnapshotGoalRow[],
+  settledEurRate: number | null,
+): number {
+  return goals.reduce((sum, goal) => {
+    const actual = goal.actualAmount ?? 0;
+    if (goal.currency === "PLN") return sum + actual;
+    // `summable` gwarantuje kurs, gdy jest cel w EUR; 0 to tylko zabezpieczenie.
+    return sum + (settledEurRate ? convertEurToPln(actual, settledEurRate) : 0);
+  }, 0);
+}
+
 /** Szerokości pasków w procentach przychodu; zerowe segmenty pomijamy. */
-function buildSegments(plan: MonthPlanResult, income: number) {
-  const parts: { key: "savings" | "investments" | "spend"; amount: number }[] =
-    [
-      { key: "savings", amount: plan.pools.savings },
-      { key: "investments", amount: plan.pools.investments },
-      { key: "spend", amount: plan.toSpend },
-    ];
+function buildSegments(
+  savings: number,
+  investments: number,
+  spend: number,
+  income: number,
+): Segment[] {
+  const parts = [
+    { key: "savings" as const, amount: savings },
+    { key: "investments" as const, amount: investments },
+    { key: "spend" as const, amount: spend },
+  ];
   return parts
     .filter((part) => part.amount > 0)
     .map((part) => {
       const widthPct = (part.amount * 100) / income;
-      return {
-        key: part.key,
-        pctLabel: `${Math.round(widthPct)}%`,
-        widthPct,
-      };
+      return { key: part.key, pctLabel: `${Math.round(widthPct)}%`, widthPct };
     });
 }
 
 function buildItem(
-  goal: Awaited<ReturnType<typeof getMonthSnapshot>>[number],
-  amount: number,
+  goal: SnapshotGoalRow,
+  planAmount: number,
   data: MonthData,
   eurRate: number | null,
 ): TransferItem {
@@ -181,49 +225,44 @@ function buildItem(
               target > 0 ? Math.min(100, (goal.progress * 100) / target) : 100,
           };
 
-  return {
+  const base = {
     goalId: goal.goalId,
     pool: goal.pool,
     name: goal.name,
     sourceName: goal.sourceName,
     pctLabel: formatPercent(goal.pct),
-    amountLabel: formatMoney(amount, "PLN"),
-    eur: buildEurLine(goal, amount, data.settled, eurRate),
     progress,
-    actualLabel: data.settled
-      ? buildActualLabel(goal, data.settledEurRate)
-      : null,
   };
-}
 
-/** Druga linia kwoty celu EUR w otwartym miesiącu (SPEC 5.4). */
-function buildEurLine(
-  goal: { currency: "PLN" | "EUR" },
-  amount: number,
-  settled: boolean,
-  eurRate: number | null,
-): TransferItem["eur"] {
-  if (goal.currency !== "EUR" || settled) return null;
-  if (eurRate === null) return { kind: "rate" };
-  return {
-    kind: "amount",
-    text: `≈ ${formatMoney(convertPlnToEur(amount, eurRate), "EUR")}`,
-  };
-}
-
-/** Wykonanie celu w rozliczonym miesiącu; EUR po kursie z rozliczenia (SPEC 6.9). */
-function buildActualLabel(
-  goal: { currency: "PLN" | "EUR"; actualAmount: number | null },
-  settledEurRate: number | null,
-): string {
-  const actual = goal.actualAmount ?? 0;
-  if (goal.currency === "PLN") {
-    return `wykonanie: ${formatMoney(actual, "PLN")}`;
+  // Rozliczony: główna kwota = wpłata faktyczna w walucie źródła, pod spodem
+  // plan w PLN; cel w EUR pokazuje też przelicznik po kursie rozliczenia.
+  if (data.settled) {
+    const actual = goal.actualAmount ?? 0;
+    const amountNote =
+      goal.currency === "EUR" && data.settledEurRate !== null
+        ? `= ${formatMoney(convertEurToPln(actual, data.settledEurRate), "PLN")}`
+        : null;
+    return {
+      ...base,
+      amountLabel: formatMoney(actual, goal.currency),
+      amountNote,
+      rateLink: false,
+      planNote: `plan: ${formatMoney(planAmount, "PLN")}`,
+    };
   }
-  const eur = formatMoney(actual, "EUR");
-  if (settledEurRate === null) return `wykonanie: ${eur}`;
-  const pln = formatMoney(convertEurToPln(actual, settledEurRate), "PLN");
-  return `wykonanie: ${eur} (${pln})`;
+
+  // Otwarty: główna kwota = plan w PLN; cel w EUR z linią „≈ … €" albo linkiem.
+  const isEur = goal.currency === "EUR";
+  return {
+    ...base,
+    amountLabel: formatMoney(planAmount, "PLN"),
+    amountNote:
+      isEur && eurRate !== null
+        ? `≈ ${formatMoney(convertPlnToEur(planAmount, eurRate), "EUR")}`
+        : null,
+    rateLink: isEur && eurRate === null,
+    planNote: null,
+  };
 }
 
 function buildWealthView(

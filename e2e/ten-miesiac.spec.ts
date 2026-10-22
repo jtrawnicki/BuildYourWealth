@@ -421,7 +421,7 @@ test("pasek majątku pokazuje sumę i liczbę źródeł, a bez kursu prosi o kur
   await expect(wealthRegion(page)).not.toContainText("zł");
 });
 
-test("rozliczony miesiąc pokazuje plan tylko do odczytu z wykonaniem (SPEC 5.4)", async ({
+test("rozliczony miesiąc pokazuje kwoty faktyczne jako główne, plan niżej (SPEC 5.4)", async ({
   page,
   seed,
 }) => {
@@ -438,14 +438,51 @@ test("rozliczony miesiąc pokazuje plan tylko do odczytu z wykonaniem (SPEC 5.4)
   await page.goto("/");
 
   await expect(currentRegion(page)).toContainText("Miesiąc rozliczony");
-  const row = item(card(page, "Oszczędności"), "Poduszka");
-  await expect(row).toContainText(text("wykonanie: 1 500,00 zł"));
 
-  // Rozliczony miesiąc opisujemy w czasie przeszłym, bez zapowiedzi rozliczenia.
+  // Główna liczba celu i suma puli to wykonanie (1 500,00 zł), plan w drugiej linii.
+  const savings = card(page, "Oszczędności");
+  await expect(savings).toContainText(text("1 500,00 zł"));
+  const row = item(savings, "Poduszka");
+  await expect(row).toContainText(text("1 500,00 zł"));
+  await expect(row).toContainText("plan:");
+  await expect(row).toContainText(text("1 700,00 zł"));
+
+  // Zdanie z faktycznymi kwotami w czasie przeszłym, bez zapowiedzi rozliczenia.
   const plan = planRegion(page);
-  await expect(plan).toContainText("odłożono");
+  await expect(plan).toContainText(text("odłożono 1 500,00 zł"));
+  await expect(plan).toContainText(text("zostało 7 000,00 zł"));
   await expect(plan).not.toContainText("odkładasz");
   await expect(plan).not.toContainText("potwierdzisz");
+});
+
+test("rozliczony miesiąc z celem EUR: wpłata w EUR z przelicznikiem i suma w PLN (SPEC 5.4, 6.8)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({
+    name: "Konto EUR",
+    kind: "investments",
+    currency: "EUR",
+  });
+  await seed.setPools(0, 1500);
+  const goalId = await seed.addGoal(source, { name: "Akcje", pct: 10000 });
+  // Kurs rozliczenia 4,3000: wpłata 90,00 € = 387,00 zł.
+  await seed.addMonth({
+    month: current,
+    settled: true,
+    investmentsPct: 1500,
+    settledEurRate: 43000,
+    incomes: [{ name: "Pensja", amount: 980000 }],
+    snapshot: [{ goalId, actualAmount: 9000 }],
+  });
+  await page.goto("/");
+
+  const row = item(card(page, "Inwestycje"), "Akcje");
+  await expect(row).toContainText(text("90,00 €"));
+  await expect(row).toContainText(text("387,00 zł"));
+  // Suma puli i zdanie liczą się z wpłaty przeliczonej kursem rozliczenia.
+  await expect(card(page, "Inwestycje")).toContainText(text("387,00 zł"));
+  await expect(planRegion(page)).toContainText(text("odłożono 387,00 zł"));
 });
 
 for (const colorScheme of ["light", "dark"] as const) {

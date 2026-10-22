@@ -6,10 +6,13 @@ import styles from "./MonthPlan.module.css";
 // „odkładasz X…", pasek podziału z legendą i karty przelewów z postępem celów.
 // Komponent jest czysto prezentacyjny — kwoty, procenty i postęp liczy
 // `page.tsx` z domeny; tutaj tylko układ i kolory z tokenów obu motywów.
-
-/** Druga linia kwoty celu w EUR albo prośba o kurs (SPEC 5.4). */
-export type EurLine =
-  { kind: "amount"; text: string } | { kind: "rate" } | null;
+//
+// Miesiąc otwarty pokazuje plan (kwoty w PLN, cel w EUR z linią „≈ … €" albo
+// linkiem do kursu). Miesiąc rozliczony pokazuje kwoty faktyczne jako główne
+// liczby (SPEC 5.4), z planem w drugiej linii; pule, „do wydania" i pasek
+// liczą się z wpłat przeliczonych kursem rozliczenia. Gdy wpłat nie da się
+// sprowadzić do PLN (cel w EUR bez zapisanego kursu), `summable` jest false:
+// znikają zdanie z kwotami i pasek, a sumy pul pokazują „—".
 
 export type Progress =
   | { reached: true }
@@ -22,11 +25,15 @@ export type TransferItem = {
   name: string;
   sourceName: string;
   pctLabel: string;
+  /** Główna kwota: plan (otwarty) albo wpłata faktyczna (rozliczony). */
   amountLabel: string;
-  eur: EurLine;
+  /** Druga linia kwoty: „≈ … €" (otwarty, EUR) albo „= … zł" (rozliczony, EUR). */
+  amountNote: string | null;
+  /** Otwarty miesiąc, cel w EUR bez kursu: zamiast kwoty EUR link do ustawień. */
+  rateLink: boolean;
+  /** Linia w kolumnie celu: plan w rozliczonym miesiącu („plan: … zł"). */
+  planNote: string | null;
   progress: Progress;
-  /** Wykonanie w widoku rozliczonego miesiąca (SPEC 5.4). */
-  actualLabel: string | null;
 };
 
 export type PoolGroup = {
@@ -51,6 +58,8 @@ export type LegendEntry = {
 export type MonthPlanView = {
   /** Rozliczony miesiąc jest tylko do odczytu: kopia w czasie przeszłym. */
   settled: boolean;
+  /** Czy kwoty da się zsumować w PLN (pasek, pule, zdanie z kwotami). */
+  summable: boolean;
   setAsideLabel: string;
   toSpendLabel: string;
   segments: Segment[];
@@ -67,42 +76,39 @@ const SEGMENT_CLASS: Record<Segment["key"], string> = {
 export function MonthPlan({ view }: { view: MonthPlanView }) {
   return (
     <section className={styles.plan} aria-label="Plan miesiąca">
-      <p className={styles.lead}>
-        {view.settled ? "W tym miesiącu odłożono" : "W tym miesiącu odkładasz"}{" "}
-        <span className={styles.leadSet}>{view.setAsideLabel}</span>, a do
-        wydania {view.settled ? "zostało" : "zostaje"} {view.toSpendLabel}.
-      </p>
-
-      <div className={styles.split}>
-        <div
-          className={styles.bar}
-          role="img"
-          aria-label={`Podział przychodu: ${view.legend
-            .map((entry) => `${entry.label} ${entry.amountLabel}`)
-            .join(", ")}`}
-        >
-          {view.segments.map((segment) => (
-            <div
-              key={segment.key}
-              className={`${styles.segment} ${SEGMENT_CLASS[segment.key]}`}
-              style={{ width: `${segment.widthPct}%` }}
-            >
-              {segment.pctLabel}
-            </div>
-          ))}
+      <Lead view={view} />
+      {view.summable && (
+        <div className={styles.split}>
+          <div
+            className={styles.bar}
+            role="img"
+            aria-label={`Podział przychodu: ${view.legend
+              .map((entry) => `${entry.label} ${entry.amountLabel}`)
+              .join(", ")}`}
+          >
+            {view.segments.map((segment) => (
+              <div
+                key={segment.key}
+                className={`${styles.segment} ${SEGMENT_CLASS[segment.key]}`}
+                style={{ width: `${segment.widthPct}%` }}
+              >
+                {segment.pctLabel}
+              </div>
+            ))}
+          </div>
+          <div className={styles.legend}>
+            {view.legend.map((entry) => (
+              <span key={entry.key} className={styles.legendItem}>
+                <span
+                  className={`${styles.swatch} ${SEGMENT_CLASS[entry.key]}`}
+                  aria-hidden="true"
+                />
+                {entry.label} <strong>{entry.amountLabel}</strong>
+              </span>
+            ))}
+          </div>
         </div>
-        <div className={styles.legend}>
-          {view.legend.map((entry) => (
-            <span key={entry.key} className={styles.legendItem}>
-              <span
-                className={`${styles.swatch} ${SEGMENT_CLASS[entry.key]}`}
-                aria-hidden="true"
-              />
-              {entry.label} <strong>{entry.amountLabel}</strong>
-            </span>
-          ))}
-        </div>
-      </div>
+      )}
 
       {view.groups.length > 0 && (
         <div className={styles.transfers}>
@@ -124,6 +130,24 @@ export function MonthPlan({ view }: { view: MonthPlanView }) {
         </div>
       )}
     </section>
+  );
+}
+
+function Lead({ view }: { view: MonthPlanView }) {
+  // Rozliczony miesiąc z wpłatami nieprzeliczalnymi na PLN: zdanie bez kwot.
+  if (view.settled && !view.summable) {
+    return (
+      <p className={styles.lead}>
+        Miesiąc rozliczony — wykonanie każdego celu niżej.
+      </p>
+    );
+  }
+  return (
+    <p className={styles.lead}>
+      {view.settled ? "W tym miesiącu odłożono" : "W tym miesiącu odkładasz"}{" "}
+      <span className={styles.leadSet}>{view.setAsideLabel}</span>, a do wydania{" "}
+      {view.settled ? "zostało" : "zostaje"} {view.toSpendLabel}.
+    </p>
   );
 }
 
@@ -178,19 +202,20 @@ function TransferRow({ item }: { item: TransferItem }) {
         {item.progress?.reached === true && (
           <span className={styles.reached}>osiągnięty</span>
         )}
-        {item.actualLabel !== null && (
-          <span className={styles.actual}>{item.actualLabel}</span>
+        {item.planNote !== null && (
+          <span className={styles.actual}>{item.planNote}</span>
         )}
       </div>
       <span className={styles.itemAmount}>
         <span className={styles.amount}>{item.amountLabel}</span>
-        {item.eur?.kind === "amount" && (
-          <span className={styles.eur}>{item.eur.text}</span>
-        )}
-        {item.eur?.kind === "rate" && (
+        {item.rateLink ? (
           <Link href="/ustawienia" className={styles.rateLink}>
             Ustaw kurs EUR
           </Link>
+        ) : (
+          item.amountNote !== null && (
+            <span className={styles.eur}>{item.amountNote}</span>
+          )
         )}
       </span>
     </li>
