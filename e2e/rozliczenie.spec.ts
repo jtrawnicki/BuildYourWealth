@@ -104,8 +104,9 @@ test("plan zrealizowany dopisuje zaplanowane kwoty do źródeł (scen. 4)", asyn
   await expect(
     page.getByRole("heading", { name: "Czy udało się zrealizować plan?" }),
   ).toBeVisible();
-  // Plan łącznie: 1 960,00 + 1 470,00 = 3 430,00 zł na 6 celów.
-  await expect(page.getByText(text("3 430,00 zł"))).toBeVisible();
+  // Podtytuł planu: 1 960,00 + 1 470,00 = 3 430,00 zł na 6 celów (kwota
+  // powtarza się w podsumowaniu, więc celujemy w jednoznaczny ogon podtytułu).
+  await expect(page.getByText("na 6 celów")).toBeVisible();
 
   await submit(page.getByRole("button", { name: "Zatwierdź rozliczenie" }));
   await expect(page).toHaveURL(/\/$/);
@@ -168,8 +169,11 @@ test("brak kursu przy celu EUR blokuje rozliczenie (SPEC 7)", async ({
 }) => {
   await seedSettleableMonth(seed, { eur: true });
   await page.goto(`/rozliczenie/${previous}`);
+  // Pełny komunikat jest jednoznaczny (sam „kurs euro" jest też w linku).
   await expect(
-    page.getByText("ustaw kurs euro", { exact: false }),
+    page.getByText(
+      "Najpierw ustaw kurs euro w Ustawieniach, żeby rozliczyć cel w euro.",
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Zatwierdź rozliczenie" }),
