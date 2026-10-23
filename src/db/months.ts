@@ -142,7 +142,10 @@ export async function getMonthSnapshot(
 /**
  * Dodaje pozycję przychodu. Jeśli miesiąca jeszcze nie ma, tworzy go z migawką
  * bieżącego planu — ale tylko bieżący albo bezpośrednio poprzedni (SPEC 5.4,
- * `canCreateMonth`). Istniejący rozliczony miesiąc jest zablokowany.
+ * `canCreateMonth`). Istniejący rozliczony miesiąc jest zablokowany: wiersz
+ * miesiąca blokujemy `for update`, więc sprawdzenie `settled_at` serializuje się
+ * z rozliczeniem (`db/settlement.ts`) i równoległe rozliczenie nie przejdzie
+ * między sprawdzeniem a wstawieniem przychodu.
  */
 export async function addIncome(
   db: Db,
@@ -156,6 +159,7 @@ export async function addIncome(
       .select({ id: months.id, settledAt: months.settledAt })
       .from(months)
       .where(and(eq(months.userId, userId), eq(months.month, month)))
+      .for("update")
       .limit(1);
 
     if (existing) {

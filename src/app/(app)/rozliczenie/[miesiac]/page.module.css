@@ -1,0 +1,303 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.875rem;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+}
+
+.sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.0625rem;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover {
+  border-color: var(--input-border);
+}
+
+.optionActive,
+.optionActive:hover {
+  border-color: var(--accent);
+}
+
+.optionTitle {
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+
+.optionDesc {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 24px 12px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 16px 0 10px;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.dotSave {
+  background: var(--save);
+}
+
+.dotInvest {
+  background: var(--invest);
+}
+
+.groupTotal {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.itemName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.itemSource {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 1 220px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.input {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--err-text);
+}
+
+.amountInput {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--err-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.planAmount {
+  font-family: var(--font-sora), sans-serif;
+  font-weight: 700;
+  font-size: 1.125rem;
+  white-space: nowrap;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  border-radius: 24px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.summaryMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.summaryLabel {
+  font-size: 0.9375rem;
+  opacity: 0.9;
+}
+
+.summaryTotal {
+  font-family: var(--font-sora), sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.summaryNote {
+  font-size: 0.8125rem;
+  opacity: 0.9;
+}
+
+.submit {
+  min-height: 52px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--on-accent);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.formError {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--err-bg);
+  color: var(--err-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.infoCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.infoText {
+  margin: 0;
+  color: var(--muted);
+}
+
+.infoLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.back {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
