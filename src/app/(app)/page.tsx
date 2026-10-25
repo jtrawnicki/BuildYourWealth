@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
-import { getMonth, getMonthSnapshot, type MonthData } from "@/db/months";
+import {
+  getMonth,
+  getMonthSnapshot,
+  listOverdueMonths,
+  type MonthData,
+} from "@/db/months";
 import { getEurRate } from "@/db/settings";
 import { listSources } from "@/db/sources";
 import { now } from "@/domain/clock";
@@ -42,12 +47,14 @@ export default async function Home() {
   const db = getDb();
   const current = currentMonth(now());
   const previous = previousMonth(current);
-  const [currentData, previousData, sources, eurRate] = await Promise.all([
-    getMonth(db, user.id, current),
-    getMonth(db, user.id, previous),
-    listSources(db, user.id),
-    getEurRate(db, user.id),
-  ]);
+  const [currentData, previousData, overdue, sources, eurRate] =
+    await Promise.all([
+      getMonth(db, user.id, current),
+      getMonth(db, user.id, previous),
+      listOverdueMonths(db, user.id, current),
+      listSources(db, user.id),
+      getEurRate(db, user.id),
+    ]);
 
   const hasIncome = currentData !== null && currentData.incomes.length > 0;
   const planView = hasIncome
@@ -55,7 +62,8 @@ export default async function Home() {
     : null;
 
   // Rozliczenie bieżącego miesiąca jest dostępne od jego ostatniego dnia
-  // (SPEC 5.5). Zaległe miesiące dostają osobne pigułki w T13.
+  // (SPEC 5.5). Zaległe miesiące z przeszłości mają osobne pigułki nad
+  // nagłówkiem, od najstarszego (SPEC 5.5, scen. 7).
   const canSettle =
     hasIncome && !currentData.settled && canSettleMonth(current, now());
 
@@ -63,6 +71,7 @@ export default async function Home() {
 
   return (
     <>
+      {overdue.length > 0 && <OverdueMonths months={overdue} />}
       <h1 className={styles.title}>Ten miesiąc</h1>
       <CurrentMonth
         month={current}
@@ -300,6 +309,27 @@ function toView(income: MonthData["incomes"][number]): IncomeView {
 // Kwota do pola edycji bez symbolu waluty: `850000` → `8 500,00`.
 function formatAmountField(amount: number): string {
   return formatMoney(amount, "PLN").replace(/\s*zł$/u, "");
+}
+
+/**
+ * Pigułki zaległych miesięcy nad nagłówkiem, od najstarszego (SPEC 5.5, scen. 7).
+ * Każda prowadzi do rozliczenia danego miesiąca; po rozliczeniu miesiąc znika
+ * z listy przy kolejnym odczycie.
+ */
+function OverdueMonths({ months }: { months: string[] }) {
+  return (
+    <ul className={styles.overdueList} aria-label="Zaległe miesiące">
+      {months.map((month) => (
+        <li key={month} className={styles.overdue}>
+          <span className={styles.overdueDot} aria-hidden="true" />
+          <span>{formatMonthTitle(month)} czeka na rozliczenie.</span>
+          <Link href={`/rozliczenie/${month}`} className={styles.overdueLink}>
+            Rozlicz
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function CurrentMonth({
