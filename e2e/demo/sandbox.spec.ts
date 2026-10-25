@@ -40,8 +40,8 @@ test("wejście do demo otwiera Ten miesiąc z danymi, pigułką i banerem; inne 
   await expect(page.getByText("Konto IKE (EUR)")).toBeVisible();
 
   await page.goto("/plan");
-  // Na ekranie Plan nazwa celu jest wartością pola edycji, nie tekstem.
-  await expect(page.getByDisplayValue("ETF globalny")).toBeVisible();
+  // Na ekranie Plan nazwa celu jest wartością pola edycji; cel ma aria-label.
+  await expect(page.locator('[aria-label="Cel: ETF globalny"]')).toBeVisible();
 
   await page.goto("/historia");
   await expect(page.getByText("Rozliczony").first()).toBeVisible();
