@@ -24,6 +24,7 @@ const currentRegion = (page: Page) =>
 // otwarty, więc helper klika tylko, gdy karta jest zwinięta.
 async function openCurrent(page: Page) {
   const details = currentRegion(page).locator("details").first();
+  await expect(details).toBeVisible();
   const isOpen = await details.evaluate(
     (el) => (el as HTMLDetailsElement).open,
   );
@@ -31,6 +32,7 @@ async function openCurrent(page: Page) {
     await currentRegion(page)
       .getByRole("heading", { name: formatMonthTitle(current) })
       .click();
+    await expect(details).toHaveJSProperty("open", true);
   }
 }
 const previousRegion = (page: Page) =>
@@ -165,8 +167,10 @@ test("edycja, usunięcie i skasowanie miesiąca po ostatniej pozycji (SPEC 7, P7
     .where(and(eq(months.userId, authUserId), eq(months.month, current)));
   expect(remaining).toHaveLength(0);
 
-  // Ponowny przychód tworzy miesiąc z planem obowiązującym w tej chwili.
+  // Ponowny przychód tworzy miesiąc z planem obowiązującym w tej chwili;
+  // utworzenie miesiąca zwija kartę, więc rozwijamy ją przed sprawdzeniem.
   await addIncome(currentRegion(page), { name: "Pensja", amount: "500" });
+  await openCurrent(page);
   await expect(item(currentRegion(page), "Pensja")).toBeVisible();
 });
 
@@ -255,6 +259,8 @@ test("przy błędzie zapisu widać komunikat, a wpis zostaje (SPEC 7)", async ({
   await submit(
     currentRegion(page).getByRole("button", { name: "Dodaj przychód" }),
   );
+  // Udany zapis tworzy miesiąc i zwija kartę — rozwijamy ją przed sprawdzeniem.
+  await openCurrent(page);
   await expect(currentRegion(page).getByRole("status")).toHaveText(
     "Dodano przychód.",
   );
