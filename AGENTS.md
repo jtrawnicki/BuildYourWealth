@@ -66,6 +66,7 @@ pustą bazę.
 | `npm run db:generate` | Nowa migracja SQL w `drizzle/` po zmianie `src/db/schema.ts` (commitowana razem ze schematem). |
 | `npm run db:migrate` | Stosuje migracje na bazie z `DATABASE_URL`. `npm test` migruje bazę testową sam. |
 | `npm run user:set-password -- <email>` | Tworzy konto albo ustawia nowe hasło (min. 12 znaków) i unieważnia sesje. Hasło z terminala bez echa albo z wejścia standardowego. |
+| `npm run demo:seed -- <email>` | Zapisuje dane przykładowe demo dla istniejącego konta w `byw_dev` (ręczne oglądanie ekranów demo). Odmawia pracy na `byw_private`. |
 | `npm run db:dump [-- <plik>]` | `pg_dump` w formacie custom do `backups/` (poza repozytorium); odtwarzanie przez `pg_restore`. Odmawia, gdy `pg_dump` jest starszy niż serwer; `PG_DUMP` wskazuje inny program `pg_dump`. |
 
 Skrypty i `drizzle-kit` biorą `DATABASE_URL` z powłoki, a gdy jej brak,

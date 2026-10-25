@@ -46,7 +46,8 @@ export default defineConfig({
     {
       command: `npm run start -- --port ${demoPort}`,
       url: demoURL,
-      env: { APP_MODE: "demo" },
+      // Sekret skrótu IP wymagany w trybie demo (STACK 5); w E2E dowolna wartość.
+      env: { APP_MODE: "demo", DEMO_IP_SECRET: "e2e-demo-ip-secret" },
       reuseExistingServer: false,
     },
   ],

@@ -14,7 +14,7 @@ test("bez piaskownicy strona chroniona prowadzi na ekran startowy demo bez formu
   await page.goto("/");
   await expect(page).toHaveURL(/\/logowanie$/);
   await expect(
-    page.getByText("Wersja demo jest w przygotowaniu."),
+    page.getByRole("button", { name: "Wypróbuj wersję demo" }),
   ).toBeVisible();
   await expect(page.getByLabel("E-mail")).toHaveCount(0);
   await expect(page.getByLabel("Hasło")).toHaveCount(0);
