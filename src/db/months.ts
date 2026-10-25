@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { canCreateMonth } from "@/domain/time";
 import type { Db, Tx } from "./client";
 import {
@@ -124,6 +124,100 @@ export async function listOverdueMonths(
     )
     .orderBy(asc(months.month));
   return rows.map((row) => row.month);
+}
+
+/** Cel z migawki miesiąca do ekranu Historia (SPEC 5.6). */
+export type HistoryGoal = {
+  goalId: number;
+  pool: "savings" | "investments";
+  /** Procent puli z migawki (stan planu w chwili utworzenia miesiąca). */
+  pct: number;
+  name: string;
+  currency: "PLN" | "EUR";
+  /** Faktyczna wpłata w walucie źródła; `null`, dopóki miesiąc nierozliczony. */
+  actualAmount: number | null;
+};
+
+/** Miesiąc do ekranu Historia: przychód, migawka planu i stan rozliczenia. */
+export type HistoryMonth = {
+  month: string;
+  savingsPct: number;
+  investmentsPct: number;
+  settled: boolean;
+  /** Kurs zapisany przy rozliczeniu (SPEC 6.9); historia liczy EUR po nim. */
+  settledEurRate: number | null;
+  income: number;
+  goals: HistoryGoal[];
+};
+
+/**
+ * Wszystkie miesiące użytkownika do ekranu Historia, od najnowszego (SPEC 5.6).
+ * Plan liczy się z migawki (procenty i cele z `month_goals`), nie z żywego planu,
+ * więc zmiana planu nie zmienia historii (scen. 8); nazwa celu pochodzi z żywego
+ * celu, więc jej zmiana widać też w starszych miesiącach. Dwa zapytania zamiast
+ * N+1: miesiące z sumą przychodu i wszystkie cele migawek naraz.
+ */
+export async function listHistory(
+  db: Db,
+  userId: number,
+): Promise<HistoryMonth[]> {
+  const monthRows = await db
+    .select({
+      id: months.id,
+      month: months.month,
+      savingsPct: months.savingsPct,
+      investmentsPct: months.investmentsPct,
+      settledAt: months.settledAt,
+      settledEurRate: months.settledEurRate,
+      // Suma `bigint` wraca ze sterownika jako string; rzutujemy na liczbę.
+      income: sql<string>`coalesce(sum(${incomes.amount}), 0)`,
+    })
+    .from(months)
+    .leftJoin(incomes, eq(incomes.monthId, months.id))
+    .where(eq(months.userId, userId))
+    .groupBy(months.id)
+    .orderBy(desc(months.month));
+
+  const goalRows = await db
+    .select({
+      monthId: monthGoals.monthId,
+      goalId: monthGoals.goalId,
+      pool: monthGoals.pool,
+      pct: monthGoals.pct,
+      name: goals.name,
+      currency: sources.currency,
+      actualAmount: monthGoals.actualAmount,
+    })
+    .from(monthGoals)
+    .innerJoin(months, eq(months.id, monthGoals.monthId))
+    .innerJoin(goals, eq(goals.id, monthGoals.goalId))
+    .innerJoin(sources, eq(sources.id, monthGoals.sourceId))
+    .where(eq(months.userId, userId))
+    .orderBy(asc(goals.position), asc(goals.id));
+
+  const goalsByMonth = new Map<number, HistoryGoal[]>();
+  for (const row of goalRows) {
+    const list = goalsByMonth.get(row.monthId) ?? [];
+    list.push({
+      goalId: row.goalId,
+      pool: row.pool,
+      pct: row.pct,
+      name: row.name,
+      currency: row.currency,
+      actualAmount: row.actualAmount,
+    });
+    goalsByMonth.set(row.monthId, list);
+  }
+
+  return monthRows.map((row) => ({
+    month: row.month,
+    savingsPct: row.savingsPct,
+    investmentsPct: row.investmentsPct,
+    settled: row.settledAt !== null,
+    settledEurRate: row.settledEurRate,
+    income: Number(row.income),
+    goals: goalsByMonth.get(row.id) ?? [],
+  }));
 }
 
 /**
