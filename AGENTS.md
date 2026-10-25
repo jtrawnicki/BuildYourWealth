@@ -59,6 +59,19 @@ Testy odmawiają pracy na bazie, której nazwa nie kończy się na `_test`.
 Rola testowa potrzebuje prawa `CREATEDB`, bo test migracji tworzy na chwilę
 pustą bazę.
 
+**Testowanie wersji demo lokalnie:** domyślnie `npm run dev` działa w trybie
+prywatnym (logowanie hasłem). Aby obejrzeć ekran startowy demo i przycisk
+„Wypróbuj wersję demo" z piaskownicą, uruchom aplikację na `byw_dev` z dwiema
+zmiennymi: `APP_MODE=demo` i `DEMO_IP_SECRET=<dowolny lokalny ciąg>` (sekret
+służy tylko do skrótu adresu IP przy limitach; w trybie demo jego brak celowo
+wywołuje błąd — fail closed, STACK 5). Najszybciej przez wpis z powłoki (bash:
+`APP_MODE=demo DEMO_IP_SECRET=lokalny-sekret-demo npm run dev`; PowerShell:
+`$env:APP_MODE="demo"; $env:DEMO_IP_SECRET="lokalny-sekret-demo"; npm run dev`),
+albo przez odkomentowanie obu zmiennych w `.env` (wzór w `.env.example`).
+Baza `byw_dev`
+musi być wcześniej zmigrowana (`npm run db:migrate`), inaczej zapis piaskownicy
+kończy się komunikatem „Nie udało się zapisać".
+
 ## Baza i skrypty administracyjne
 
 | Polecenie | Działanie |
