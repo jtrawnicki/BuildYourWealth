@@ -14,6 +14,7 @@ const text = (value: string) => value.replace(/ /g, " ");
 
 const current = currentMonth(now());
 const previous = previousMonth(current);
+const twoAgo = previousMonth(previous);
 
 const currentRegion = (page: Page) =>
   page.getByRole("region", { name: formatMonthTitle(current) });
@@ -483,6 +484,49 @@ test("rozliczony miesiąc z celem EUR: wpłata w EUR z przelicznikiem i suma w P
   // Suma puli i zdanie liczą się z wpłaty przeliczonej kursem rozliczenia.
   await expect(card(page, "Inwestycje")).toContainText(text("387,00 zł"));
   await expect(planRegion(page)).toContainText(text("odłożono 387,00 zł"));
+});
+
+test("zaległe miesiące mają pigułki od najstarszego i znikają po rozliczeniu (scen. 7)", async ({
+  page,
+  seed,
+}) => {
+  const source = await seed.addSource({ name: "Konto", kind: "savings" });
+  await seed.setPools(2000, 0);
+  const goalId = await seed.addGoal(source, { name: "Poduszka", pct: 10000 });
+  // Dwa nierozliczone miesiące z przeszłości, wstawione w odwrotnej kolejności,
+  // żeby test sprawdzał sortowanie od najstarszego, a nie kolejność wstawienia.
+  for (const month of [previous, twoAgo]) {
+    await seed.addMonth({
+      month,
+      savingsPct: 2000,
+      incomes: [{ name: "Pensja", amount: 850000 }],
+      snapshot: [{ goalId }],
+    });
+  }
+
+  await page.goto("/");
+  const pills = page.getByRole("list", { name: "Zaległe miesiące" });
+  const items = pills.getByRole("listitem");
+  await expect(items).toHaveCount(2);
+  // Od najstarszego: twoAgo przed previous.
+  await expect(items.nth(0)).toContainText(
+    `${formatMonthTitle(twoAgo)} czeka na rozliczenie.`,
+  );
+  await expect(items.nth(1)).toContainText(
+    `${formatMonthTitle(previous)} czeka na rozliczenie.`,
+  );
+
+  // „Rozlicz" najstarszego prowadzi na jego rozliczenie i je zatwierdzamy.
+  await items.nth(0).getByRole("link", { name: "Rozlicz" }).click();
+  await expect(page).toHaveURL(new RegExp(`/rozliczenie/${twoAgo}$`));
+  await submit(page.getByRole("button", { name: "Zatwierdź rozliczenie" }));
+  await expect(page).toHaveURL(/\/$/);
+
+  // Zaległość znika; zostaje tylko nowszy miesiąc.
+  await expect(items).toHaveCount(1);
+  await expect(items.nth(0)).toContainText(
+    `${formatMonthTitle(previous)} czeka na rozliczenie.`,
+  );
 });
 
 for (const colorScheme of ["light", "dark"] as const) {

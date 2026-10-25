@@ -7,6 +7,7 @@ import {
   deleteIncome,
   getMonth,
   getMonthSnapshot,
+  listOverdueMonths,
   updateIncome,
 } from "./months";
 import { savePlan } from "./plan";
@@ -522,5 +523,46 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
 
     const [snap] = await getMonthSnapshot(getDb(), october!.id);
     expect(snap.name).toBe("Nowa nazwa");
+  });
+});
+
+describe("zaległe miesiące (SPEC 5.5, T13)", () => {
+  async function insertMonth(
+    owner: number,
+    month: string,
+    settled = false,
+  ): Promise<void> {
+    await getDb()
+      .insert(months)
+      .values({
+        userId: owner,
+        month,
+        savingsPct: 2000,
+        investmentsPct: 0,
+        settledAt: settled ? new Date() : null,
+      });
+  }
+
+  it("zwraca nierozliczone miesiące z przeszłości od najstarszego", async () => {
+    await insertMonth(userId, "2026-09");
+    await insertMonth(userId, "2026-07");
+    await insertMonth(userId, "2026-08");
+
+    expect(await listOverdueMonths(getDb(), userId, "2026-10")).toEqual([
+      "2026-07",
+      "2026-08",
+      "2026-09",
+    ]);
+  });
+
+  it("pomija bieżący miesiąc, rozliczone i miesiące innego użytkownika", async () => {
+    await insertMonth(userId, "2026-10"); // bieżący — nie jest zaległy
+    await insertMonth(userId, "2026-09", true); // rozliczony
+    await insertMonth(userId, "2026-08"); // zaległy
+    await insertMonth(otherId, "2026-07"); // inny użytkownik
+
+    expect(await listOverdueMonths(getDb(), userId, "2026-10")).toEqual([
+      "2026-08",
+    ]);
   });
 });

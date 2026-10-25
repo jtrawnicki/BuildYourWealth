@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { canCreateMonth } from "@/domain/time";
 import type { Db, Tx } from "./client";
 import {
@@ -98,6 +98,32 @@ export async function getMonth(
     settledEurRate: row.settledEurRate,
     incomes: items,
   };
+}
+
+/**
+ * Klucze nierozliczonych miesięcy z przeszłości (`YYYY-MM` < bieżący), od
+ * najstarszego — każdy czeka na rozliczenie i dostaje osobną pigułkę na ekranie
+ * „Ten miesiąc" (SPEC 5.5, T13). Miesiąc zawsze ma przychód (usunięcie ostatniej
+ * pozycji kasuje miesiąc, P7), więc nie sprawdzamy tego osobno. Bieżący miesiąc
+ * rozlicza się z własnej karty, więc go pomijamy.
+ */
+export async function listOverdueMonths(
+  db: Db,
+  userId: number,
+  current: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ month: months.month })
+    .from(months)
+    .where(
+      and(
+        eq(months.userId, userId),
+        isNull(months.settledAt),
+        lt(months.month, current),
+      ),
+    )
+    .orderBy(asc(months.month));
+  return rows.map((row) => row.month);
 }
 
 /**
