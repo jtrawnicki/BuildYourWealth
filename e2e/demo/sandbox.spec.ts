@@ -57,6 +57,11 @@ test("druga przeglądarka dostaje osobną piaskownicę: zmiany pierwszej są nie
   const p1 = await c1.newPage();
   await enterDemo(p1);
   const region = p1.getByRole("region", { name: formatMonthTitle(current) });
+  // Bieżący miesiąc demo ma przychody, więc karta jest zwinięta — rozwijamy ją,
+  // zanim wejdziemy w formularz dodawania.
+  await region
+    .getByRole("heading", { name: formatMonthTitle(current) })
+    .click();
   await region.getByLabel("Nazwa").fill(unique);
   await region.getByLabel("Kwota netto (PLN)").fill("1 234");
   await submit(region.getByRole("button", { name: "Dodaj przychód" }));
