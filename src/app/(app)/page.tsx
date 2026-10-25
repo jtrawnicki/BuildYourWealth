@@ -26,7 +26,8 @@ import { computeMonthPlan, type Pool } from "@/domain/plan";
 import { isGoalReached } from "@/domain/progress";
 import { canSettleMonth, currentMonth, previousMonth } from "@/domain/time";
 import { AddIncomeForm } from "./AddIncomeForm";
-import { IncomeItem, type IncomeView } from "./IncomeItem";
+import { toIncomeView } from "./income-view";
+import { IncomeItem } from "./IncomeItem";
 import {
   MonthPlan,
   type MonthPlanView,
@@ -294,23 +295,6 @@ function buildWealthView(
   return { ok: true, countLabel, totalLabel: formatMoney(worth.pln, "PLN") };
 }
 
-function toView(income: MonthData["incomes"][number]): IncomeView {
-  return {
-    id: income.id,
-    name: income.name,
-    amountText: formatMoney(income.amount, "PLN"),
-    form: {
-      name: income.name,
-      amount: formatAmountField(income.amount),
-    },
-  };
-}
-
-// Kwota do pola edycji bez symbolu waluty: `850000` → `8 500,00`.
-function formatAmountField(amount: number): string {
-  return formatMoney(amount, "PLN").replace(/\s*zł$/u, "");
-}
-
 /**
  * Pigułki zaległych miesięcy nad nagłówkiem, od najstarszego (SPEC 5.5, scen. 7).
  * Każda prowadzi do rozliczenia danego miesiąca; po rozliczeniu miesiąc znika
@@ -373,7 +357,7 @@ function CurrentMonth({
           {incomes.map((income) => (
             <IncomeItem
               key={income.id}
-              income={toView(income)}
+              income={toIncomeView(income)}
               readOnly={settled}
             />
           ))}

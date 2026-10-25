@@ -7,6 +7,7 @@ import {
   deleteIncome,
   getMonth,
   getMonthSnapshot,
+  listHistory,
   listOverdueMonths,
   updateIncome,
 } from "./months";
@@ -564,5 +565,195 @@ describe("zaległe miesiące (SPEC 5.5, T13)", () => {
     expect(await listOverdueMonths(getDb(), userId, "2026-10")).toEqual([
       "2026-08",
     ]);
+  });
+});
+
+describe("historia miesięcy (SPEC 5.6, T14)", () => {
+  async function insertGoal(
+    sourceId: number,
+    pool: "savings" | "investments",
+    name: string,
+    pct: number,
+    position: number,
+  ): Promise<number> {
+    const [row] = await getDb()
+      .insert(goals)
+      .values({ userId, pool, name, pct, sourceId, position })
+      .returning({ id: goals.id });
+    return row.id;
+  }
+
+  async function insertMonth(input: {
+    month: string;
+    settled?: boolean;
+    settledEurRate?: number;
+    savingsPct?: number;
+    investmentsPct?: number;
+    income?: number;
+    snapshot?: {
+      goalId: number;
+      pool: "savings" | "investments";
+      pct: number;
+      sourceId: number;
+      actualAmount?: number;
+    }[];
+  }): Promise<void> {
+    const [m] = await getDb()
+      .insert(months)
+      .values({
+        userId,
+        month: input.month,
+        savingsPct: input.savingsPct ?? 0,
+        investmentsPct: input.investmentsPct ?? 0,
+        settledAt: input.settled ? new Date() : null,
+        settledEurRate: input.settled ? (input.settledEurRate ?? null) : null,
+      })
+      .returning({ id: months.id });
+    if (input.income) {
+      await getDb()
+        .insert(incomes)
+        .values({ monthId: m.id, name: "Pensja", amount: input.income });
+    }
+    for (const g of input.snapshot ?? []) {
+      await getDb()
+        .insert(monthGoals)
+        .values({
+          monthId: m.id,
+          goalId: g.goalId,
+          pool: g.pool,
+          pct: g.pct,
+          sourceId: g.sourceId,
+          actualAmount: g.actualAmount ?? null,
+        });
+    }
+  }
+
+  it("zwraca miesiące od najnowszego z przychodem, migawką i stanem rozliczenia", async () => {
+    const savings = await addSource("savings");
+    const eur = await getDb()
+      .insert(sources)
+      .values({
+        userId,
+        name: "Konto EUR",
+        kind: "investments",
+        currency: "EUR",
+        value: 0,
+      })
+      .returning({ id: sources.id });
+    const eurId = eur[0].id;
+    const poduszka = await insertGoal(savings, "savings", "Poduszka", 10000, 0);
+    const akcje = await insertGoal(eurId, "investments", "Akcje", 10000, 1);
+
+    // Wrzesień: rozliczony, kurs 4,3000; Poduszka plan 980 / wykonanie 500,
+    // Akcje wpłata 90,00 €.
+    await insertMonth({
+      month: "2026-09",
+      settled: true,
+      settledEurRate: 43000,
+      savingsPct: 2000,
+      investmentsPct: 1500,
+      income: 980000,
+      snapshot: [
+        {
+          goalId: poduszka,
+          pool: "savings",
+          pct: 10000,
+          sourceId: savings,
+          actualAmount: 50000,
+        },
+        {
+          goalId: akcje,
+          pool: "investments",
+          pct: 10000,
+          sourceId: eurId,
+          actualAmount: 9000,
+        },
+      ],
+    });
+    // Październik: otwarty, bez wykonania.
+    await insertMonth({
+      month: "2026-10",
+      savingsPct: 2000,
+      income: 850000,
+      snapshot: [
+        { goalId: poduszka, pool: "savings", pct: 10000, sourceId: savings },
+      ],
+    });
+
+    const history = await listHistory(getDb(), userId);
+    expect(history.map((m) => m.month)).toEqual(["2026-10", "2026-09"]);
+
+    const [october, september] = history;
+    expect(october).toMatchObject({
+      income: 850000,
+      settled: false,
+      settledEurRate: null,
+    });
+    expect(october.goals).toEqual([
+      {
+        goalId: poduszka,
+        pool: "savings",
+        pct: 10000,
+        name: "Poduszka",
+        currency: "PLN",
+        actualAmount: null,
+      },
+    ]);
+
+    expect(september).toMatchObject({
+      income: 980000,
+      settled: true,
+      settledEurRate: 43000,
+    });
+    expect(september.goals).toEqual([
+      {
+        goalId: poduszka,
+        pool: "savings",
+        pct: 10000,
+        name: "Poduszka",
+        currency: "PLN",
+        actualAmount: 50000,
+      },
+      {
+        goalId: akcje,
+        pool: "investments",
+        pct: 10000,
+        name: "Akcje",
+        currency: "EUR",
+        actualAmount: 9000,
+      },
+    ]);
+  });
+
+  it("zmiana nazwy celu widać także w starszych miesiącach (nazwa z żywego celu)", async () => {
+    const savings = await addSource("savings");
+    const goalId = await insertGoal(savings, "savings", "Poduszka", 10000, 0);
+    await insertMonth({
+      month: "2026-09",
+      settled: true,
+      savingsPct: 2000,
+      income: 850000,
+      snapshot: [
+        {
+          goalId,
+          pool: "savings",
+          pct: 10000,
+          sourceId: savings,
+          actualAmount: 170000,
+        },
+      ],
+    });
+
+    await getDb()
+      .update(goals)
+      .set({ name: "Fundusz awaryjny" })
+      .where(eq(goals.id, goalId));
+
+    const [september] = await listHistory(getDb(), userId);
+    expect(september.goals[0].name).toBe("Fundusz awaryjny");
+  });
+
+  it("bez miesięcy zwraca pustą listę", async () => {
+    expect(await listHistory(getDb(), userId)).toEqual([]);
   });
 });
