@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { isDemo } from "@/demo/mode";
+import { DemoEntry } from "./DemoEntry";
 import { LoginForm } from "./LoginForm";
 import styles from "./page.module.css";
 
@@ -34,7 +35,11 @@ async function Entry() {
         <p className={styles.lead}>
           Miesięczny plan podziału przychodów na oszczędności i inwestycje.
         </p>
-        <p className={styles.lead}>Wersja demo jest w przygotowaniu.</p>
+        <p className={styles.lead}>
+          Wypróbuj wersję demo — dostaniesz własną piaskownicę z przykładowymi
+          danymi. Znika po 24 godzinach i widzisz ją tylko Ty.
+        </p>
+        <DemoEntry />
       </>
     );
   }
