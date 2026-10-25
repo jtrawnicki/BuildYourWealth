@@ -44,8 +44,9 @@ export async function login(
     if (result.ok) {
       await createSession(result.userId);
     }
-  } catch {
+  } catch (error) {
     // Błąd zapisu lub budzącej się bazy (SPEC 7): dane zostają w formularzu.
+    console.error(SAVE_ERROR_MESSAGE, error);
     return { error: SAVE_ERROR_MESSAGE };
   }
 
@@ -85,8 +86,9 @@ export async function enterDemo(
       sessionId: hashToken(token),
       data: generateDemoData(current, Math.random),
     });
-  } catch {
+  } catch (error) {
     // Błąd zapisu, budzącej się bazy albo braku sekretu (SPEC 7, fail closed).
+    console.error(SAVE_ERROR_MESSAGE, error);
     return { error: SAVE_ERROR_MESSAGE };
   }
 
