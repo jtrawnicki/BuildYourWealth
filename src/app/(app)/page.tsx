@@ -329,46 +329,63 @@ function CurrentMonth({
   const settled = data?.settled ?? false;
   const incomes = data?.incomes ?? [];
   const total = incomes.reduce((sum, income) => sum + income.amount, 0);
+  const empty = data === null;
 
-  // Formularz dodawania ma stałą pozycję i `key`, więc przejście pusty →
-  // wypełniony nie odmontowuje go i zachowuje stan (potwierdzenie „Dodano").
+  // Karta jest domyślnie zwinięta do nagłówka z miesiącem i sumą przychodów;
+  // rozwinięcie pokazuje pozycje i formularz. Pusty miesiąc nie ma sumy, więc
+  // zostaje otwarty, żeby od razu dało się wpisać pierwszy przychód: dla danych
+  // nie przekazujemy `open` (karta niekontrolowana, startuje zwinięta i daje się
+  // przełączać), a pusty wymusza `open`. Formularz dodawania ma stałą pozycję
+  // i `key`, więc przejście pusty → wypełniony nie odmontowuje go i zachowuje
+  // stan (potwierdzenie „Dodano").
   return (
     <section className={styles.card} aria-labelledby="biezacy">
-      <div className={styles.cardHead}>
-        <h2 id="biezacy" className={styles.cardTitle}>
-          {title}
-        </h2>
-        {data !== null && (
-          <p className={styles.total}>
-            <span className={styles.totalLabel}>Przychód łącznie</span>
-            <span className={styles.totalAmount}>
-              {formatMoney(total, "PLN")}
-            </span>
-          </p>
-        )}
-      </div>
-      {settled && (
-        <p className={styles.note}>Miesiąc rozliczony — tylko do odczytu.</p>
-      )}
-      {data === null ? (
-        <p className={styles.empty}>Wpisz przychód z {monthGenitive(month)}.</p>
-      ) : (
-        <ul className={styles.list}>
-          {incomes.map((income) => (
-            <IncomeItem
-              key={income.id}
-              income={toIncomeView(income)}
-              readOnly={settled}
-            />
-          ))}
-        </ul>
-      )}
-      {!settled && <AddIncomeForm key="add-income" month={month} />}
-      {settleHref !== null && (
-        <Link href={settleHref} className={styles.settleLink}>
-          Rozlicz miesiąc
-        </Link>
-      )}
+      <details className={styles.month} {...(empty ? { open: true } : {})}>
+        <summary className={styles.summary}>
+          <div className={styles.cardHead}>
+            <h2 id="biezacy" className={styles.cardTitle}>
+              {title}
+            </h2>
+            {!empty && (
+              <p className={styles.total}>
+                <span className={styles.totalLabel}>Przychód łącznie</span>
+                <span className={styles.totalAmount}>
+                  {formatMoney(total, "PLN")}
+                </span>
+              </p>
+            )}
+          </div>
+          {!empty && <span className={styles.chevron} aria-hidden="true" />}
+        </summary>
+        <div className={styles.monthBody}>
+          {settled && (
+            <p className={styles.note}>
+              Miesiąc rozliczony — tylko do odczytu.
+            </p>
+          )}
+          {empty ? (
+            <p className={styles.empty}>
+              Wpisz przychód z {monthGenitive(month)}.
+            </p>
+          ) : (
+            <ul className={styles.list}>
+              {incomes.map((income) => (
+                <IncomeItem
+                  key={income.id}
+                  income={toIncomeView(income)}
+                  readOnly={settled}
+                />
+              ))}
+            </ul>
+          )}
+          {!settled && <AddIncomeForm key="add-income" month={month} />}
+          {settleHref !== null && (
+            <Link href={settleHref} className={styles.settleLink}>
+              Rozlicz miesiąc
+            </Link>
+          )}
+        </div>
+      </details>
     </section>
   );
 }

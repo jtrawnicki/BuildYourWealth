@@ -18,6 +18,21 @@ const twoAgo = previousMonth(previous);
 
 const currentRegion = (page: Page) =>
   page.getByRole("region", { name: formatMonthTitle(current) });
+
+// Karta bieżącego miesiąca z danymi jest domyślnie zwinięta (nagłówek + suma);
+// rozwijamy ją, zanim wejdziemy w pozycje czy formularz. Pusty miesiąc jest już
+// otwarty, więc helper klika tylko, gdy karta jest zwinięta.
+async function openCurrent(page: Page) {
+  const details = currentRegion(page).locator("details").first();
+  const isOpen = await details.evaluate(
+    (el) => (el as HTMLDetailsElement).open,
+  );
+  if (!isOpen) {
+    await currentRegion(page)
+      .getByRole("heading", { name: formatMonthTitle(current) })
+      .click();
+  }
+}
 const previousRegion = (page: Page) =>
   page.getByRole("region", { name: "Poprzedni miesiąc" });
 const planRegion = (page: Page) =>
@@ -87,6 +102,9 @@ test("pusty stan i utworzenie bieżącego miesiąca pierwszym przychodem (SPEC 5
   await expect(currentRegion(page)).toContainText("Wpisz przychód z");
 
   await addIncome(currentRegion(page), { name: "Pensja", amount: "8 500" });
+  // Pierwszy przychód tworzy miesiąc i zwija kartę — rozwijamy ją, żeby zobaczyć
+  // pozycje i dalej dodawać.
+  await openCurrent(page);
   await expect(currentRegion(page).getByRole("status")).toHaveText(
     "Dodano przychód.",
   );
@@ -115,6 +133,7 @@ test("edycja, usunięcie i skasowanie miesiąca po ostatniej pozycji (SPEC 7, P7
   });
 
   await page.goto("/");
+  await openCurrent(page);
   const region = currentRegion(page);
   await expect(region).toContainText(text("9 800,00 zł"));
 
@@ -551,6 +570,7 @@ for (const colorScheme of ["light", "dark"] as const) {
         snapshot: goalIds.map((goalId) => ({ goalId })),
       });
       await page.goto("/");
+      await openCurrent(page);
       await expect(planRegion(page)).toBeVisible();
       await page.getByRole("button", { name: "Edytuj" }).first().click();
       await expect(
