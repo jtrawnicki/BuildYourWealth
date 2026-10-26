@@ -1,0 +1,40 @@
+name: Semgrep
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Cotygodniowy pełny skan (poniedziałek 06:00 UTC) — łapie nowe reguły
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  security-events: write   # pozwala wrzucić wyniki do zakładki Security
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Oficjalny obraz z zainstalowanym Semgrepem
+    container:
+      image: semgrep/semgrep
+    # Nie uruchamiaj na forkach (brak sekretów i uprawnień)
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v5
+      - run: semgrep ci --sarif --output=semgrep.sarif
+        env:
+          # Zestaw reguł; "auto" dobiera je po językach w repo
+          SEMGREP_RULES: >-
+            p/default
+            p/typescript
+            p/javascript
+            p/nextjs
+            p/secrets
+        continue-on-error: true
+      - name: Wyślij wyniki do GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
