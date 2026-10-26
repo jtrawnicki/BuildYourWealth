@@ -10,7 +10,7 @@ on:
 
 permissions:
   contents: read
-  security-events: write   # pozwala wrzucić wyniki do zakładki Security
+  security-events: write # pozwala wrzucić wyniki do zakładki Security
 
 jobs:
   semgrep:
