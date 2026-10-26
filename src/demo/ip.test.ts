@@ -1,9 +1,9 @@
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { clientIp, hashIp, ipSecret } from "./ip";
 
-// Stały klucz tylko na potrzeby testu HMAC — nie jest to prawdziwy sekret.
-const TEST_SECRET = "sekret";
+// Losowy klucz tylko na potrzeby testu HMAC — nie hardkodujemy sekretu.
+const TEST_SECRET = randomBytes(16).toString("hex");
 
 describe("skrót adresu IP demo (SPEC 5.8, T16)", () => {
   it("bierze pierwszy adres z x-forwarded-for", () => {
@@ -17,7 +17,6 @@ describe("skrót adresu IP demo (SPEC 5.8, T16)", () => {
   });
 
   it("liczy HMAC-SHA-256 z sekretem, a nie zapisuje adresu", () => {
-    // nosemgrep: javascript.lang.security.audit.hardcoded-hmac-key.hardcoded-hmac-key -- klucz testowy, nie sekret produkcyjny
     const expected = createHmac("sha256", TEST_SECRET)
       .update("1.2.3.4")
       .digest("hex");
