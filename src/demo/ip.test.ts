@@ -2,6 +2,9 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { clientIp, hashIp, ipSecret } from "./ip";
 
+// Stały klucz tylko na potrzeby testu HMAC — nie jest to prawdziwy sekret.
+const TEST_SECRET = "sekret";
+
 describe("skrót adresu IP demo (SPEC 5.8, T16)", () => {
   it("bierze pierwszy adres z x-forwarded-for", () => {
     expect(clientIp("1.2.3.4, 10.0.0.1")).toBe("1.2.3.4");
@@ -14,14 +17,15 @@ describe("skrót adresu IP demo (SPEC 5.8, T16)", () => {
   });
 
   it("liczy HMAC-SHA-256 z sekretem, a nie zapisuje adresu", () => {
-    const expected = createHmac("sha256", "sekret")
+    // nosemgrep: javascript.lang.security.audit.hardcoded-hmac-key.hardcoded-hmac-key -- klucz testowy, nie sekret produkcyjny
+    const expected = createHmac("sha256", TEST_SECRET)
       .update("1.2.3.4")
       .digest("hex");
-    const hash = hashIp("1.2.3.4", "sekret");
+    const hash = hashIp("1.2.3.4", TEST_SECRET);
     expect(hash).toBe(expected);
     expect(hash).not.toContain("1.2.3.4");
     // Ten sam adres i sekret → ten sam skrót; inny sekret → inny skrót.
-    expect(hashIp("1.2.3.4", "sekret")).toBe(hash);
+    expect(hashIp("1.2.3.4", TEST_SECRET)).toBe(hash);
     expect(hashIp("1.2.3.4", "inny")).not.toBe(hash);
   });
 
