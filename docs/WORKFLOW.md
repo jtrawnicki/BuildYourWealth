@@ -1,7 +1,8 @@
 # Uniwersalny workflow pracy nad projektem z agentami AI
 
-> Stan procesu w tym repozytorium: **etapy A–E zakończone**; `SPEC.md`, `STACK.md`
-> i `PLAN.md` zatwierdzone; następny krok: etap F (implementacja od T1).
+> Stan procesu w tym repozytorium: **etapy A–F zakończone** (T1–T16
+> zmerge'owane); etap G (zamknięcie MVP, T15) w toku — dowody i kroki ręczne
+> właściciela w [`RELEASE-MVP.md`](RELEASE-MVP.md).
 
 ## 1. Cel
 
