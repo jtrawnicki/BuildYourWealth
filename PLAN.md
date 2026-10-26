@@ -345,6 +345,12 @@ który z nich korzysta. Równolegle z T2–T4.
 
 ### T15 Zamknięcie MVP
 
+> **W toku.** Część autonomiczna (bramka w CI, pokrycie 21 scenariuszy,
+> audyt niezmienników bezpieczeństwa, backlog SPEC 9 jako Issues #55–#65)
+> zebrana w [`docs/RELEASE-MVP.md`](docs/RELEASE-MVP.md). Pozostają kroki
+> ręczne właściciela (scenariusz akceptacyjny wersji prywatnej, przegląd demo
+> na Vercel, próbna kopia `private:dump` + `pg_restore`) — lista w tym dokumencie.
+
 - **Rezultat:** wydanie zgodne z WORKFLOW etap G.
 - **Zależy od:** wszystkie. **Poziom:** 3.
 - **Kryteria akceptacji:** wszystkie 21 scenariuszy z SPEC 12 mają
