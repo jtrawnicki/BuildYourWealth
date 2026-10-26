@@ -6,6 +6,10 @@ updates:
   # zasypywać repozytorium; major zostaje osobno (może wymagać uwagi).
   - package-ecosystem: npm
     directory: "/"
+    # Odczekaj 7 dni z nowo opublikowanymi wersjami (łańcuch dostaw A03):
+    # świeżo wydany pakiet może być złośliwy lub niestabilny.
+    cooldown:
+      default-days: 7
     schedule:
       interval: weekly
       day: monday
@@ -21,6 +25,10 @@ updates:
   # Akcje GitHub (przypięte po SHA — Dependabot podnosi SHA i komentarz wersji).
   - package-ecosystem: github-actions
     directory: "/"
+    # Odczekaj 7 dni z nowo opublikowanymi wersjami (łańcuch dostaw A03):
+    # świeżo wydana wersja akcji może być złośliwa lub niestabilna.
+    cooldown:
+      default-days: 7
     schedule:
       interval: weekly
       day: monday
