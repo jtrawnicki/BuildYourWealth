@@ -33,7 +33,7 @@ type FormValues = {
 
 /** Procent bez znaku `%` do pola tekstowego: `2000` → `20`, `3333` → `33,33`. */
 const pctField = (hundredths: number) =>
-  formatPercent(hundredths).replace("%", "");
+  formatPercent(hundredths).replace(/%$/, "");
 const amountField = (minor: number | null) =>
   minor === null ? "" : formatAmount(minor);
 
