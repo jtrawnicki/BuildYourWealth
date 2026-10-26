@@ -1,0 +1,42 @@
+# Automatyczne aktualizacje zależności (OWASP 2025 A03 — Software Supply Chain).
+# Dependabot otwiera PR-y, które przechodzą przez pełną bramkę jakości (CI).
+version: 2
+updates:
+  # Zależności npm. Aktualizacje minor/patch grupujemy w jeden PR, żeby nie
+  # zasypywać repozytorium; major zostaje osobno (może wymagać uwagi).
+  - package-ecosystem: npm
+    directory: "/"
+    # Odczekaj 7 dni z nowo opublikowanymi wersjami (łańcuch dostaw A03):
+    # świeżo wydany pakiet może być złośliwy lub niestabilny.
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Akcje GitHub (przypięte po SHA — Dependabot podnosi SHA i komentarz wersji).
+  - package-ecosystem: github-actions
+    directory: "/"
+    # Odczekaj 7 dni z nowo opublikowanymi wersjami (łańcuch dostaw A03):
+    # świeżo wydana wersja akcji może być złośliwa lub niestabilna.
+    cooldown:
+      default-days: 7
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        update-types:
+          - minor
+          - patch
