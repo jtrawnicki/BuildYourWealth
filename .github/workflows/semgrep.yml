@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # upload-sarif (codeql-action v4) czyta dane uruchomienia workflow
   security-events: write # pozwala wrzucić wyniki do zakładki Security
 
 jobs:

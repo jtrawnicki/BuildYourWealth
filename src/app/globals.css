@@ -9,14 +9,14 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--font-sora), sans-serif;
+  font-family: var(--font-sans), sans-serif;
 }
 
 a {

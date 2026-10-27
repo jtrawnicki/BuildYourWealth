@@ -6,7 +6,7 @@ import { MESSAGES } from "@/domain/input";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
 import { expect, test } from "./fixtures";
 
-const LIGHT_BG = "rgb(247, 247, 250)";
+const LIGHT_BG = "rgb(241, 244, 247)";
 const DARK_BG = "rgb(15, 17, 23)";
 
 const bodyBackground = (page: Page) =>
@@ -50,7 +50,7 @@ test("zakładka Ustawienia jest aktywna", async ({ page }) => {
     page
       .getByRole("navigation", { name: "Menu główne" })
       .locator('[aria-current="page"]'),
-  ).toHaveText("Ustawienia");
+  ).toHaveAccessibleName("Ustawienia");
 });
 
 test.describe("kurs EUR", () => {

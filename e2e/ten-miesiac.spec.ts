@@ -284,8 +284,9 @@ test("plan miesiąca pokazuje pule, karty i do wydania (makieta B1, scen. 1)", a
   await page.goto("/");
 
   const plan = planRegion(page);
-  await expect(plan).toContainText(text("odkładasz 3 430,00 zł"));
-  await expect(plan).toContainText(text("do wydania zostaje 6 370,00 zł"));
+  await expect(plan).toContainText(text("Odkładasz w tym miesiącu"));
+  await expect(plan).toContainText(text("3 430,00 zł"));
+  await expect(plan).toContainText(text("Do wydania zostaje 6 370,00 zł"));
 
   const savings = card(page, "Oszczędności");
   await expect(savings).toContainText(text("1 960,00 zł"));
@@ -317,7 +318,7 @@ test("reszta z zaokrągleń trafia do do wydania (scen. 14)", async ({
   const plan = planRegion(page);
   await expect(card(page, "Oszczędności")).toContainText(text("1 930,00 zł"));
   await expect(card(page, "Inwestycje")).toContainText(text("1 447,49 zł"));
-  await expect(plan).toContainText(text("do wydania zostaje 6 272,51 zł"));
+  await expect(plan).toContainText(text("Do wydania zostaje 6 272,51 zł"));
 });
 
 test("cel z osiągniętą kwotą docelową pokazuje osiągnięty, a plan dalej liczy wpłatę (scen. 10)", async ({
@@ -475,7 +476,7 @@ test("rozliczony miesiąc pokazuje kwoty faktyczne jako główne, plan niżej (S
 
   // Zdanie z faktycznymi kwotami w czasie przeszłym, bez zapowiedzi rozliczenia.
   const plan = planRegion(page);
-  await expect(plan).toContainText(text("odłożono 1 500,00 zł"));
+  await expect(plan).toContainText(text("W tym miesiącu odłożono"));
   await expect(plan).toContainText(text("zostało 7 000,00 zł"));
   await expect(plan).not.toContainText("odkładasz");
   await expect(plan).not.toContainText("potwierdzisz");
@@ -508,7 +509,7 @@ test("rozliczony miesiąc z celem EUR: wpłata w EUR z przelicznikiem i suma w P
   await expect(row).toContainText(text("387,00 zł"));
   // Suma puli i zdanie liczą się z wpłaty przeliczonej kursem rozliczenia.
   await expect(card(page, "Inwestycje")).toContainText(text("387,00 zł"));
-  await expect(planRegion(page)).toContainText(text("odłożono 387,00 zł"));
+  await expect(planRegion(page)).toContainText(text("W tym miesiącu odłożono"));
 });
 
 test("zaległe miesiące mają pigułki od najstarszego i znikają po rozliczeniu (scen. 7)", async ({

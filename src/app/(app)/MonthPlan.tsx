@@ -73,41 +73,56 @@ const SEGMENT_CLASS: Record<Segment["key"], string> = {
   spend: styles.segSpend,
 };
 
+const TILE_CLASS: Record<Segment["key"], string> = {
+  savings: styles.tileSave,
+  investments: styles.tileInvest,
+  spend: styles.tileSpend,
+};
+
 export function MonthPlan({ view }: { view: MonthPlanView }) {
+  // Procent obok kwoty na kafelku bierzemy z segmentu paska; kategoria o kwocie
+  // 0 nie ma segmentu, więc zostaje sama nazwa.
+  const pctByKey = new Map(view.segments.map((s) => [s.key, s.pctLabel]));
+
   return (
     <section className={styles.plan} aria-label="Plan miesiąca">
-      <Lead view={view} />
-      {view.summable && (
-        <div className={styles.split}>
-          <div
-            className={styles.bar}
-            role="img"
-            aria-label={`Podział przychodu: ${view.legend
-              .map((entry) => `${entry.label} ${entry.amountLabel}`)
-              .join(", ")}`}
-          >
-            {view.segments.map((segment) => (
-              <div
-                key={segment.key}
-                className={`${styles.segment} ${SEGMENT_CLASS[segment.key]}`}
-                style={{ width: `${segment.widthPct}%` }}
-              >
-                {segment.pctLabel}
-              </div>
-            ))}
-          </div>
-          <div className={styles.legend}>
-            {view.legend.map((entry) => (
-              <span key={entry.key} className={styles.legendItem}>
+      {view.summable ? (
+        <div className={styles.hero}>
+          <Lead view={view} />
+          <div className={styles.heroSplit}>
+            <div
+              className={styles.bar}
+              role="img"
+              aria-label={`Podział przychodu: ${view.legend
+                .map((entry) => `${entry.label} ${entry.amountLabel}`)
+                .join(", ")}`}
+            >
+              {view.segments.map((segment) => (
                 <span
-                  className={`${styles.swatch} ${SEGMENT_CLASS[entry.key]}`}
-                  aria-hidden="true"
+                  key={segment.key}
+                  className={`${styles.segment} ${SEGMENT_CLASS[segment.key]}`}
+                  style={{ width: `${segment.widthPct}%` }}
                 />
-                {entry.label} <strong>{entry.amountLabel}</strong>
-              </span>
-            ))}
+              ))}
+            </div>
+            <div className={styles.tiles}>
+              {view.legend.map((entry) => (
+                <div
+                  key={entry.key}
+                  className={`${styles.tile} ${TILE_CLASS[entry.key]}`}
+                >
+                  <span className={styles.tileAmount}>{entry.amountLabel}</span>
+                  <span className={styles.tileLabel}>
+                    {entry.label}
+                    {pctByKey.has(entry.key) && ` · ${pctByKey.get(entry.key)}`}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      ) : (
+        <Lead view={view} />
       )}
 
       {view.groups.length > 0 && (
@@ -135,19 +150,24 @@ export function MonthPlan({ view }: { view: MonthPlanView }) {
 
 function Lead({ view }: { view: MonthPlanView }) {
   // Rozliczony miesiąc z wpłatami nieprzeliczalnymi na PLN: zdanie bez kwot.
-  if (view.settled && !view.summable) {
+  if (!view.summable) {
     return (
-      <p className={styles.lead}>
+      <p className={styles.leadMessage}>
         Miesiąc rozliczony — wykonanie każdego celu niżej.
       </p>
     );
   }
   return (
-    <p className={styles.lead}>
-      {view.settled ? "W tym miesiącu odłożono" : "W tym miesiącu odkładasz"}{" "}
-      <span className={styles.leadSet}>{view.setAsideLabel}</span>, a do wydania{" "}
-      {view.settled ? "zostało" : "zostaje"} {view.toSpendLabel}.
-    </p>
+    <div className={styles.lead}>
+      <span className={styles.leadLabel}>
+        {view.settled ? "W tym miesiącu odłożono" : "Odkładasz w tym miesiącu"}
+      </span>
+      <span className={styles.leadNum}>{view.setAsideLabel}</span>
+      <span className={styles.leadRest}>
+        Do wydania {view.settled ? "zostało" : "zostaje"}{" "}
+        <strong>{view.toSpendLabel}</strong>
+      </span>
+    </div>
   );
 }
 

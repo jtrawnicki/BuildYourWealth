@@ -1,7 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
-const LIGHT_BG = "rgb(247, 247, 250)";
+const LIGHT_BG = "rgb(241, 244, 247)";
 const DARK_BG = "rgb(15, 17, 23)";
 
 const bodyBackground = (page: Page) =>
