@@ -1,8 +1,10 @@
-# BuildYourWealth: plan wykonania MVP
+# BuildYourWealth: plan wykonania
 
-Status: **zatwierdzony po review etapu E (2026-10-20)**; zmiana koncepcji
+Status: **MVP zatwierdzone po review etapu E (2026-10-20)**; zmiana koncepcji
 wdrożenia z 2026-10-21 (SPEC P8, STACK 9.4): nowe zadania T4a i T16,
-zmienione T4 (opis historyczny) i T15.
+zmienione T4 (opis historyczny) i T15. MVP zamknięte (T15).
+**Etap 2** (T17–T26, rozdział „Etap 2” na końcu): projekt z 2026-10-27,
+przed review etapów B i E.
 Źródła: [`SPEC.md`](SPEC.md) (co budujemy), [`STACK.md`](STACK.md) (jak),
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (proces). Plan opisuje rezultaty,
 nie kod. Po review etapu E każde zadanie dostaje Issue na GitHub, a ten plan
@@ -376,3 +378,213 @@ czy to decyzje produktowe dla człowieka:
    tak zachowuje się miesiąc, który nigdy nie miał przychodu.
    **Rozstrzygnięte 2026-10-20 (SPEC P7):** właściciel wybrał „miesiąc
    znika”; SPEC 7 poprawiony.
+
+# Etap 2
+
+Zakres: SPEC 5.9–5.12, reguły 6.10–6.13, scenariusze 22–34, STACK
+„Kurs NBP”, „Historia wartości”, „Prognoza celu”, „Powiadomienia”.
+Oznaczenia jak w MVP. **R** to odświeżenie wyglądu w kierunku „Portfel”
+(gałąź `feat-portfel-reskin`, realizowane osobno): zadania z interfejsem
+zaczynają się po jego merge'u, żeby nie przepisywać tych samych plików
+równolegle (SPEC P20).
+
+## Milestone'y Etapu 2
+
+| Milestone | Działający przyrost | Zadania |
+| --- | --- | --- |
+| M7 Fundamenty | Aplikacja zapisuje historię wartości i ma kursy NBP w bazie. | T17, T18 |
+| M8 Kurs NBP | Kurs EUR bez ręcznego wpisywania; rozliczenie po kursie z końca miesiąca. | T19 |
+| M9 Wykres i prognoza | Wykres majątku na Majątku; termin, prognoza i sugestia procentu przy celach. | T20–T22 |
+| M10 Powiadomienia | Wersja prywatna wysyła maile o przychodach, rozliczeniu i celach; demo pokazuje podgląd. | T23–T25 |
+| M11 Wydanie Etapu 2 | Pełna weryfikacja poziomu 3. | T26 |
+
+Graf zależności:
+
+```
+T17 (historia wartości) ─────────────┐
+T18 (kursy NBP) ─┬─ T19 (kurs w UI) ─┼─ T20 (wykres)       ← T19, T20 wymagają R
+                 │                   │
+T21 (domena prognozy) ─┬─ T22 (termin i prognoza w UI)     ← wymaga T18 i R
+                       └─ T23 (silnik powiadomień) ─┬─ T24 (wyzwalacze, Harmonogram)
+                                                    └─ T25 (Ustawienia, podgląd demo) ← wymaga R
+wszystko ─ T26
+```
+
+T17 jest pilne: historia wartości liczy się od wdrożenia (SPEC P17), więc
+każdy tydzień zwłoki to tydzień bez danych na wykresie. Po jego merge'u
+właściciel aktualizuje wersję prywatną (`git pull`, `npm run private:start`).
+T17, T18 i T21 nie dotykają interfejsu i mogą iść równolegle, także przed
+merge'em R.
+
+## M7 Fundamenty
+
+### T17 Historia wartości źródeł
+
+- **Rezultat:** tabela `source_values` z migracją wstawiającą punkt
+  `initial` dla istniejących źródeł; jedna funkcja w `db/` dla każdej zmiany
+  wartości źródła (dodanie, edycja, rozliczenie, archiwizacja), zapisująca
+  historię w tej samej transakcji; generator demo zapisuje 12 miesięcy
+  historii zgodnej z rozliczeniami i z co najmniej jedną ręczną zmianą
+  wyceny (SPEC 5.8).
+- **Zależy od:** brak. **Poziom:** 2 (dane, migracja na `byw_private`).
+  **Równolegle:** z T18, T21.
+- **Kryteria akceptacji:** migracja na bazie z danymi MVP zachowuje
+  wszystkie wartości i tworzy po jednym punkcie `initial` na źródło; test
+  integracyjny każdej ścieżki zmiany wartości widzi nowy wiersz historii
+  z właściwym powodem; odrzucone drugie rozliczenie (scen. 15) nie zostawia
+  wpisu w historii; w kodzie nie ma innego zapisu `sources.value`; testy
+  generatora: ostatni punkt historii każdego źródła = jego bieżąca wartość.
+- **Weryfikacja:** testy integracyjne, niezależne review migracji.
+
+### T18 Kursy NBP: pobieranie i wybór kursu
+
+- **Rezultat:** wg STACK „Kurs NBP”: tabele `exchange_rates`
+  i `rate_fetches`, klient NBP z limitem czasu, leniwe pobieranie
+  brakujących tabel (raz na godzinę), czyste funkcje reguły 6.10 (bieżący
+  kurs, kurs na dzień, kurs rozliczenia, kurs zapasowy), atrapa NBP do E2E
+  przez `NBP_API_URL` (ignorowana przy `VERCEL_ENV`).
+- **Zależy od:** brak. **Poziom:** 2 (integracja zewnętrzna).
+  **Równolegle:** z T17, T21.
+- **Kryteria akceptacji:** testy jednostkowe reguły 6.10: weekend na końcu
+  miesiąca (31.10.2026 to sobota → tabela z 30.10), rozliczenie ostatniego
+  dnia przed publikacją tabeli, brak tabel z 7 dni → kurs zapasowy, brak
+  obu → brak kursu; test integracyjny: brak odpowiedzi NBP nie rzuca błędu
+  i zwraca kurs z bazy, druga próba w ciągu godziny nie łączy się z NBP,
+  zakres dłuższy niż 93 dni dzielony na zapytania; żaden test nie łączy się
+  z prawdziwym NBP.
+- **Weryfikacja:** testy jednostkowe i integracyjne, niezależne review.
+
+## M8 Kurs NBP
+
+### T19 Kurs NBP w aplikacji i rozliczeniu
+
+- **Rezultat:** SPEC 5.9 i zmiany w 5.2, 5.4–5.7: Ustawienia z kursem NBP
+  i datą, ostrzeżeniem o starym kursie i polem kursu zapasowego; Majątek
+  i „Ten miesiąc” na bieżącym kursie; ekran rozliczenia z kursem
+  rozliczenia (data, pochodzenie) i prośbą o kurs zapasowy, gdy go brak;
+  kolumny `settled_rate_date` i `settled_rate_source` (miesiące sprzed
+  Etapu 2: `fallback`); Historia z pochodzeniem kursu; demo z bieżącym
+  kursem z NBP i kursem zapasowym w generatorze.
+- **Zależy od:** T18, R. **Poziom:** 2 (pieniądze, rozliczenie).
+- **Kryteria akceptacji:** scen. 22, 23, 24; scen. 6 i 15 nadal przechodzą;
+  pobieranie z NBP nie dzieje się w transakcji rozliczenia; nowe akcje mają
+  test „bez sesji brak danych” (scen. 13).
+- **Weryfikacja:** E2E z atrapą NBP, testy integracyjne rozliczenia,
+  niezależne review.
+
+## M9 Wykres i prognoza
+
+### T20 Wykres wartości majątku
+
+- **Rezultat:** SPEC 5.11: czysta funkcja reguły 6.11 (punkty na koniec
+  miesiąca, EUR po kursie z końca miesiąca), komponent SVG na Majątku
+  z podpowiedziami na hover, dotyk i fokus, tabela dla czytników ekranu,
+  pusty stan.
+- **Zależy od:** T17, T18, R. **Poziom:** 2.
+- **Kryteria akceptacji:** scen. 25, 26; wykres w demo pokazuje 12 miesięcy
+  (scen. 34, część); scen. 12 dla Majątku (oba motywy, 360 px bez
+  przewijania w poziomie); brak nowej zależności produkcyjnej.
+- **Weryfikacja:** testy jednostkowe reguły 6.11 (przełom roku, źródło
+  dodane w trakcie miesiąca, archiwizacja, brak kursu z końca miesiąca), E2E.
+
+### T21 Domena prognozy celu
+
+- **Rezultat:** czyste funkcje reguł 6.12–6.13: średnia wpłata, pierwszy
+  miesiąc wpłaty, miesiąc osiągnięcia, status, wymagana wpłata, sugerowany
+  procent; walidacja terminu z SPEC 7.1.
+- **Zależy od:** brak (korzysta z istniejących funkcji domeny).
+  **Poziom:** 2 (obliczenia). **Równolegle:** z T17, T18.
+- **Kryteria akceptacji:** przykład prognozy z SPEC 6 co do grosza
+  (566,66 zł, styczeń 2027, 650,00 zł, 33,17%, 260,00 zł); przypadki: mniej
+  niż 3 rozliczone miesiące, brak rozliczeń, średnia 0, termin minął,
+  termin = P, cel EUR (kwoty w EUR, procent z PLN), sugestia powyżej 100%,
+  przełom roku.
+- **Weryfikacja:** testy jednostkowe, niezależne review obliczeń.
+
+### T22 Termin celu i prognoza w interfejsie
+
+- **Rezultat:** SPEC 5.12: pole terminu w Planie podziału (kolumna
+  `goals.deadline` z CHECK), prognoza i status na „Ten miesiąc”, wymagana
+  wpłata i sugestia procentu w Planie podziału z linkiem z „zagrożony”;
+  generator demo z celem „zdążysz” i „zagrożony”.
+- **Zależy od:** T21, T18, R. **Poziom:** 2.
+- **Kryteria akceptacji:** scen. 27, 28; walidacja terminu z SPEC 7.1;
+  usunięcie kwoty docelowej usuwa termin; procenty planu nie zmieniają się
+  same; testy generatora potwierdzają oba statusy dla wielu dat `now`.
+- **Weryfikacja:** E2E, testy generatora.
+
+## M10 Powiadomienia
+
+### T23 Silnik powiadomień
+
+- **Rezultat:** wg STACK „Powiadomienia”: tabela `notifications`, kolumny
+  ustawień powiadomień i `goals.risk_notified`, czysta funkcja wyboru maili
+  dla trzech grup (SPEC 5.10), polskie treści i tematy z kwotami, wysyłka
+  przez `nodemailer` ze wstrzykiwanym transportem, funkcja „sprawdź
+  i wyślij” z ochroną przed duplikatem; moduł wysyłki odmawia działania
+  w trybie demo.
+- **Zależy od:** T21. **Poziom:** 2 (nowa zależność produkcyjna, dane
+  wychodzące poza komputer).
+- **Kryteria akceptacji:** scen. 29–32 jako testy z wstrzykniętym `now`;
+  dwa równoległe sprawdzenia wysyłają mail raz; błąd transportu zostawia
+  mail do ponownej próby; brak zmiennych `SMTP_*` = brak wysyłki bez błędu;
+  wyłączona grupa nie wysyła; tryb demo nie tworzy transportu SMTP;
+  uzasadnienie `nodemailer` w PR (STACK 2).
+- **Weryfikacja:** testy jednostkowe i integracyjne, niezależne review
+  bezpieczeństwa (co wychodzi poza komputer, sekrety, demo).
+
+### T24 Wyzwalacze w wersji prywatnej
+
+- **Rezultat:** `npm run private:notify`, sprawdzenie w `private:start`
+  przed `next start`, sprawdzenie po rozliczeniu przez `after()`,
+  `private:notify:install` / `:uninstall` (Harmonogram zadań, codziennie,
+  `StartWhenAvailable`), log poza repozytorium, `SMTP_*` w
+  `.env.private.example`, instrukcja w `AGENTS.md` (hasło aplikacji Gmail,
+  rejestracja zadania, wymagany Docker Desktop).
+- **Zależy od:** T23. **Poziom:** 2.
+- **Wymaga człowieka:** hasło aplikacji Gmail i zmienne `SMTP_*`
+  w `.env.private`, rejestracja zadania, sprawdzenie maila na prawdziwej
+  skrzynce (agent nie czyta `.env.private`).
+- **Kryteria akceptacji:** `private:notify` na `byw_dev` z atrapą SMTP
+  wysyła mail ze scen. 29; wyłączony Docker daje czytelny błąd i kod ≠ 0;
+  rozliczenie nie czeka na SMTP; skrypty instalacji nie wymagają
+  uprawnień administratora i są idempotentne.
+- **Weryfikacja:** testy skryptów, ręczny test właściciela.
+
+### T25 Ustawienia powiadomień i podgląd w demo
+
+- **Rezultat:** sekcja „Powiadomienia” w Ustawieniach (SPEC 5.10): adres,
+  przełączniki, „Wyślij testowy mail”, lista 10 ostatnich maili, stan „nie
+  skonfigurowano”; w demo podgląd maili bez wysyłki.
+- **Zależy od:** T23, R. **Poziom:** 2.
+- **Kryteria akceptacji:** scen. 33, 34 (część powiadomień); walidacja
+  adresu z SPEC 7.1; testowy mail w demo jest odrzucony po stronie serwera;
+  nowe akcje mają test „bez sesji brak danych”.
+- **Weryfikacja:** E2E w obu trybach z atrapą SMTP, niezależne review.
+
+## M11 Wydanie Etapu 2
+
+### T26 Zamknięcie Etapu 2
+
+- **Rezultat:** wydanie zgodne z WORKFLOW etap G, raport
+  `docs/RELEASE-ETAP-2.md` (jak `RELEASE-MVP.md`).
+- **Zależy od:** wszystkie. **Poziom:** 3.
+- **Kryteria akceptacji:** scenariusze 1–34 mają zielony test albo
+  odhaczony krok ręczny; audyt bezpieczeństwa: wersja prywatna nadal
+  niedostępna z sieci, jedyne połączenia wychodzące to NBP i SMTP, demo nie
+  wysyła maili; smoke test demo; wersja prywatna zaktualizowana z kopią
+  przed migracją (`private:dump`), testowy mail i mail z Harmonogramu
+  odebrane przez właściciela.
+- **Weryfikacja:** pełna bramka, ręczny scenariusz właściciela.
+
+## Pytania do review Etapu 2
+
+1. **Prywatność maili a P8.** P8 trzyma prawdziwe dane tylko na komputerze
+   właściciela, a P15 wysyła kwoty przez serwer poczty. Właściciel wybrał
+   to świadomie; reviewer sprawdza, czy SPEC 10 i STACK 9.6 opisują ten
+   wyjątek wystarczająco.
+2. **Założenia Z10–Z16** (SPEC 11) zaproponował agent; każde wymaga
+   akceptacji albo zmiany przez właściciela.
+3. **Zależność od R.** Jeśli odświeżenie wyglądu się przedłuży, T19 można
+   zrobić w obecnym stylu (zmiany w istniejących ekranach są małe); T20, T22
+   i T25 dodają nowe elementy i lepiej poczekać.
