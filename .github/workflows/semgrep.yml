@@ -34,8 +34,13 @@ jobs:
             p/nextjs
             p/secrets
         continue-on-error: true
+      # Upload do zakładki Security wymaga włączonego Code scanning (GitHub
+      # Advanced Security — niedostępne dla prywatnego repo na darmowym planie).
+      # Gdy go brak, krok tylko ostrzega i nie wywala joba; sam skan wyżej i tak
+      # działa. Po upublicznieniu repo lub włączeniu GHAS wyniki wrócą do Security.
       - name: Wyślij wyniki do GitHub Security
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           sarif_file: semgrep.sarif
