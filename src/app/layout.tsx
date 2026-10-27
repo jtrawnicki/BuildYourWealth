@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
-import { DM_Sans, Sora } from "next/font/google";
+import { Manrope } from "next/font/google";
 import { THEME_SCRIPT } from "@/ui/theme";
 import "@/ui/tokens.css";
 import "./globals.css";
 
-const sora = Sora({
+// Jeden krój dla całej aplikacji (styl „Portfel"): Manrope, zmienny font
+// z pełnym zakresem grubości, więc nie trzeba podawać listy wag.
+const manrope = Manrope({
   subsets: ["latin", "latin-ext"],
-  variable: "--font-sora",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin", "latin-ext"],
-  axes: ["opsz"],
-  variable: "--font-dm-sans",
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
@@ -24,11 +20,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   // suppressHydrationWarning: THEME_SCRIPT dodaje data-theme przed hydracją.
   return (
-    <html
-      lang="pl"
-      className={`${sora.variable} ${dmSans.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="pl" className={manrope.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

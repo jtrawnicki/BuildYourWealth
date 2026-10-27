@@ -41,13 +41,12 @@ const pairs: [text: string, background: string][] = [
   ["text", "spend"],
   ["save-ink", "save-soft"],
   ["invest-ink", "invest-soft"],
+  ["spend-ink", "spend-soft"],
   ["warn-text", "warn-bg"],
   ["info-text", "info-bg"],
   ["ok-text", "ok-bg"],
   ["err-text", "err-bg"],
   ["disabled-text", "disabled-bg"],
-  ["on-dark", "dark"],
-  ["dark", "on-dark"], // przycisk na ciemnym pasku
 ];
 
 describe("tokeny kolorów", () => {

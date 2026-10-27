@@ -73,7 +73,7 @@
 }
 
 .incomeAmount {
-  font-family: var(--font-sora), sans-serif;
+  font-family: var(--font-sans), sans-serif;
   font-size: 1.25rem;
   font-weight: 700;
   white-space: nowrap;

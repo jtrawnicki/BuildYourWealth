@@ -15,8 +15,18 @@ export const metadata: Metadata = {
 };
 
 const GROUPS = [
-  { kind: "savings", title: "Oszczędności", dot: styles.dotSave },
-  { kind: "investments", title: "Inwestycje", dot: styles.dotInvest },
+  {
+    kind: "savings",
+    title: "Oszczędności",
+    dot: styles.dotSave,
+    pool: styles.poolSave,
+  },
+  {
+    kind: "investments",
+    title: "Inwestycje",
+    dot: styles.dotInvest,
+    pool: styles.poolInvest,
+  },
 ] as const;
 
 /** Suma w PLN albo `null`, gdy bez kursu nie da się jej policzyć (SPEC 7). */
@@ -77,13 +87,13 @@ export default async function WealthPage() {
           )}
         </div>
         <dl className={styles.summaryPools}>
-          {GROUPS.map(({ kind, title, dot }) => {
+          {GROUPS.map(({ kind, title, dot, pool }) => {
             const sum = sumPln(
               rows.filter((row) => row.kind === kind),
               rate,
             );
             return (
-              <div key={kind} className={styles.summaryPool}>
+              <div key={kind} className={`${styles.summaryPool} ${pool}`}>
                 <dt>
                   <span className={`${styles.dot} ${dot}`} />
                   {title}
@@ -98,16 +108,20 @@ export default async function WealthPage() {
       <div className={styles.groups}>
         {GROUPS.map(({ kind, title, dot }) => {
           const group = rows.filter((row) => row.kind === kind);
+          const groupSum = sumPln(group, rate);
           return (
             <section
               key={kind}
               className={styles.card}
               aria-labelledby={`grupa-${kind}`}
             >
-              <h2 id={`grupa-${kind}`} className={styles.groupTitle}>
-                <span className={`${styles.dot} ${dot}`} />
-                {title}
-              </h2>
+              <div className={styles.groupHead}>
+                <h2 id={`grupa-${kind}`} className={styles.groupTitle}>
+                  <span className={`${styles.dot} ${dot}`} />
+                  {title}
+                </h2>
+                <span className={styles.groupTotal}>{groupSum ?? "—"}</span>
+              </div>
               {group.length === 0 ? (
                 <p className={styles.empty}>
                   {kind === "savings"

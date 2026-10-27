@@ -1,28 +1,54 @@
 .nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .tab {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  border-radius: 999px;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
   text-decoration: none;
-  font-size: 15px;
-  font-weight: 600;
   color: var(--muted);
 }
 
-.tab[aria-current="page"] {
-  background: var(--text);
-  color: var(--bg);
+.tab:hover {
+  background: var(--track);
+  color: var(--text);
+  opacity: 1;
 }
 
+.tab[aria-current="page"] {
+  background: var(--invest-soft);
+  color: var(--invest-ink);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Na wąskim ekranie pasek jest dolną belką: ikony w rzędzie, rozłożone równo. */
 @media (max-width: 759px) {
+  .nav {
+    flex-direction: row;
+    flex: 1;
+    gap: 0;
+    justify-content: space-around;
+  }
+
   .tab {
-    padding: 0 12px;
+    width: 48px;
+    height: 48px;
   }
 }

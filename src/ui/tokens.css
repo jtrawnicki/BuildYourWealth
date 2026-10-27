@@ -1,27 +1,30 @@
-/* Kolory obu motywów z makiet wariantu B (docs/design/, obiekt `t`).
+/* Kolory obu motywów. Motyw jasny to styl „Portfel" (kobaltowy akcent,
+   pastelowe kafelki pul); motyw ciemny zachowany bez zmian.
    Każdy token: light-dark(jasny, ciemny); motyw wybiera `color-scheme`. */
 :root {
   color-scheme: light dark;
 
-  --bg: light-dark(#f7f7fa, #0f1117);
+  --bg: light-dark(#f1f4f7, #0f1117);
   --surface: light-dark(#ffffff, #171a23);
-  --text: light-dark(#161826, #eceef5);
-  --muted: light-dark(#5d6275, #a2a8ba);
-  --border: light-dark(#e6e7ee, #272b38);
-  --input-border: light-dark(#c9cbd6, #3a3f50);
-  --accent: light-dark(#4338ca, #8c85ff);
+  --text: light-dark(#1b1d1f, #eceef5);
+  --muted: light-dark(#5c6064, #a2a8ba);
+  --border: light-dark(#e6e6e6, #272b38);
+  --input-border: light-dark(#cfd4da, #3a3f50);
+  --accent: light-dark(#1d5fd6, #8c85ff);
   --on-accent: light-dark(#ffffff, #12104a);
 
-  --save: light-dark(#0e7490, #2bb3c9);
+  --save: light-dark(#157b8b, #2bb3c9);
   --on-save: light-dark(#ffffff, #04262c);
-  --save-soft: light-dark(#e0f2f6, #11303a);
-  --save-ink: light-dark(#0b5d73, #7fdceb);
-  --invest: light-dark(#4338ca, #8c85ff);
+  --save-soft: light-dark(#def0f2, #11303a);
+  --save-ink: light-dark(#0c4b55, #7fdceb);
+  --invest: light-dark(#1d5fd6, #8c85ff);
   --on-invest: light-dark(#ffffff, #12104a);
-  --invest-soft: light-dark(#e9e8fb, #24224f);
-  --invest-ink: light-dark(#3a30b0, #c1bdff);
-  --spend: light-dark(#e4e5ec, #2c3140);
-  --track: light-dark(#ecedf2, #2c3140);
+  --invest-soft: light-dark(#dcf1ff, #24224f);
+  --invest-ink: light-dark(#0a3a80, #c1bdff);
+  --spend: light-dark(#dfe3e8, #2c3140);
+  --spend-soft: light-dark(#fbead8, #3b2c12);
+  --spend-ink: light-dark(#6a3307, #f7cf8a);
+  --track: light-dark(#e9edf1, #2c3140);
 
   --warn-bg: light-dark(#fff1d9, #3b2c12);
   --warn-text: light-dark(#6b4200, #f7cf8a);
@@ -33,9 +36,6 @@
   --err-text: light-dark(#8a1c1c, #ffb4b4);
   --disabled-bg: light-dark(#e4e5ec, #2c3140);
   --disabled-text: light-dark(#5d6275, #a2a8ba);
-
-  --dark: light-dark(#161826, #eceef5);
-  --on-dark: light-dark(#ffffff, #0f1117);
 }
 
 :root[data-theme="light"] {
