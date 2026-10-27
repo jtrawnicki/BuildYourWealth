@@ -71,7 +71,7 @@ test("zakładka Majątek jest aktywna, pusty stan pokazuje 0,00 zł", async ({
     page
       .getByRole("navigation", { name: "Menu główne" })
       .locator('[aria-current="page"]'),
-  ).toHaveText("Majątek");
+  ).toHaveAccessibleName("Majątek");
   await expect(summary(page)).toContainText(text("(0 źródeł)"));
   await expect(summary(page)).toContainText(text("0,00 zł"));
 });

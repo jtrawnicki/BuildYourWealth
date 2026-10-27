@@ -50,7 +50,7 @@ test("zakładka Ustawienia jest aktywna", async ({ page }) => {
     page
       .getByRole("navigation", { name: "Menu główne" })
       .locator('[aria-current="page"]'),
-  ).toHaveText("Ustawienia");
+  ).toHaveAccessibleName("Ustawienia");
 });
 
 test.describe("kurs EUR", () => {

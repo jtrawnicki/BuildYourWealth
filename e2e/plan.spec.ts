@@ -49,7 +49,7 @@ test("pusty plan: zakładka aktywna, bez źródeł zachęca do Majątku", async 
     page
       .getByRole("navigation", { name: "Menu główne" })
       .locator('[aria-current="page"]'),
-  ).toHaveText("Plan podziału");
+  ).toHaveAccessibleName("Plan podziału");
   await expect(pool(page, "Oszczędności")).toContainText("zakładce Majątek");
 });
 

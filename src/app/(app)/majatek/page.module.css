@@ -130,9 +130,10 @@
    i grubsza niż kwoty poszczególnych źródeł na liście niżej. */
 .groupHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
 }
 
 .groupTitle {
@@ -393,6 +394,10 @@
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 22px;
+  }
+
+  .summaryPools {
+    grid-template-columns: 1fr;
   }
 
   .summaryTotal {
