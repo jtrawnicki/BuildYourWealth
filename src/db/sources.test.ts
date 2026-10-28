@@ -1,8 +1,15 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closePool, getDb, getPool } from "./client";
-import { goals, monthGoals, months, sources, users } from "./schema";
+import {
+  goals,
+  monthGoals,
+  months,
+  sources,
+  sourceValues,
+  users,
+} from "./schema";
 import {
   archiveSource,
   createSource,
@@ -291,5 +298,88 @@ describe("edycja (SPEC 5.2)", () => {
     const id = await createSource(db, userId, POLISH);
     await archiveSource(db, userId, id);
     expect(await updateSource(db, userId, id, EDITED)).toBe("not-found");
+  });
+});
+
+describe("historia wartości (SPEC 5.11, T17)", () => {
+  async function history(id: number) {
+    return getDb()
+      .select({
+        value: sourceValues.value,
+        currency: sourceValues.currency,
+        reason: sourceValues.reason,
+        userId: sourceValues.userId,
+      })
+      .from(sourceValues)
+      .where(eq(sourceValues.sourceId, id))
+      .orderBy(asc(sourceValues.id));
+  }
+
+  it("dodanie źródła zapisuje punkt z wartością i walutą", async () => {
+    const id = await createSource(getDb(), userId, {
+      ...POLISH,
+      currency: "EUR",
+      value: 2500,
+    });
+    expect(await history(id)).toEqual([
+      { value: 2500, currency: "EUR", reason: "created", userId },
+    ]);
+  });
+
+  it("ręczna zmiana wartości zapisuje punkt; zmiana samej nazwy nie", async () => {
+    const id = await createSource(getDb(), userId, POLISH);
+    await updateSource(getDb(), userId, id, { ...POLISH, name: "Inna" });
+    await updateSource(getDb(), userId, id, { ...POLISH, value: 7000 });
+    expect(await history(id)).toEqual([
+      { value: 0, currency: "PLN", reason: "created", userId },
+      { value: 7000, currency: "PLN", reason: "manual", userId },
+    ]);
+  });
+
+  it("zmiana waluty zapisuje punkt w nowej walucie, choć liczba ta sama (SPEC 7)", async () => {
+    const id = await createSource(getDb(), userId, { ...POLISH, value: 900 });
+    await updateSource(getDb(), userId, id, {
+      ...POLISH,
+      value: 900,
+      currency: "EUR",
+    });
+    expect((await history(id)).at(-1)).toEqual({
+      value: 900,
+      currency: "EUR",
+      reason: "manual",
+      userId,
+    });
+  });
+
+  it("odrzucona edycja (zablokowana waluta) nie zostawia punktu", async () => {
+    const id = await createSource(getDb(), userId, POLISH);
+    await addGoal(id);
+    expect(
+      await updateSource(getDb(), userId, id, {
+        ...POLISH,
+        value: 100,
+        currency: "EUR",
+      }),
+    ).toBe("kind-locked");
+    expect(await history(id)).toHaveLength(1);
+  });
+
+  it("archiwizacja zapisuje punkt z wartością 0; odrzucona nie zapisuje", async () => {
+    const id = await createSource(getDb(), userId, { ...POLISH, value: 10 });
+    expect(await archiveSource(getDb(), userId, id)).toBe("has-value");
+    await updateSource(getDb(), userId, id, POLISH);
+    expect(await archiveSource(getDb(), userId, id)).toBe("ok");
+    expect((await history(id)).map((p) => [p.reason, p.value])).toEqual([
+      ["created", 10],
+      ["manual", 0],
+      ["archived", 0],
+    ]);
+  });
+
+  it("nie zapisuje punktu dla źródła innego konta", async () => {
+    const foreign = await createSource(getDb(), otherId, POLISH);
+    await updateSource(getDb(), userId, foreign, { ...POLISH, value: 5 });
+    await archiveSource(getDb(), userId, foreign);
+    expect(await history(foreign)).toHaveLength(1);
   });
 });

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { asc, eq, isNotNull, sql } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { generateDemoData } from "@/demo/generate";
 import { closePool, getDb } from "./client";
@@ -8,7 +8,15 @@ import {
   MAX_SANDBOXES_PER_IP_PER_HOUR,
   createSandbox,
 } from "./demo";
-import { goals, months, sessions, settings, sources, users } from "./schema";
+import {
+  goals,
+  months,
+  sessions,
+  settings,
+  sources,
+  sourceValues,
+  users,
+} from "./schema";
 
 afterAll(closePool);
 
@@ -161,5 +169,54 @@ describe("piaskownice demo (SPEC 5.8, T16)", () => {
       sandboxInput({ ipHash: "ip-hash-nowy" }),
     );
     expect(result.status).toBe("overloaded");
+  });
+});
+
+describe("historia wartości piaskownicy (SPEC 5.8, 5.11, T17)", () => {
+  it("zapisuje historię i daty rozliczeń z generatora; wartość źródła = ostatni punkt", async () => {
+    const input = sandboxInput();
+    const result = await createSandbox(getDb(), input);
+    if (result.status !== "ok") throw new Error(result.status);
+
+    const points = await getDb()
+      .select({
+        name: sources.name,
+        value: sourceValues.value,
+        currency: sourceValues.currency,
+        reason: sourceValues.reason,
+        recordedAt: sourceValues.recordedAt,
+      })
+      .from(sourceValues)
+      .innerJoin(sources, eq(sources.id, sourceValues.sourceId))
+      .where(eq(sourceValues.userId, result.userId))
+      .orderBy(asc(sourceValues.id));
+    const nameOf = new Map(input.data.sources.map((s) => [s.key, s]));
+    expect(points).toEqual(
+      input.data.history.map((p) => ({
+        name: nameOf.get(p.sourceKey)!.name,
+        value: p.value,
+        currency: nameOf.get(p.sourceKey)!.currency,
+        reason: p.reason,
+        recordedAt: p.recordedAt,
+      })),
+    );
+
+    const stored = await getDb()
+      .select({ name: sources.name, value: sources.value })
+      .from(sources)
+      .where(eq(sources.userId, result.userId));
+    for (const s of input.data.sources) {
+      expect(stored.find((r) => r.name === s.name)?.value).toBe(s.value);
+    }
+
+    const settled = await getDb()
+      .select({ month: months.month, settledAt: months.settledAt })
+      .from(months)
+      .where(eq(months.userId, result.userId));
+    for (const m of input.data.months) {
+      expect(settled.find((r) => r.month === m.month)?.settledAt).toEqual(
+        m.settledAt,
+      );
+    }
   });
 });

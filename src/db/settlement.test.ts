@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closePool, getDb, getPool } from "./client";
 import { addIncome, getMonth, getMonthSnapshot } from "./months";
 import { savePlan, type PlanGoalInput } from "./plan";
-import { months, settings, sources, users } from "./schema";
+import { months, settings, sources, sourceValues, users } from "./schema";
 import { settleMonth } from "./settlement";
 import { setUserPassword } from "./users";
 
@@ -363,5 +363,71 @@ describe("miesiąc nieistniejący", () => {
     expect(
       await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
     ).toEqual({ status: "not-found" });
+  });
+});
+
+describe("historia wartości przy rozliczeniu (SPEC 5.11, T17)", () => {
+  async function history() {
+    return getDb()
+      .select({
+        sourceId: sourceValues.sourceId,
+        value: sourceValues.value,
+        currency: sourceValues.currency,
+        reason: sourceValues.reason,
+        recordedAt: sourceValues.recordedAt,
+      })
+      .from(sourceValues)
+      .where(eq(sourceValues.userId, userId))
+      .orderBy(asc(sourceValues.id));
+  }
+
+  it("zapisuje punkt każdego źródła z wpłatą, w walucie źródła i z chwilą rozliczenia", async () => {
+    const src = await seedScenario1({ akcjeEur: true, eurStart: 1000 });
+    await getDb()
+      .update(settings)
+      .set({ eurRate: 43000 })
+      .where(eq(settings.userId, userId));
+    expect(
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+    ).toEqual({ status: "ok" });
+
+    const points = await history();
+    expect(points).toHaveLength(6);
+    for (const p of points) expect(p.reason).toBe("settlement");
+    for (const [name, id] of Object.entries(src)) {
+      const point = points.find((p) => p.sourceId === id);
+      expect(point?.value, name).toBe(await sourceValue(id));
+      expect(point?.currency, name).toBe(name === "akcje" ? "EUR" : "PLN");
+    }
+    const month = await getMonth(getDb(), userId, "2026-10");
+    const [settled] = await getDb()
+      .select({ settledAt: months.settledAt })
+      .from(months)
+      .where(eq(months.id, month!.id));
+    for (const p of points) expect(p.recordedAt).toEqual(settled.settledAt);
+  });
+
+  it("odrzucone drugie rozliczenie nie zostawia wpisu (scen. 15)", async () => {
+    await seedScenario1();
+    await settleMonth(getDb(), userId, "2026-10", { mode: "plan" });
+    const before = await history();
+    expect(
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+    ).toEqual({ status: "already-settled" });
+    expect(await history()).toEqual(before);
+  });
+
+  it("źródło z wpłatą 0 nie dostaje punktu", async () => {
+    const src = await seedScenario1();
+    const month = await getMonth(getDb(), userId, "2026-10");
+    const snapshot = await getMonthSnapshot(getDb(), month!.id);
+    const actuals = snapshot.map((g) => ({
+      goalId: g.goalId,
+      amount: g.name === "Poduszka" ? 0 : 100,
+    }));
+    await settleMonth(getDb(), userId, "2026-10", { mode: "manual", actuals });
+    const ids = (await history()).map((p) => p.sourceId);
+    expect(ids).toHaveLength(5);
+    expect(ids).not.toContain(src.poduszka);
   });
 });

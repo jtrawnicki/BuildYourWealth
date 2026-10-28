@@ -121,6 +121,45 @@ export const sources = pgTable(
   ],
 );
 
+// Historia wartości źródeł (SPEC 5.11, STACK 5 „Historia wartości"). Każdy
+// wiersz to stan źródła po zmianie, w walucie źródła z chwili zapisu. Zapisy
+// tworzy wyłącznie `changeSourceValue` w `db/sources.ts`; migracja 0005 wstawia
+// punkt `initial` dla źródeł istniejących przed wdrożeniem.
+export const sourceValues = pgTable(
+  "source_values",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceId: integer("source_id").notNull(),
+    value: amount("value").notNull(),
+    currency: text("currency", { enum: ["PLN", "EUR"] }).notNull(),
+    recordedAt: timestamptz("recorded_at").notNull().defaultNow(),
+    reason: text("reason", {
+      enum: ["initial", "created", "manual", "settlement", "archived"],
+    }).notNull(),
+  },
+  (t) => [
+    foreignKey({
+      name: "source_values_source_fk",
+      columns: [t.sourceId, t.userId],
+      foreignColumns: [sources.id, sources.userId],
+    }).onDelete("cascade"),
+    index("source_values_source_id_recorded_at_idx").on(
+      t.sourceId,
+      t.recordedAt,
+    ),
+    index("source_values_user_id_idx").on(t.userId),
+    check("source_values_value_check", sql`${t.value} >= 0`),
+    check("source_values_currency_check", sql`${t.currency} in ('PLN', 'EUR')`),
+    check(
+      "source_values_reason_check",
+      sql`${t.reason} in ('initial', 'created', 'manual', 'settlement', 'archived')`,
+    ),
+  ],
+);
+
 export const goals = pgTable(
   "goals",
   {

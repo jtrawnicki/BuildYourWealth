@@ -134,6 +134,16 @@ Pierwsze uruchomienie (raz), w klonie repozytorium po `npm ci`:
 | `npm run private:set-password -- <email>` | Konto albo nowe hasło w wersji prywatnej. |
 | `npm run private:dump [-- <plik>]` | Kopia `byw_private` do `backups/` przez `pg_dump` z kontenera bazy. |
 
+Aktualizacja do nowej wersji z `main` (Ctrl+C zatrzymuje działającą
+aplikację):
+
+1. `git pull`.
+2. `npm ci` (gdy zmieniły się zależności; nie szkodzi uruchomić zawsze).
+3. **`npm run private:dump`** — kopia przed migracją. Obowiązkowa, gdy
+   `git pull` przyniósł nowy plik w `drizzle/` (np. `0005_source_values.sql`
+   z T17: pierwsza migracja zmieniająca dane na `byw_private`).
+4. `npm run private:start` — zastosuje migracje i uruchomi aplikację.
+
 Kopia zapasowa: np. po każdym rozliczeniu i zawsze przed aktualizacją
 z nową migracją. Plik zawiera prawdziwe dane: przenieś go na osobny nośnik,
 nie wysyłaj do repozytorium ani niezaszyfrowanej chmury. Odtwarzanie:
