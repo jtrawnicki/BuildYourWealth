@@ -1,6 +1,6 @@
 .shell {
   display: grid;
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 220px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -11,11 +11,25 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 6px;
-  padding: 16px 0;
+  padding: 16px 12px;
   background: var(--surface);
   border-right: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px 5px;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.brand:hover {
+  opacity: 1;
 }
 
 .mark {
@@ -24,21 +38,16 @@
   flex: none;
   display: grid;
   place-items: center;
-  margin-bottom: 10px;
   border-radius: 11px;
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 800;
   font-size: 16px;
-  text-decoration: none;
-}
-
-.mark:hover {
-  opacity: 1;
 }
 
 .railFoot {
   margin-top: auto;
+  padding-left: 6px;
 }
 
 .content {
@@ -48,7 +57,10 @@
 }
 
 .main {
+  box-sizing: border-box;
+  width: 100%;
   max-width: 1280px;
+  margin-inline: auto;
   padding: 28px 36px 48px;
   display: flex;
   flex-direction: column;
@@ -69,18 +81,20 @@
     width: 100%;
     flex-direction: row;
     gap: 0;
-    padding: 0 8px;
+    align-items: center;
+    padding: 0 6px;
     border-right: 0;
     border-top: 1px solid var(--border);
     z-index: 20;
   }
 
-  .mark {
+  .brand {
     display: none;
   }
 
   .railFoot {
     margin-top: 0;
+    padding-left: 0;
   }
 
   .main {
