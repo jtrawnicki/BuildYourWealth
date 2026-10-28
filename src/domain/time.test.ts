@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDays,
   canCreateMonth,
   canSettleMonth,
+  currentDay,
   currentMonth,
+  currentTime,
   daysInMonth,
+  isWeekend,
+  lastDayOfMonth,
   previousMonth,
 } from "./time";
 
@@ -91,5 +96,44 @@ describe("canCreateMonth (SPEC 5.4, scenariusz 18)", () => {
     const now = new Date("2026-01-10T12:00:00Z");
     expect(canCreateMonth("2025-12", now)).toBe(true);
     expect(canCreateMonth("2025-11", now)).toBe(false);
+  });
+});
+
+describe("currentDay w strefie Europe/Warsaw", () => {
+  it("granica północy czasu warszawskiego, nie UTC", () => {
+    expect(currentDay(new Date("2026-10-30T22:59:00Z"))).toBe("2026-10-30");
+    expect(currentDay(new Date("2026-10-30T23:00:00Z"))).toBe("2026-10-31");
+    expect(currentDay(new Date("2026-06-30T22:00:00Z"))).toBe("2026-07-01");
+  });
+});
+
+describe("lastDayOfMonth i addDays", () => {
+  it.each([
+    ["2026-10", "2026-10-31"],
+    ["2026-11", "2026-11-30"],
+    ["2028-02", "2028-02-29"],
+  ])("ostatni dzień %s to %s", (key, expected) => {
+    expect(lastDayOfMonth(key)).toBe(expected);
+  });
+
+  it("przesuwa przez granice miesiąca i roku", () => {
+    expect(addDays("2026-10-31", -6)).toBe("2026-10-25");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+  });
+});
+
+describe("currentTime i isWeekend", () => {
+  it("godzina w strefie Europe/Warsaw, także w czasie letnim", () => {
+    expect(currentTime(new Date("2026-10-30T11:29:00Z"))).toBe("12:29");
+    expect(currentTime(new Date("2026-06-30T10:30:00Z"))).toBe("12:30");
+    expect(currentTime(new Date("2026-10-30T23:05:00Z"))).toBe("00:05");
+  });
+
+  it("sobota i niedziela to weekend", () => {
+    expect(isWeekend("2026-10-30")).toBe(false);
+    expect(isWeekend("2026-10-31")).toBe(true);
+    expect(isWeekend("2026-11-01")).toBe(true);
+    expect(isWeekend("2026-11-02")).toBe(false);
   });
 });

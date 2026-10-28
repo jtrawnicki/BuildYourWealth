@@ -61,6 +61,8 @@ export function privateProcessEnv(base: Env, db: PrivateDatabase): Env {
     DATABASE_URL: db.url,
     APP_MODE: "private",
     BYW_DIST_DIR: PRIVATE_DIST_DIR,
+    // Pusta wartość, nie brak: Next nie nadpisze jej adresem atrapy NBP z `.env`.
+    NBP_API_URL: "",
   };
   // drizzle.config.ts woli adres bezpośredni; tu nie może wskazać innej bazy.
   delete env.DATABASE_URL_UNPOOLED;

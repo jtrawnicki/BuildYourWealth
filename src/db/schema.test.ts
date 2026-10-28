@@ -24,11 +24,13 @@ describe("migracja", () => {
          where table_schema = 'public' order by table_name`,
       );
       expect(rows.map((row) => row.table_name)).toEqual([
+        "exchange_rates",
         "goals",
         "incomes",
         "login_attempts",
         "month_goals",
         "months",
+        "rate_fetches",
         "sessions",
         "settings",
         "source_values",

@@ -3,7 +3,8 @@ import { sql } from "drizzle-orm";
 import { hashPassword } from "@/auth/password";
 import { hashToken } from "@/auth/token";
 import { getDb } from "@/db/client";
-import { sessions, settings, users } from "@/db/schema";
+import { saveRates } from "@/db/rates";
+import { rateFetches, sessions, settings, users } from "@/db/schema";
 
 // Infrastruktura danych E2E (T3): czyszczenie bazy, konto testowe i sesja
 // zakładana wprost w bazie, żeby fixture logowania był szybki i deterministyczny.
@@ -26,8 +27,32 @@ export async function resetDatabase(): Promise<void> {
     sql`drop trigger if exists e2e_fail_incomes on incomes`,
   );
   await getDb().execute(
-    sql`truncate table users, sessions, settings, sources, source_values, goals, months, month_goals, incomes, login_attempts restart identity cascade`,
+    sql`truncate table users, sessions, settings, sources, source_values, goals, months, month_goals, incomes, login_attempts, exchange_rates, rate_fetches restart identity cascade`,
   );
+}
+
+/**
+ * Wstawia kursy NBP (kurs w dziesięciotysięcznych) i oznacza próbę pobrania
+ * z chwili `attemptedAt`, żeby aplikacja w E2E nie próbowała łączyć się z NBP
+ * przez najbliższą godzinę (STACK 5 „Kurs NBP”).
+ */
+export async function seedRates(
+  rates: { effectiveDate: string; rate: number }[],
+  attemptedAt: Date = new Date(),
+): Promise<void> {
+  const db = getDb();
+  await saveRates(
+    db,
+    "EUR",
+    rates.map((r) => ({ ...r, tableNo: `${r.effectiveDate}/A/NBP/E2E` })),
+  );
+  await db
+    .insert(rateFetches)
+    .values({ currency: "EUR", attemptedAt, ok: true })
+    .onConflictDoUpdate({
+      target: rateFetches.currency,
+      set: { attemptedAt, ok: true },
+    });
 }
 
 export async function createTestUser(
