@@ -1,9 +1,9 @@
 export const NAV_TABS = [
-  { href: "/", label: "Ten miesiąc" },
-  { href: "/majatek", label: "Majątek" },
-  { href: "/plan", label: "Plan podziału" },
-  { href: "/historia", label: "Historia" },
-  { href: "/ustawienia", label: "Ustawienia" },
+  { href: "/", label: "Ten miesiąc", short: "Miesiąc" },
+  { href: "/majatek", label: "Majątek", short: "Majątek" },
+  { href: "/plan", label: "Plan podziału", short: "Plan" },
+  { href: "/historia", label: "Historia", short: "Historia" },
+  { href: "/ustawienia", label: "Ustawienia", short: "Ustawienia" },
 ] as const;
 
 export type NavHref = (typeof NAV_TABS)[number]["href"];

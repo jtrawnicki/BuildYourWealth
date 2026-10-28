@@ -11,8 +11,8 @@ const TABS = [
 test("nawigacja ma pięć zakładek, aktywna jest oznaczona", async ({ page }) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Menu główne" });
-  // Pasek jest ikonowy: zakładki rozpoznajemy po dostępnej nazwie (aria-label),
-  // nie po widocznym tekście.
+  // Na telefonie widać skróconą nazwę, więc zakładki rozpoznajemy po dostępnej
+  // nazwie (aria-label), nie po widocznym tekście.
   await expect(nav.getByRole("link")).toHaveCount(TABS.length);
   for (const name of TABS) {
     await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();

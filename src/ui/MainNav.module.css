@@ -1,20 +1,21 @@
 .nav {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tab {
   position: relative;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  display: grid;
-  place-items: center;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
   border-radius: 12px;
   text-decoration: none;
   color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .tab:hover {
@@ -26,6 +27,7 @@
 .tab[aria-current="page"] {
   background: var(--invest-soft);
   color: var(--invest-ink);
+  font-weight: 600;
 }
 
 .tab:focus-visible {
@@ -36,9 +38,15 @@
 .icon {
   width: 20px;
   height: 20px;
+  flex: none;
 }
 
-/* Na wąskim ekranie pasek jest dolną belką: ikony w rzędzie, rozłożone równo. */
+.short {
+  display: none;
+}
+
+/* Na wąskim ekranie pasek jest dolną belką: ikona nad skróconą nazwą,
+   zakładki rozłożone równo. */
 @media (max-width: 759px) {
   .nav {
     flex-direction: row;
@@ -48,7 +56,26 @@
   }
 
   .tab {
-    width: 48px;
-    height: 48px;
+    flex: 1;
+    min-width: 0;
+    min-height: 52px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 2px;
+    font-size: 10.5px;
+    line-height: 1.1;
+  }
+
+  .label {
+    display: none;
+  }
+
+  .short {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

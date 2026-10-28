@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { NAV_TABS, type NavHref, activeTab } from "./nav";
 import styles from "./MainNav.module.css";
 
-// Boczny pasek to ikony bez widocznych etykiet (styl „Portfel"): nazwa zakładki
-// jest w `aria-label` i w natywnej podpowiedzi `title`, więc pozostaje dostępna
-// dla czytników ekranu i po najechaniu kursorem.
+// Każda zakładka ma ikonę i widoczną nazwę. Na dolnej belce telefonu brakuje
+// miejsca na pełne nazwy, więc pokazujemy skróconą; `aria-label` trzyma pełną
+// nazwę zakładki niezależnie od tego, który wariant jest widoczny.
 const ICONS: Record<NavHref, ReactNode> = {
   "/": (
     <>
@@ -45,14 +45,13 @@ export function MainNav({ className }: { className?: string }) {
       aria-label="Menu główne"
       className={`${styles.nav} ${className ?? ""}`}
     >
-      {NAV_TABS.map(({ href, label }) => (
+      {NAV_TABS.map(({ href, label, short }) => (
         <Link
           key={href}
           href={href}
           className={styles.tab}
           aria-current={href === active ? "page" : undefined}
           aria-label={label}
-          title={label}
         >
           <svg
             className={styles.icon}
@@ -66,6 +65,8 @@ export function MainNav({ className }: { className?: string }) {
           >
             {ICONS[href]}
           </svg>
+          <span className={styles.label}>{label}</span>
+          <span className={styles.short}>{short}</span>
         </Link>
       ))}
     </nav>
