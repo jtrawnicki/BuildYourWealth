@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Db, Tx } from "./client";
-import { goals, months, monthGoals, sources } from "./schema";
+import { goals, months, monthGoals, sources, sourceValues } from "./schema";
 
 export type SourceKind = "savings" | "investments";
 export type SourceCurrency = "PLN" | "EUR";
@@ -64,6 +64,49 @@ async function lockActive(tx: Tx, userId: number, id: number) {
   return row !== undefined;
 }
 
+export type ValueReason = "created" | "manual" | "settlement" | "archived";
+
+export type ValueChange =
+  /** Nowa wartość źródła. */
+  | { value: number }
+  /** Wpłata dopisywana do bieżącej wartości (rozliczenie). */
+  | { delta: number };
+
+/**
+ * Jedyny zapis `sources.value` (STACK 5 „Historia wartości"): zmienia wartość
+ * źródła i w tej samej transakcji dopisuje do historii wiersz z wartością po
+ * zmianie, bieżącą walutą źródła i powodem. `recordedAt` podaje tylko generator
+ * demo; aplikacja zapisuje chwilę transakcji (`now()`), tę samą co
+ * `settled_at` rozliczenia. Zmiana i wpis historii idą jednym zapytaniem (CTE):
+ * piaskownica demo wywołuje tę funkcję kilkadziesiąt razy przy tworzeniu.
+ * Zwraca `false`, gdy źródła nie ma.
+ */
+export async function changeSourceValue(
+  tx: Tx,
+  userId: number,
+  sourceId: number,
+  change: ValueChange,
+  reason: ValueReason,
+  recordedAt?: Date,
+): Promise<boolean> {
+  const value =
+    "delta" in change
+      ? sql`${sources.value} + ${change.delta}`
+      : sql`${change.value}`;
+  const at = recordedAt ? sql`${recordedAt.toISOString()}` : sql`now()`;
+  const result = await tx.execute(sql`
+    with changed as (
+      update ${sources} set "value" = ${value}
+      where ${sources.id} = ${sourceId} and ${sources.userId} = ${userId}
+      returning "id", "user_id", "value", "currency"
+    )
+    insert into ${sourceValues}
+      ("user_id", "source_id", "value", "currency", "recorded_at", "reason")
+    select "user_id", "id", "value", "currency", ${at}, ${reason}
+    from changed`);
+  return (result.rowCount ?? 0) > 0;
+}
+
 /** Niezarchiwizowane źródła użytkownika w kolejności dodania. */
 export async function listSources(
   db: Db,
@@ -90,11 +133,15 @@ export async function createSource(
   userId: number,
   input: SourceInput,
 ): Promise<number> {
-  const [row] = await db
-    .insert(sources)
-    .values({ userId, ...input })
-    .returning({ id: sources.id });
-  return row.id;
+  const { value, ...rest } = input;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(sources)
+      .values({ userId, ...rest })
+      .returning({ id: sources.id });
+    await changeSourceValue(tx, userId, row.id, { value }, "created");
+    return row.id;
+  });
 }
 
 export type UpdateResult = "ok" | "not-found" | "kind-locked";
@@ -116,6 +163,7 @@ export async function updateSource(
       .select({
         kind: sources.kind,
         currency: sources.currency,
+        value: sources.value,
         kindLocked: sql<boolean>`(${inCurrentPlan} or ${inAnyMonth})`,
       })
       .from(sources)
@@ -123,10 +171,16 @@ export async function updateSource(
     const kindChanged =
       current.kind !== input.kind || current.currency !== input.currency;
     if (kindChanged && current.kindLocked) return "kind-locked";
+    const { value, ...rest } = input;
     await tx
       .update(sources)
-      .set(input)
+      .set(rest)
       .where(and(eq(sources.id, id), eq(sources.userId, userId)));
+    // Zmiana waluty bez zmiany liczby też zmienia wartość: historia zapisuje ją
+    // w nowej walucie (SPEC 7).
+    if (value !== current.value || current.currency !== input.currency) {
+      await changeSourceValue(tx, userId, id, { value }, "manual");
+    }
     return "ok";
   });
 }
@@ -160,6 +214,8 @@ export async function archiveSource(
       .where(eq(sources.id, id));
     if (current.value > 0) return "has-value";
     if (current.inUse) return "in-use";
+    // Od archiwizacji źródło ma w historii wartość 0 (SPEC 7).
+    await changeSourceValue(tx, userId, id, { value: 0 }, "archived");
     await tx
       .update(sources)
       .set({ archivedAt: sql`now()` })

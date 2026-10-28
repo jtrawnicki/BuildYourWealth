@@ -47,7 +47,7 @@ async function main(): Promise<void> {
     await tx.delete(goals).where(eq(goals.userId, user.id));
     await tx.delete(sources).where(eq(sources.userId, user.id));
     await tx.delete(settings).where(eq(settings.userId, user.id));
-    await writeDemoData(tx, user.id, generateDemoData(now, Math.random), now);
+    await writeDemoData(tx, user.id, generateDemoData(now, Math.random));
   });
   console.log(`Zapisano dane demo dla ${normalized}.`);
 }

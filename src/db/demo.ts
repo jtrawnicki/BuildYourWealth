@@ -12,6 +12,7 @@ import {
   sources,
   users,
 } from "./schema";
+import { changeSourceValue } from "./sources";
 
 // Zapis danych piaskownicy demo i jej cykl życia (SPEC 5.8, STACK 5 „Piaskownice
 // demo"). Generator (`src/demo/generate.ts`) nie zna bazy; tutaj zapisujemy jego
@@ -100,7 +101,7 @@ export async function createSandbox(
       })
       .returning({ id: users.id });
 
-    await writeDemoData(tx, user.id, data, now);
+    await writeDemoData(tx, user.id, data);
 
     await tx
       .insert(sessions)
@@ -112,15 +113,14 @@ export async function createSandbox(
 
 /**
  * Zapisuje komplet danych generatora dla konta `userId` (ustawienia, źródła,
- * cele, miesiące, przychody i migawki). Klucze z generatora są mapowane na
- * nadane przez bazę identyfikatory. `now` to znacznik rozliczenia miesięcy
- * rozliczonych (oś czasu historii bierze się z pola `month`, nie z niego).
+ * cele, miesiące, przychody, migawki i historię wartości). Klucze z generatora
+ * są mapowane na nadane przez bazę identyfikatory; daty rozliczeń i punktów
+ * historii pochodzą z generatora.
  */
 export async function writeDemoData(
   tx: Tx,
   userId: number,
   data: DemoData,
-  now: Date,
 ): Promise<void> {
   await tx.insert(settings).values({
     userId,
@@ -129,6 +129,8 @@ export async function writeDemoData(
     investmentsPct: data.investmentsPct,
   });
 
+  // Źródła powstają z wartością 0; wartość bieżącą ustawia ostatni punkt
+  // historii zapisany przez `changeSourceValue` (STACK 5 „Historia wartości").
   const sourceIds = await tx
     .insert(sources)
     .values(
@@ -137,13 +139,22 @@ export async function writeDemoData(
         name: s.name,
         kind: s.kind,
         currency: s.currency,
-        value: s.value,
       })),
     )
     .returning({ id: sources.id });
   const sourceIdByKey = new Map(
     data.sources.map((s, i) => [s.key, sourceIds[i].id]),
   );
+  for (const point of data.history) {
+    await changeSourceValue(
+      tx,
+      userId,
+      sourceIdByKey.get(point.sourceKey)!,
+      { value: point.value },
+      point.reason,
+      point.recordedAt,
+    );
+  }
 
   const goalIds = await tx
     .insert(goals)
@@ -171,7 +182,7 @@ export async function writeDemoData(
         month: month.month,
         savingsPct: month.savingsPct,
         investmentsPct: month.investmentsPct,
-        settledAt: month.settled ? now : null,
+        settledAt: month.settledAt,
         settledEurRate: month.settledEurRate,
       })
       .returning({ id: months.id });

@@ -1,7 +1,8 @@
 // Generator danych przykładowych wersji demo (SPEC 5.8, STACK 5 „Piaskownice
 // demo"). Czysta funkcja `(now, rng) → dane`: nie zna bazy, daty liczy względem
 // `now` w Europe/Warsaw, kwoty planu i rozliczeń funkcjami z `domain`, a wartości
-// źródeł jako wartość początkowa + suma rozliczonych wpłat. Dzięki temu wynik
+// źródeł jako ostatni punkt historii wartości, złożonej z dodania źródła,
+// ręcznych wycen i wpłat z rozliczeń w kolejności dat. Dzięki temu wynik
 // spełnia reguły SPEC 6, walidację planu (SPEC 7.1) i ograniczenia bazy dla
 // dowolnej losowości i daty. Losowość jest wstrzykiwana, żeby testy były
 // powtarzalne. Zapis wyniku robi osobno `db/demo.ts`.
@@ -16,8 +17,16 @@ export type DemoSource = {
   name: string;
   kind: "savings" | "investments";
   currency: "PLN" | "EUR";
-  /** Wartość końcowa = początkowa + suma rozliczonych wpłat (SPEC 6.7). */
+  /** Wartość bieżąca = wartość ostatniego punktu historii źródła. */
   value: number;
+};
+
+/** Punkt historii wartości źródła (SPEC 5.11): stan po zmianie. */
+export type DemoValuePoint = {
+  sourceKey: string;
+  value: number;
+  recordedAt: Date;
+  reason: "created" | "manual" | "settlement";
 };
 
 export type DemoGoal = {
@@ -43,6 +52,8 @@ export type DemoMonth = {
   savingsPct: number;
   investmentsPct: number;
   settled: boolean;
+  /** Pierwsze dni następnego miesiąca (SPEC 5.8); `null` dla nierozliczonego. */
+  settledAt: Date | null;
   settledEurRate: number | null;
   incomes: { name: string; amount: number }[];
   goals: DemoMonthGoal[];
@@ -55,6 +66,8 @@ export type DemoData = {
   sources: DemoSource[];
   goals: DemoGoal[];
   months: DemoMonth[];
+  /** Historia wartości z ostatnich 12 miesięcy, w kolejności dat. */
+  history: DemoValuePoint[];
 };
 
 // Stały, zawsze poprawny plan: pule 20% / 15%, a w każdej puli cele sumują się
@@ -183,10 +196,118 @@ function index(key: string): number {
   return PLAN_GOALS.findIndex((g) => g.key === key);
 }
 
+/** Następny miesiąc kalendarzowy `YYYY-MM`. */
+function nextMonth(key: string): string {
+  const [year, month] = key.split("-").map(Number);
+  return month === 12
+    ? `${year + 1}-01`
+    : `${year}-${String(month + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Chwila w dniu `day` miesiąca `key` o 12:00 UTC: w Europe/Warsaw to zawsze
+ * ten sam dzień (13:00 albo 14:00), niezależnie od czasu letniego.
+ */
+function dayOf(key: string, day: number): Date {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12));
+}
+
+// Źródła, których wartość rynkowa zmienia się co miesiąc (ręczna wycena).
+const REVALUED = ["makler", "ike"];
+
+type Settlement = { at: Date; deltaBySource: Map<string, number> };
+
+/**
+ * Historia wartości (SPEC 5.8, 5.11): źródła dodane w pierwszych dniach
+ * miesiąca sprzed 11 miesięcy, w każdym kolejnym zakończonym miesiącu ręczna
+ * wycena inwestycji (od −3% do +4%), jednorazowe odsetki na koncie
+ * oszczędnościowym i lokacie oraz wpłaty z rozliczeń w dniu rozliczenia.
+ * Wartość liczona narastająco w kolejności dat, więc punkt rozliczenia to
+ * poprzedni punkt + wpłata. Wszystkie daty są przed `now` (bieżący miesiąc
+ * nie ma zmian).
+ */
+function buildHistory(
+  rng: () => number,
+  current: string,
+  initial: Record<string, number>,
+  settlements: Settlement[],
+): DemoValuePoint[] {
+  type Event =
+    | { at: Date; sourceKey: string; reason: "created" }
+    | { at: Date; sourceKey: string; reason: "manual"; bp: number }
+    | { at: Date; sourceKey: string; reason: "settlement"; delta: number };
+
+  const keys: string[] = [current];
+  while (keys.length < 12) keys.unshift(previousMonth(keys[0]));
+  const finished = keys.slice(1, -1);
+
+  const events: Event[] = [];
+  for (const s of SOURCES) {
+    events.push({
+      at: dayOf(keys[0], randInt(rng, 1, 5)),
+      sourceKey: s.key,
+      reason: "created",
+    });
+  }
+  for (const month of finished) {
+    for (const sourceKey of REVALUED) {
+      events.push({
+        at: dayOf(month, randInt(rng, 10, 25)),
+        sourceKey,
+        reason: "manual",
+        bp: randInt(rng, -300, 400),
+      });
+    }
+  }
+  for (const sourceKey of ["osz", "lokata"]) {
+    const month = finished[randInt(rng, 0, finished.length - 1)];
+    events.push({
+      at: dayOf(month, randInt(rng, 10, 25)),
+      sourceKey,
+      reason: "manual",
+      bp: randInt(rng, 50, 200),
+    });
+  }
+  for (const { at, deltaBySource } of settlements) {
+    for (const [sourceKey, delta] of deltaBySource) {
+      if (delta > 0) {
+        events.push({ at, sourceKey, reason: "settlement", delta });
+      }
+    }
+  }
+  // Sortowanie stabilne: przy tej samej chwili zostaje kolejność dodania.
+  events.sort((a, b) => a.at.getTime() - b.at.getTime());
+
+  const value = new Map<string, number>();
+  const points: DemoValuePoint[] = [];
+  for (const e of events) {
+    const before = value.get(e.sourceKey) ?? 0;
+    const after =
+      e.reason === "created"
+        ? initial[e.sourceKey]
+        : e.reason === "manual"
+          ? Math.round((before * (10000 + e.bp)) / 10000)
+          : before + e.delta;
+    // Wycena bez zmiany wartości (np. źródło o wartości 0) nie jest zmianą,
+    // tak jak w aplikacji (`updateSource`).
+    if (e.reason === "manual" && after === before) continue;
+    value.set(e.sourceKey, after);
+    points.push({
+      sourceKey: e.sourceKey,
+      value: after,
+      recordedAt: e.at,
+      reason: e.reason,
+    });
+  }
+  return points;
+}
+
 /**
  * Składa komplet danych przykładowych piaskownicy demo (SPEC 5.8). Oś czasu:
- * trzy wcześniejsze miesiące rozliczone, poprzedni miesiąc nierozliczony
- * (pigułka zaległości) i bieżący nierozliczony z kilkoma przychodami.
+ * trzy wcześniejsze miesiące rozliczone w pierwszych dniach następnego
+ * miesiąca, poprzedni miesiąc nierozliczony (pigułka zaległości) i bieżący
+ * nierozliczony z kilkoma przychodami; historia wartości z 12 miesięcy.
  */
 export function generateDemoData(now: Date, rng: () => number): DemoData {
   const eurRate = randInt(rng, 40000, 45000);
@@ -204,7 +325,7 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
   const oddMonth = settledKeys[settledKeys.length - 1];
 
   const paidByGoal = new Map<string, number>(PLAN_GOALS.map((g) => [g.key, 0]));
-  const deltaBySource = new Map<string, number>(SOURCES.map((s) => [s.key, 0]));
+  const settlements: Settlement[] = [];
 
   const settledMonths: DemoMonth[] = settledKeys.map((month) => {
     const income = randInt(rng, 850000, 1150000);
@@ -214,6 +335,7 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
       const plan = actuals.get("poduszka") ?? 0;
       actuals.set("poduszka", Math.floor((plan * randInt(rng, 40, 70)) / 100));
     }
+    const deltaBySource = new Map<string, number>();
     for (const g of PLAN_GOALS) {
       const amount = actuals.get(g.key) ?? 0;
       paidByGoal.set(g.key, (paidByGoal.get(g.key) ?? 0) + amount);
@@ -222,11 +344,16 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
         (deltaBySource.get(g.sourceKey) ?? 0) + amount,
       );
     }
+    // Rozliczenie w pierwszych dniach następnego miesiąca (SPEC 5.8); ostatni
+    // rozliczony to miesiąc przed poprzednim, więc data jest zawsze przed `now`.
+    const settledAt = dayOf(nextMonth(month), randInt(rng, 1, 5));
+    settlements.push({ at: settledAt, deltaBySource });
     return {
       month,
       savingsPct: SAVINGS_PCT,
       investmentsPct: INVEST_PCT,
       settled: true,
+      settledAt,
       settledEurRate: eurRate,
       incomes: splitIncome(rng, income, randInt(rng, 2, 3)),
       goals: PLAN_GOALS.map((g) => ({
@@ -241,6 +368,7 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
     savingsPct: SAVINGS_PCT,
     investmentsPct: INVEST_PCT,
     settled: false,
+    settledAt: null,
     settledEurRate: null,
     incomes: splitIncome(
       rng,
@@ -250,16 +378,18 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
     goals: PLAN_GOALS.map((g) => ({ goalKey: g.key, actualAmount: null })),
   }));
 
-  // Wartości startowe źródeł (eurocenty dla EUR); wartość końcowa dolicza wpłaty.
+  // Wartości z chwili dodania źródeł (eurocenty dla EUR).
   const initial: Record<string, number> = {
     osz: randInt(rng, 500000, 2000000),
     lokata: randInt(rng, 1000000, 5000000),
     makler: randInt(rng, 0, 1000000),
     ike: randInt(rng, 50000, 200000),
   };
+  const history = buildHistory(rng, current, initial, settlements);
+  const lastValue = new Map(history.map((p) => [p.sourceKey, p.value]));
   const sources: DemoSource[] = SOURCES.map((s) => ({
     ...s,
-    value: initial[s.key] + (deltaBySource.get(s.key) ?? 0),
+    value: lastValue.get(s.key) ?? 0,
   }));
 
   // Role celów ustalamy po poznaniu wpłat, żeby niezależnie od losowości jeden
@@ -298,5 +428,6 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
     sources,
     goals,
     months: [...settledMonths, ...openMonths],
+    history,
   };
 }

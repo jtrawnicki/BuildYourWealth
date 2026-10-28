@@ -1,4 +1,7 @@
 import { randomBytes } from "node:crypto";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool, type PoolClient } from "pg";
@@ -28,6 +31,7 @@ describe("migracja", () => {
         "months",
         "sessions",
         "settings",
+        "source_values",
         "sources",
         "users",
       ]);
@@ -35,7 +39,64 @@ describe("migracja", () => {
       await pool.end();
       await getPool().query(`drop database ${name}`);
     }
-  });
+  }, 30_000);
+
+  it("historia wartości (0005) na danych MVP zachowuje wartości i dodaje punkt initial każdego źródła", async () => {
+    const name = `byw_migrate_${randomBytes(4).toString("hex")}`;
+    await getPool().query(`create database ${name}`);
+    const url = new URL(process.env.DATABASE_URL!);
+    url.pathname = `/${name}`;
+    const pool = new Pool({ connectionString: url.toString() });
+    // Kopia migracji obcięta do stanu MVP (0000–0004).
+    const mvp = await mkdtemp(path.join(tmpdir(), "byw-mvp-"));
+    try {
+      await cp("drizzle", mvp, { recursive: true });
+      const journalPath = path.join(mvp, "meta", "_journal.json");
+      const journal = JSON.parse(await readFile(journalPath, "utf8"));
+      journal.entries = journal.entries.filter(
+        (entry: { tag: string }) => entry.tag < "0005",
+      );
+      await writeFile(journalPath, JSON.stringify(journal));
+      await migrate(drizzle(pool), { migrationsFolder: mvp });
+
+      const { rows: accounts } = await pool.query<{ id: number }>(
+        `insert into users (email, password_hash)
+         values ('a@example.com', 'x'), ('b@example.com', 'x') returning id`,
+      );
+      await pool.query(
+        `insert into sources (user_id, name, kind, currency, value, archived_at)
+         values ($1, 'Konto', 'savings', 'PLN', 1234567, null),
+                ($1, 'IKE', 'investments', 'EUR', 98765, null),
+                ($1, 'Stare', 'savings', 'PLN', 0, now()),
+                ($2, 'Inne konto', 'savings', 'PLN', 500, null)`,
+        [accounts[0].id, accounts[1].id],
+      );
+      const sourcesQuery = `select id, user_id, value, currency, archived_at
+                            from sources order by id`;
+      const { rows: before } = await pool.query(sourcesQuery);
+
+      await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
+
+      expect((await pool.query(sourcesQuery)).rows).toEqual(before);
+      const { rows: history } = await pool.query(
+        `select source_id, user_id, value, currency, reason
+         from source_values order by source_id`,
+      );
+      expect(history).toEqual(
+        before.map((s) => ({
+          source_id: s.id,
+          user_id: s.user_id,
+          value: s.value,
+          currency: s.currency,
+          reason: "initial",
+        })),
+      );
+    } finally {
+      await pool.end();
+      await getPool().query(`drop database ${name}`);
+      await rm(mvp, { recursive: true, force: true });
+    }
+  }, 30_000);
 });
 
 describe("ograniczenia schematu", () => {

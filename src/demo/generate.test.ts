@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validatePlan } from "@/domain/plan";
+import { computeMonthPlan, validatePlan } from "@/domain/plan";
 import { currentMonth, previousMonth } from "@/domain/time";
 import { generateDemoData, type DemoData } from "./generate";
 
@@ -30,18 +30,103 @@ const DATES = [
 ];
 const SEEDS = [1, 2, 7, 42, 123, 9999, 2026, 31337];
 
-/** Delta źródła ze wszystkich rozliczonych miesięcy (suma wpłat jego celów). */
-function settledDeltaBySource(data: DemoData): Map<string, number> {
+/** Wpłata miesiąca na źródło (suma faktycznych kwot jego celów). */
+function monthDeltaBySource(
+  data: DemoData,
+  month: DemoData["months"][number],
+): Map<string, number> {
   const sourceOf = new Map(data.goals.map((g) => [g.key, g.sourceKey]));
-  const delta = new Map<string, number>(data.sources.map((s) => [s.key, 0]));
-  for (const month of data.months) {
-    if (!month.settled) continue;
-    for (const mg of month.goals) {
-      const src = sourceOf.get(mg.goalKey)!;
-      delta.set(src, (delta.get(src) ?? 0) + (mg.actualAmount ?? 0));
-    }
+  const delta = new Map<string, number>();
+  for (const mg of month.goals) {
+    const src = sourceOf.get(mg.goalKey)!;
+    delta.set(src, (delta.get(src) ?? 0) + (mg.actualAmount ?? 0));
   }
   return delta;
+}
+
+/** Ostatni dzień miesiąca `YYYY-MM` o 23:59:59 w Europe/Warsaw (górna granica). */
+function monthEndUpperBound(key: string): Date {
+  const [year, month] = key.split("-").map(Number);
+  // Północ UTC pierwszego dnia następnego miesiąca to najwyżej 01:00/02:00
+  // czasu polskiego, więc koniec miesiąca w Warszawie jest wcześniej.
+  return new Date(Date.UTC(year, month, 1) - 2 * 60 * 60 * 1000);
+}
+
+/**
+ * Historia wartości generatora: daty rosnące i przed `now`, 12 miesięcy,
+ * ręczna wycena, rozliczenia po końcu miesiąca, punkty rozliczeń zgodne
+ * z wpłatami, ostatni punkt każdego źródła = jego bieżąca wartość.
+ */
+function checkHistory(data: DemoData, now: Date): void {
+  const { history } = data;
+  for (let i = 1; i < history.length; i++) {
+    expect(history[i].recordedAt.getTime()).toBeGreaterThanOrEqual(
+      history[i - 1].recordedAt.getTime(),
+    );
+  }
+  for (const p of history) {
+    expect(p.recordedAt.getTime()).toBeLessThan(now.getTime());
+    expect(p.value).toBeGreaterThanOrEqual(0);
+    expect(Number.isSafeInteger(p.value)).toBe(true);
+  }
+
+  // Pierwszy punkt każdego źródła to dodanie, w miesiącu sprzed 11 miesięcy.
+  let first = currentMonth(now);
+  for (let i = 0; i < 11; i++) first = previousMonth(first);
+  for (const s of data.sources) {
+    const points = history.filter((p) => p.sourceKey === s.key);
+    expect(points[0].reason).toBe("created");
+    expect(currentMonth(points[0].recordedAt)).toBe(first);
+    expect(points.filter((p) => p.reason === "created")).toHaveLength(1);
+    expect(points.at(-1)!.value).toBe(s.value);
+  }
+  expect(history.some((p) => p.reason === "manual")).toBe(true);
+
+  // Rozliczenia: data po końcu rozliczanego miesiąca, w pierwszych dniach
+  // następnego, przed `now`; punkt = poprzednia wartość źródła + wpłata.
+  for (const m of data.months) {
+    if (!m.settled) {
+      expect(m.settledAt).toBeNull();
+      continue;
+    }
+    const at = m.settledAt!;
+    expect(at.getTime()).toBeGreaterThan(monthEndUpperBound(m.month).getTime());
+    expect(at.getTime()).toBeLessThan(now.getTime());
+    expect(previousMonth(currentMonth(at))).toBe(m.month);
+    expect(
+      Number(
+        new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Europe/Warsaw",
+          day: "numeric",
+        }).format(at),
+      ),
+    ).toBeLessThanOrEqual(5);
+
+    for (const [sourceKey, delta] of monthDeltaBySource(data, m)) {
+      const index = history.findIndex(
+        (p) =>
+          p.sourceKey === sourceKey &&
+          p.reason === "settlement" &&
+          p.recordedAt.getTime() === at.getTime(),
+      );
+      if (delta === 0) {
+        expect(index).toBe(-1);
+        continue;
+      }
+      expect(index).toBeGreaterThan(-1);
+      const before = history
+        .slice(0, index)
+        .filter((p) => p.sourceKey === sourceKey)
+        .at(-1);
+      expect(history[index].value).toBe((before?.value ?? 0) + delta);
+    }
+  }
+  const settlements = history.filter((p) => p.reason === "settlement");
+  const expected = data.months
+    .filter((m) => m.settled)
+    .flatMap((m) => [...monthDeltaBySource(data, m).values()])
+    .filter((d) => d > 0);
+  expect(settlements).toHaveLength(expected.length);
 }
 
 /** Postęp celu: kwota startowa + suma rozliczonych wpłat (SPEC 6.6). */
@@ -105,11 +190,8 @@ describe("generator danych demo (SPEC 5.8, T16)", () => {
           }
         }
 
-        // Wartość źródła = początek + rozliczone wpłaty (SPEC 6.7): początek ≥ 0.
-        const delta = settledDeltaBySource(data);
-        for (const s of data.sources) {
-          expect(s.value - (delta.get(s.key) ?? 0)).toBeGreaterThanOrEqual(0);
-        }
+        // Historia wartości (SPEC 5.8, 5.11, T17).
+        checkHistory(data, date);
 
         // Oś czasu: bieżący i poprzedni otwarte, trzy wcześniejsze rozliczone.
         const current = currentMonth(date);
@@ -159,16 +241,28 @@ describe("generator danych demo (SPEC 5.8, T16)", () => {
 
   it("co najmniej jeden rozliczony miesiąc ma wykonanie różne od planu", () => {
     const now = new Date("2026-10-25T12:00:00Z");
-    const data = generateDemoData(now, mulberry32(5));
-    // Poduszka w „odmiennym" miesiącu jest zmniejszona względem planu, więc
-    // suma jej wpłat jest mniejsza niż suma pozostałych rozliczonych celów puli.
-    const settled = data.months.filter((m) => m.settled);
-    const hasOdd = settled.some((m) => {
-      const poduszka = m.goals.find((g) => g.goalKey === "poduszka");
-      const wakacje = m.goals.find((g) => g.goalKey === "wakacje");
-      // plan: Poduszka 50% puli, Wakacje 30% → zwykle Poduszka > Wakacje.
-      return (poduszka?.actualAmount ?? 0) < (wakacje?.actualAmount ?? 0);
-    });
-    expect(hasOdd).toBe(true);
+    for (const seed of SEEDS) {
+      const data = generateDemoData(now, mulberry32(seed));
+      // Poduszka (cel PLN) w „odmiennym" miesiącu jest wpłacona częściowo.
+      const hasOdd = data.months
+        .filter((m) => m.settled)
+        .some((m) => {
+          const plan = computeMonthPlan({
+            income: m.incomes.reduce((sum, i) => sum + i.amount, 0),
+            savingsPct: m.savingsPct,
+            investmentsPct: m.investmentsPct,
+            goals: data.goals.map((g, id) => ({
+              id,
+              pool: g.pool,
+              pct: g.pct,
+            })),
+          });
+          const index = data.goals.findIndex((g) => g.key === "poduszka");
+          const planned = plan.goals.find((g) => g.id === index)!.amount;
+          const actual = m.goals.find((g) => g.goalKey === "poduszka");
+          return actual?.actualAmount !== planned;
+        });
+      expect(hasOdd).toBe(true);
+    }
   });
 });

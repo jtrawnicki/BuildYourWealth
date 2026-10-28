@@ -3,6 +3,7 @@ import { computeMonthPlan } from "@/domain/plan";
 import { plannedActual } from "@/domain/settlement";
 import type { Db } from "./client";
 import { incomes, months, monthGoals, settings, sources } from "./schema";
+import { changeSourceValue } from "./sources";
 
 // Rozliczenie miesiąca (SPEC 5.5). Faktyczne kwoty celów są dopisywane do
 // wartości połączonych źródeł, zapisywane w migawce (`month_goals.actual_amount`)
@@ -136,10 +137,7 @@ export async function settleMonth(
     }
     for (const [sourceId, delta] of deltaBySource) {
       if (delta === 0) continue;
-      await tx
-        .update(sources)
-        .set({ value: sql`${sources.value} + ${delta}` })
-        .where(and(eq(sources.id, sourceId), eq(sources.userId, userId)));
+      await changeSourceValue(tx, userId, sourceId, { delta }, "settlement");
     }
 
     for (const goal of snapshot) {

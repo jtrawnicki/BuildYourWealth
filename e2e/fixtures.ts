@@ -10,6 +10,7 @@ import {
   settings,
   sources,
 } from "@/db/schema";
+import { createSource } from "@/db/sources";
 import {
   TEST_EMAIL,
   createSessionToken,
@@ -67,11 +68,13 @@ function makeSeed(userId: number): Seed {
   return {
     userId,
     async addSource({ name, kind, currency = "PLN", value = 0 }) {
-      const [row] = await getDb()
-        .insert(sources)
-        .values({ userId, name, kind, currency, value })
-        .returning({ id: sources.id });
-      return row.id;
+      return createSource(getDb(), userId, {
+        name,
+        kind,
+        currency,
+        value,
+        note: null,
+      });
     },
     async countSources() {
       const rows = await getDb()
