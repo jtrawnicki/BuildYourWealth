@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
+  date,
   foreignKey,
   index,
   integer,
@@ -268,4 +270,34 @@ export const incomes = pgTable(
     check("incomes_name_check", nameCheck(t.name)),
     check("incomes_amount_check", sql`${t.amount} > 0`),
   ],
+);
+
+// Kursy NBP (STACK 4, 5 „Kurs NBP”). Dane publiczne bez `user_id`, wspólne dla
+// wszystkich kont i piaskownic. Kurs w dziesięciotysięcznych jak `settings.eur_rate`.
+export const exchangeRates = pgTable(
+  "exchange_rates",
+  {
+    currency: text("currency", { enum: ["EUR"] }).notNull(),
+    effectiveDate: date("effective_date", { mode: "string" }).notNull(),
+    rate: integer("rate").notNull(),
+    tableNo: text("table_no").notNull(),
+    fetchedAt: timestamptz("fetched_at").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.currency, t.effectiveDate] }),
+    check("exchange_rates_currency_check", sql`${t.currency} in ('EUR')`),
+    check("exchange_rates_rate_check", sql`${t.rate} > 0`),
+  ],
+);
+
+// Ostatnia próba pobrania kursów z NBP, jeden wiersz na walutę (upsert): podstawa
+// limitu „raz na godzinę” (SPEC Z11). Nie jest logiem prób.
+export const rateFetches = pgTable(
+  "rate_fetches",
+  {
+    currency: text("currency", { enum: ["EUR"] }).primaryKey(),
+    attemptedAt: timestamptz("attempted_at").notNull(),
+    ok: boolean("ok").notNull(),
+  },
+  (t) => [check("rate_fetches_currency_check", sql`${t.currency} in ('EUR')`)],
 );

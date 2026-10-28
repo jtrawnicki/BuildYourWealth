@@ -71,3 +71,41 @@ export function canCreateMonth(key: string, now: Date): boolean {
   const current = currentMonth(now);
   return key === current || key === previousMonth(current);
 }
+
+/** Bieżący dzień kalendarzowy w strefie Europe/Warsaw jako `YYYY-MM-DD`. */
+export function currentDay(now: Date): string {
+  const { year, month, day } = warsawYmd(now);
+  return `${monthKey(year, month)}-${String(day).padStart(2, "0")}`;
+}
+
+const warsawTimeFormat = new Intl.DateTimeFormat("en-GB", {
+  timeZone: WARSAW,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Bieżąca godzina w strefie Europe/Warsaw jako `HH:MM` (porównywalna jako tekst). */
+export function currentTime(now: Date): string {
+  return warsawTimeFormat.format(now);
+}
+
+/** Czy dzień `YYYY-MM-DD` to sobota albo niedziela. */
+export function isWeekend(day: string): boolean {
+  const [year, month, date] = day.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, date)).getUTCDay();
+  return weekday === 0 || weekday === 6;
+}
+
+/** Ostatni dzień miesiąca `YYYY-MM` jako `YYYY-MM-DD`. */
+export function lastDayOfMonth(key: string): string {
+  return `${key}-${String(daysInMonth(key)).padStart(2, "0")}`;
+}
+
+/** Dzień `YYYY-MM-DD` przesunięty o `days` dni kalendarzowych (także ujemnie). */
+export function addDays(day: string, days: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, date + days))
+    .toISOString()
+    .slice(0, 10);
+}

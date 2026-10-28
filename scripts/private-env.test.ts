@@ -52,6 +52,7 @@ describe("konfiguracja wersji prywatnej (STACK 5)", () => {
         DATABASE_URL: "postgres://byw:byw@localhost:5432/byw_dev",
         DATABASE_URL_UNPOOLED: "postgres://inna",
         APP_MODE: "demo",
+        NBP_API_URL: "http://127.0.0.1:9",
         PATH: "/bin",
       },
       db,
@@ -60,6 +61,7 @@ describe("konfiguracja wersji prywatnej (STACK 5)", () => {
       DATABASE_URL: "postgres://byw:byw@localhost:5432/byw_private",
       APP_MODE: "private",
       BYW_DIST_DIR: ".next-private",
+      NBP_API_URL: "",
       PATH: "/bin",
     });
   });
