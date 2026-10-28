@@ -3,8 +3,10 @@
 Status: **zatwierdzony przez właściciela produktu (etap C, 2026-10-20)**,
 łącznie z decyzjami z rozdz. 9; zmiana koncepcji wdrożenia (wersja prywatna
 lokalnie, publiczne demo) z 2026-10-21, decyzja 9.4. **Etap 2** (kurs NBP,
-powiadomienia e-mail, historia wartości, prognoza celu; decyzje 9.5–9.7)
-z 2026-10-27: projekt przed review. Dokument opisuje trwałe decyzje techniczne
+powiadomienia e-mail, historia wartości, prognoza celu; decyzje 9.5–9.8)
+z 2026-10-27, po niezależnym review etapu E
+([`docs/reviews/plan-review-etap2-E.md`](docs/reviews/plan-review-etap2-E.md))
+i akceptacji właściciela. Dokument opisuje trwałe decyzje techniczne
 dla [`SPEC.md`](SPEC.md). Zakres i zachowanie produktu opisuje wyłącznie `SPEC.md`;
 w razie konfliktu agent zgłasza go, zamiast wybierać wygodniejszą wersję.
 
@@ -42,7 +44,7 @@ Repozytorium nie ma jeszcze kodu, więc nie ma istniejącego stosu do zachowania
 | Jakość | ESLint (konfiguracja Next.js), Prettier, `tsc --noEmit` | Standard dla tego stosu. |
 | CI | GitHub Actions | Bramka jakości przy każdym PR; Postgres jako kontener usługi. |
 | Kurs EUR (Etap 2) | API NBP (`api.nbp.pl`, tabela A) przez wbudowany `fetch` | Darmowe, bez klucza; bez biblioteki klienta. |
-| Wysyłka maili (Etap 2) | `nodemailer` przez SMTP | Poprawne SMTP (TLS, STARTTLS, uwierzytelnianie, kodowanie nagłówków z polskimi znakami) to dużo kodu bezpieczeństwa; `nodemailer` jest standardem bez zależności przechodnich. |
+| Wysyłka maili (Etap 2) | `nodemailer` przez SMTP | Poprawne SMTP (TLS, STARTTLS, uwierzytelnianie, kodowanie nagłówków z polskimi znakami) to dużo kodu bezpieczeństwa; `nodemailer` jest standardem bez zależności przechodnich. Dla hosta innego niż `localhost` transport wymaga TLS (`secure` albo `requireTLS`). |
 | Wykres (Etap 2) | Własny komponent SVG renderowany na serwerze | Jedna linia i podpowiedzi to kilkadziesiąt linii; biblioteka wykresów byłaby zależnością produkcyjną z ciężkim JS po stronie klienta. |
 | Harmonogram (Etap 2) | Harmonogram zadań Windows + skrypt `private:notify` | Wersja prywatna nie działa stale; system operacyjny budzi skrypt także przy wyłączonej aplikacji. |
 
@@ -130,12 +132,12 @@ Etap 2 (migracje dodające):
 | Tabela | Kolumny (skrót) | Uwagi |
 | --- | --- | --- |
 | `exchange_rates` | currency, effective_date, rate, table_no, fetched_at | Kursy NBP, unikalne (currency, effective_date). Bez `user_id`: dane publiczne, wspólne dla wszystkich kont i piaskownic. |
-| `rate_fetches` | currency, attempted_at, ok | Ostatnia próba pobrania (limit raz na godzinę, SPEC Z11). |
+| `rate_fetches` | currency (PK), attempted_at, ok | Jeden wiersz na walutę (upsert): ostatnia próba pobrania, do limitu raz na godzinę (SPEC Z11). Nie jest logiem prób. |
 | `settings` | + notify_email, notify_incomes, notify_settlement, notify_goals | `eur_rate` zmienia znaczenie na kurs zapasowy (bez migracji danych). `notify_email` null = e-mail konta. |
-| `months` | + settled_rate_date, settled_rate_source (`nbp` / `fallback`) | Miesiące rozliczone przed Etapem 2 dostają `fallback` i datę rozliczenia (kurs był ręczny). |
-| `goals` | + deadline (`YYYY-MM`), risk_notified | CHECK: termin tylko z kwotą docelową. `risk_notified` zapamiętuje wysłany mail „zagrożony” do powrotu statusu „zdążysz”. |
-| `source_values` | id, user_id, source_id, value, recorded_at, reason | Historia wartości (SPEC 5.11). `reason`: initial / created / manual / settlement / archived. Indeks (source_id, recorded_at). Migracja wstawia `initial` dla istniejących źródeł. |
-| `notifications` | id, user_id, kind, dedupe_key, subject, recipient, created_at, sent_at, error | Unikalne (user_id, dedupe_key). Lista ostatnich maili i ochrona przed duplikatem. |
+| `months` | + settled_rate_date, settled_rate_source (`nbp` / `fallback` / `manual`) | Migracja ustawia `manual` tylko tam, gdzie `settled_eur_rate IS NOT NULL` (MVP zapisuje kurs tylko przy celu EUR); data null. CHECK: kurs i pochodzenie razem albo oba null; data tylko i zawsze dla `nbp`. |
+| `goals` | + deadline (`YYYY-MM`), risk_notified_at | CHECK: termin tylko z kwotą docelową. `risk_notified_at` = chwila wysłania maila „zagrożony”; null, gdy status nie jest „zagrożony” (zerowane przy sprawdzeniu i przy zapisie celu ze zmianą terminu albo kwoty docelowej). |
+| `source_values` | id, user_id, source_id, value, currency, recorded_at, reason | Historia wartości (SPEC 5.11) z walutą z chwili zapisu. `reason`: initial / created / manual / settlement / archived. Indeks (source_id, recorded_at). Migracja wstawia `initial` z `recorded_at = now()` dla wszystkich źródeł, także zarchiwizowanych (wartość 0). |
+| `notifications` | id, user_id, kind, dedupe_key, subject, body, recipient, created_at, claimed_at, sent_at, error | Jeden wiersz na mail, unikalne (user_id, dedupe_key). Wiersz pokazuje ostatni stan (lista 10 ostatnich maili); ponowna próba przejmuje ten sam wiersz (rozdz. 5 „Powiadomienia”). Mail testowy ma klucz z chwilą wysłania. |
 
 Tabele mają `user_id`, bo dostęp i tak jest sprawdzany per użytkownik; nie
 budujemy niczego więcej dla wielu kont (rejestracji, ról, zaproszeń).
@@ -167,26 +169,47 @@ równoległe rozliczenia i sprawdza, że wartości źródeł zmieniły się raz.
 - `src/rates/` ma klienta NBP (`/api/exchangerates/rates/A/EUR/{od}/{do}/`,
   JSON, limit czasu 3 s) i czyste funkcje wyboru kursu (bieżący, na dzień,
   rozliczenia, z kursem zapasowym), które nie znają sieci ani bazy.
-- Pobieranie leniwe, bez crona: odczyt kursu sprawdza `exchange_rates`;
-  gdy brakuje tabeli, która powinna już istnieć, i od ostatniej próby minęła
-  godzina, pobiera brakujący zakres (najwyżej 93 dni na zapytanie, limit NBP)
-  i zapisuje wszystkie zwrócone tabele. Błąd sieci kończy się użyciem tego,
-  co jest w bazie; strona nie czeka dłużej niż limit czasu.
+- Pobieranie leniwe, bez crona. Odczyt kursu sprawdza `exchange_rates`
+  i pobiera brakujący zakres, gdy od ostatniej próby (`rate_fetches`)
+  minęła godzina:
+  - tabela „powinna istnieć” w dzień roboczy od 12:30 (Europe/Warsaw);
+    w święta NBP odpowie 404, co jest zgodne z limitem raz na godzinę;
+  - odpowiedź 404 dla zakresu oznacza „brak nowych tabel”, nie błąd;
+  - pierwsze pobranie przy pustej tabeli: od wcześniejszej z dat —
+    początek miesiąca wdrożenia albo koniec najstarszego nierozliczonego
+    miesiąca minus 7 dni; wykres demo pobiera końce 12 miesięcy (kilka
+    zakresów po najwyżej 93 dni, limit NBP);
+  - zapisywane są wszystkie zwrócone tabele; błąd sieci kończy się użyciem
+    tego, co jest w bazie, a strona nie czeka dłużej niż limit czasu.
 - Te same dane służą wersji prywatnej i demo; adres NBP jest stały,
   w zapytaniu są tylko waluta i daty.
-- Testy nigdy nie łączą się z NBP: klient jest wstrzykiwany, a E2E kieruje
-  go zmienną `NBP_API_URL` na lokalną atrapę (ignorowaną, gdy ustawione jest
-  `VERCEL_ENV`, jak podmiana zegara).
-- Rozliczenie (wyżej) zapisuje kurs, datę tabeli i pochodzenie ustalone
-  przed transakcją; pobranie z NBP nigdy nie dzieje się wewnątrz transakcji.
+- Testy nigdy nie łączą się z NBP: klient jest wstrzykiwany w testach
+  jednostkowych i integracyjnych. E2E wstawia kursy do `exchange_rates`
+  helperem seedującym, a `NBP_API_URL` kieruje na zamknięty port (scen. 24
+  „NBP nie odpowiada”); zmienna jest ignorowana, gdy ustawione jest
+  `VERCEL_ENV`. Osobny serwer atrapy NBP powstaje tylko, jeśli któryś test
+  E2E musi sprawdzić samo pobieranie.
+- Rozliczenie (wyżej): kurs, data tabeli i pochodzenie są ustalane przed
+  transakcją (pobranie z NBP nigdy w transakcji). Formularz przesyła datę
+  tabeli i pochodzenie pokazane użytkownikowi; akcja ponownie ustala kurs
+  i odrzuca zapis, gdy się różni (SPEC 5.5, scen. 36). Miesiąc bez celu EUR
+  nie ustala kursu.
+- Generator demo zapisuje kursy rozliczeń jako `fallback`, nigdy jako `nbp`
+  (SPEC Z16).
 
 ### Historia wartości (Etap 2, SPEC 5.11)
 
 - Każda zmiana `sources.value` (dodanie, edycja, rozliczenie, archiwizacja)
   przechodzi przez jedną funkcję w `db/`, która w tej samej transakcji
-  dopisuje wiersz do `source_values`. Bezpośredni `UPDATE sources SET value`
-  poza nią jest błędem review; test integracyjny każdej ścieżki sprawdza,
-  że historia ma nowy wiersz.
+  dopisuje wiersz do `source_values` z bieżącą walutą źródła. Bezpośredni
+  `UPDATE sources SET value` poza nią jest błędem review; test integracyjny
+  każdej ścieżki sprawdza, że historia ma nowy wiersz. Dziś zapisują
+  `sources.value`: `createSource`, `updateSource`, `settleMonth`
+  i `writeDemoData`.
+- Migracja z punktem `initial` zawiera ręcznie dopisany `INSERT … SELECT`;
+  `drizzle-kit generate` po niej nie może produkować różnicy w snapshotcie.
+- Generator demo zapisuje rozliczenia z datami z pierwszych dni następnego
+  miesiąca (dziś `settledAt = now`), a historia wartości wynika z tych dat.
 - Punkty wykresu liczy czysta funkcja domeny z historii i kursów (reguła
   6.11); zapytanie pobiera całą historię użytkownika (setki wierszy rocznie).
 - Wykres: komponent SVG w `ui/`, renderowany na serwerze; podpowiedź na
@@ -195,38 +218,65 @@ równoległe rozliczenia i sprawdza, że wartości źródeł zmieniły się raz.
 ### Prognoza celu (Etap 2, SPEC 5.12)
 
 Czyste funkcje domeny (reguły 6.12–6.13) na danych już czytanych przez
-„Ten miesiąc” i Plan podziału; nic nie jest zapisywane poza `risk_notified`.
+„Ten miesiąc” i Plan podziału. Kolumna `goals.deadline` i jej zapis w `db/`
+powstają razem z domeną (PLAN T21), bo potrzebują jej powiadomienia;
+interfejs dochodzi osobno.
 
 ### Powiadomienia (Etap 2, SPEC 5.10)
 
 - **Wybór maili:** czysta funkcja `(stan użytkownika, now, dotychczasowe
-  powiadomienia) → lista maili` w `src/notify/`. Każdy mail ma `dedupe_key`,
-  np. `incomes:2026-11`, `settlement:2026-11-07`,
-  `goal-achieved:<cel>:<kwota>`, `goal-risk:<cel>:<data>`. Ta sama funkcja
-  daje podgląd w demo.
-- **Wysyłka:** najpierw `INSERT` do `notifications` (unikalny klucz chroni
-  przed równoległym sprawdzeniem), potem SMTP, potem `sent_at`. Błąd SMTP
-  zapisuje `error` i zwalnia klucz do ponownej próby, dopóki mail jest
-  aktualny. Konfiguracja SMTP tylko z `.env.private`: `SMTP_HOST`,
-  `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. Brak którejś
-  zmiennej = wysyłka wyłączona.
-- **Wyzwalacze:** `npm run private:notify` (ładuje `.env.private`, uruchamia
-  kontener i migracje jak inne skrypty `private:*`, wykonuje jedno
-  sprawdzenie, kończy się kodem ≠ 0 przy błędzie, log do `logs/notify.log`
-  poza repozytorium); `private:start` wykonuje to samo sprawdzenie przed
-  `next start`; akcja rozliczenia planuje sprawdzenie przez `after()`
-  z `next/server`, więc odpowiedź nie czeka na SMTP.
+  powiadomienia) → lista maili` w `src/notify/`, razem z treściami (zwykły
+  tekst). Klucze, np. `incomes:2026-11`, `settlement:2026-11-07`,
+  `goal-achieved:<cel>:<kwota>`, `goal-risk:<cel>:<risk_notified_at>`.
+  Grupa „Rozliczenie” liczy 7 dni od `sent_at` ostatniego wysłanego maila
+  grupy, nie od próby z błędem. Ta sama funkcja daje podgląd w demo.
+- **Wysyłka i ponowienia** — jeden wiersz na klucz:
+  1. `INSERT … ON CONFLICT DO NOTHING` tworzy wiersz;
+  2. przejęcie: `UPDATE … SET claimed_at = now() WHERE sent_at IS NULL AND
+     (claimed_at IS NULL OR error IS NOT NULL OR claimed_at < now() -
+     interval '10 minutes') RETURNING` — tylko proces, który przejął wiersz,
+     łączy się z SMTP; proces przerwany po przejęciu zwalnia wiersz po
+     10 minutach;
+  3. sukces ustawia `sent_at` i czyści `error`; błąd nadpisuje `error`
+     (lista pokazuje ostatni stan), a kolejne sprawdzenie ponawia, dopóki
+     mail jest aktualny;
+  4. mail, który przestał być aktualny, zostaje na liście z ostatnim stanem.
+- **Konfiguracja SMTP** tylko z `.env.private`: `SMTP_HOST`, `SMTP_PORT`,
+  `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`. Brak którejś zmiennej =
+  wysyłka wyłączona. Krótkie `connectionTimeout` i `greetingTimeout`
+  (kilka sekund), żeby brak internetu nie opóźniał startu.
+  `scripts/private-env.ts` przekazuje `SMTP_*` z `.env.private` do
+  `next start` i `private:notify`, a jawnie czyści `NBP_API_URL` i zmienne
+  testowe zegara, żeby wartości deweloperskie z `.env` nie przeciekły do
+  wersji prywatnej.
+- **Wyzwalacze:**
+  - `npm run private:notify` — ładuje `.env.private`, czeka na Dockera
+    (odpytuje `docker info` do 5 minut), uruchamia kontener, **nie stosuje
+    migracji** (przy oczekujących kończy się błędem „uruchom
+    private:start”), wykonuje jedno sprawdzenie, kod wyjścia ≠ 0 przy
+    błędzie, log do `logs/notify.log` (`/logs/` w `.gitignore`);
+  - `private:start` uruchamia to samo sprawdzenie równolegle ze startem
+    serwera, nie przed nim;
+  - akcja rozliczenia i zapisu planu lub celu planuje sprawdzenie przez
+    `after()` z `next/server` tylko po udanym zapisie (callback `after`
+    wykonuje się też po `redirect()` i błędzie), z `userId` przekazanym do
+    callbacku zamiast czytania sesji w środku.
 - **Harmonogram zadań:** `npm run private:notify:install` rejestruje przez
-  PowerShell (`Register-ScheduledTask`) zadanie codzienne z opcją
-  „uruchom jak najszybciej po pominięciu” (`StartWhenAvailable`), dla
-  bieżącego użytkownika, bez uprawnień administratora;
-  `private:notify:uninstall` je usuwa. Docker Desktop musi działać; gdy nie
-  działa, skrypt kończy się błędem, a następne uruchomienie nadrabia.
+  PowerShell (`Register-ScheduledTask`) zadanie dla bieżącego użytkownika
+  (logowanie interaktywne, `RunLevel Limited`, bez uprawnień administratora)
+  z dwoma wyzwalaczami: codziennym i przy logowaniu z opóźnieniem 2 minut,
+  oraz `StartWhenAvailable`. Akcja ma ustawiony katalog roboczy
+  repozytorium, pełną ścieżkę do `node` i ukryte okno.
+  `private:notify:uninstall` usuwa zadanie. Docker Desktop musi startować
+  przy logowaniu (decyzja 9.8).
 - **Tryb demo:** moduł wysyłki odmawia działania (jak logowanie hasłem
   w demo), więc żadna ścieżka nie otworzy połączenia SMTP.
-- Hasło SMTP (np. hasło aplikacji Gmail) wpisuje właściciel w `.env.private`;
-  agent go nie widzi i nie testuje na prawdziwym serwerze. Testy używają
-  wstrzykniętego transportu.
+- **Testy:** jednostkowe i integracyjne z wstrzykniętym transportem; E2E
+  z minimalną atrapą serwera SMTP na `node:net` (bez nowej zależności),
+  z trybem „odrzuć AUTH” i odczytem odebranych maili, uruchamianą
+  w `playwright.config.ts`. Hasło SMTP (np. hasło aplikacji Gmail) wpisuje
+  właściciel w `.env.private`; agent go nie widzi i nie testuje na
+  prawdziwym serwerze.
 
 ### Czas i miesiące
 
@@ -389,11 +439,13 @@ scenariusze demo (19–21) jako E2E w trybie demo oraz testy jednostkowe
 generatora (spójność danych dla wielu wartości `now` i ziaren losowości,
 w tym granice miesięcy i przełom roku).
 
-Etap 2: obliczeniowe (22–25, 27, 28) jako testy jednostkowe domeny i wyboru
-kursu; zapis kursu rozliczenia i historii wartości (23, 25) jako testy
-integracyjne; wybór maili (29–32) jako testy jednostkowe funkcji
-z wstrzykniętym `now` i integracyjne wysyłki z atrapą transportu SMTP;
-przepływy (22–24, 26–28, 33, 34) jako E2E z atrapą NBP.
+Etap 2: obliczeniowe (22–25, 27, 28, 35, 38) jako testy jednostkowe domeny
+i wyboru kursu; zapis kursu rozliczenia, migracja starych rozliczeń
+i historia wartości (23, 25, 36, 39) jako testy integracyjne; wybór maili
+(29–32) jako testy jednostkowe funkcji z wstrzykniętym `now`, a deduplikacja
+i ponowienia jako integracyjne (dwa sprawdzenia z różnych połączeń, proces
+przerwany po przejęciu); przepływy (22–24, 26–28, 33, 34, 36–39) jako E2E
+z kursami z helpera i atrapą SMTP.
 
 ## 8. Największa niewiadoma
 
@@ -426,11 +478,15 @@ generatora z rozdz. 7.
    wygenerowanymi. Konsekwencja zaakceptowana świadomie: wersja prywatna nie
    jest dostępna z telefonu ani z innego komputera (SPEC 9 pkt 11).
 
-5. **Zależność `nodemailer` (Etap 2, do akceptacji):** pierwsza nowa
-   zależność produkcyjna po MVP, uzasadnienie w rozdz. 2.
+5. **Zależność `nodemailer` (Etap 2, zaakceptowana 2026-10-27):** pierwsza
+   nowa zależność produkcyjna po MVP, uzasadnienie w rozdz. 2; warunek: TLS
+   dla hosta innego niż `localhost`. Do tego `@types/nodemailer` (dev).
 6. **Połączenia wychodzące wersji prywatnej (Etap 2, SPEC 10):** NBP i serwer
    SMTP właściciela. Hasło SMTP leży w `.env.private`, jak adres bazy.
 7. **Harmonogram zadań Windows (Etap 2):** zadanie rejestruje skrypt na
-   koncie właściciela; wymaga, żeby Docker Desktop działał w tle.
+   koncie właściciela, bez uprawnień administratora.
+8. **Docker Desktop przy logowaniu (Etap 2, 2026-10-27, SPEC P21):**
+   autostart Dockera jest wymaganiem wersji prywatnej; bez niego codzienne
+   maile nie wychodzą.
 
 Pozostałe decyzje z tego dokumentu są techniczne i nie wymagają akceptacji.
