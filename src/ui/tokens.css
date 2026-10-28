@@ -10,17 +10,17 @@
   --muted: light-dark(#5c6064, #a2a8ba);
   --border: light-dark(#e6e6e6, #272b38);
   --input-border: light-dark(#cfd4da, #3a3f50);
-  --accent: light-dark(#1d5fd6, #8c85ff);
-  --on-accent: light-dark(#ffffff, #12104a);
+  --accent: light-dark(#1d5fd6, #6aa5ff);
+  --on-accent: light-dark(#ffffff, #0a1f3d);
 
   --save: light-dark(#157b8b, #2bb3c9);
   --on-save: light-dark(#ffffff, #04262c);
   --save-soft: light-dark(#def0f2, #11303a);
   --save-ink: light-dark(#0c4b55, #7fdceb);
-  --invest: light-dark(#1d5fd6, #8c85ff);
-  --on-invest: light-dark(#ffffff, #12104a);
-  --invest-soft: light-dark(#dcf1ff, #24224f);
-  --invest-ink: light-dark(#0a3a80, #c1bdff);
+  --invest: light-dark(#1d5fd6, #6aa5ff);
+  --on-invest: light-dark(#ffffff, #0a1f3d);
+  --invest-soft: light-dark(#dcf1ff, #16284a);
+  --invest-ink: light-dark(#0a3a80, #a9c9ff);
   --spend: light-dark(#dfe3e8, #2c3140);
   --spend-soft: light-dark(#fbead8, #3b2c12);
   --spend-ink: light-dark(#6a3307, #f7cf8a);
