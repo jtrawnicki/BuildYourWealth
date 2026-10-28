@@ -3,8 +3,9 @@
 Status: **MVP zaakceptowane przez właściciela produktu, po review etapu B
 (2026-10-19)**; zmiana koncepcji wdrożenia (wersja prywatna i demo, P8)
 z 2026-10-21. **Etap 2** (kurs NBP, powiadomienia e-mail, historia majątku,
-termin celu; rozdz. 5.9–5.12, decyzje P9–P20) z 2026-10-27: **projekt po
-wywiadzie z właścicielem, przed review etapu B**. Dokument powstał na
+termin celu; rozdz. 5.9–5.12, decyzje P9–P23) z 2026-10-27: **po
+niezależnym review etapu B i rozstrzygnięciach właściciela (2026-10-27,
+[`docs/reviews/spec-review-etap2-B.md`](docs/reviews/spec-review-etap2-B.md))**. Dokument powstał na
 podstawie wywiadów z właścicielem produktu. Proces pracy opisuje
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
@@ -154,10 +155,18 @@ MVP są wpisane bezpośrednio w ich treść.
     i pochodzeniem, np. „Kurs 4,2650 zł (NBP, 30.10.2026)”. Gdy kursu
     rozliczenia nie da się ustalić, rozliczenia nie da się zatwierdzić,
     a ekran prosi o kurs zapasowy.
+  - Rozliczenie w ostatnim dniu miesiąca przed publikacją tabeli NBP z tego
+    dnia używa poprzedniej tabeli; ekran pokazuje jej datę (reguła 6.10,
+    P10).
+  - Jeśli między otwarciem ekranu a zatwierdzeniem kurs rozliczenia się
+    zmieni (np. pojawi się nowa tabela NBP), zatwierdzenie jest odrzucone
+    komunikatem „Kurs rozliczenia się zmienił. Sprawdź kwoty i zatwierdź
+    ponownie.”, a ekran pokazuje nowy kurs i przeliczone kwoty.
+  - Miesiąc bez celu ze źródłem EUR nie potrzebuje kursu i go nie zapisuje.
 - Po zatwierdzeniu faktyczne kwoty są dodawane do bieżącej wartości
   połączonych źródeł, kurs użyty przy rozliczeniu jest zapisywany razem
-  z datą i pochodzeniem (NBP albo zapasowy), a miesiąc staje się rozliczony
-  i tylko do odczytu.
+  z datą tabeli i pochodzeniem (NBP albo zapasowy), a miesiąc staje się
+  rozliczony i tylko do odczytu.
 - Rozliczenie jest atomowe i jednorazowe: albo zapisują się wszystkie kwoty,
   albo żadna. Ponowna próba rozliczenia (druga karta, podwójne kliknięcie)
   jest odrzucana komunikatem „Ten miesiąc jest już rozliczony”.
@@ -172,7 +181,9 @@ MVP są wpisane bezpośrednio w ich treść.
 - Wykonanie celu EUR jest pokazane w EUR oraz w PLN po kursie zapisanym przy
   rozliczeniu, więc późniejsza zmiana kursu nie zmienia historii. Przy
   rozliczonym miesiącu z celem EUR widać kurs rozliczenia z datą
-  i pochodzeniem (NBP albo zapasowy).
+  i pochodzeniem, np. „Kurs 4,2650 zł (NBP, 30.10.2026)” albo „Kurs
+  4,3000 zł · kurs zapasowy”. Miesiące rozliczone przed Etapem 2 pokazują
+  „Kurs 4,3000 zł (ręczny, sprzed Etapu 2)”, bez daty tabeli.
 
 ### 5.7 Ustawienia
 - Kurs EUR: bieżący kurs NBP z datą tabeli i kurs zapasowy (5.9).
@@ -184,7 +195,7 @@ MVP są wpisane bezpośrednio w ich treść.
 
 ### 5.8 Wersja demo
 Publiczna wersja aplikacji do pokazywania efektów pracy. Działa tak samo jak
-wersja prywatna (5.2–5.7), ale zawiera wyłącznie dane wygenerowane i nigdy
+wersja prywatna (5.2–5.7 i 5.9–5.12, bez wysyłki maili z 5.10), ale zawiera wyłącznie dane wygenerowane i nigdy
 nie ma dostępu do danych z wersji prywatnej.
 
 - **Wejście:** zamiast formularza logowania ekran startowy z krótkim opisem
@@ -210,12 +221,15 @@ nie ma dostępu do danych z wersji prywatnej.
     i z co najmniej jedną ręczną zmianą wyceny, więc wykres (5.11) ma dane;
   - wśród celów z kwotą docelową: co najmniej jeden z terminem, w którym
     „zdążysz”, i jeden zagrożony (5.12);
-  - kurs zapasowy; kursy rozliczeń przykładowych miesięcy są wygenerowane,
-    nie są prawdziwymi kursami NBP. Bieżący kurs pochodzi z NBP jak
-    w wersji prywatnej.
+  - kurs zapasowy; kursy rozliczeń przykładowych miesięcy są wygenerowane
+    i oznaczone jako kurs zapasowy, nigdy jako NBP. Bieżący kurs i kursy
+    z końców miesięcy dla wykresu pochodzą z NBP jak w wersji prywatnej
+    (reguły 6.10–6.11), a gdy ich brak — z kursu zapasowego;
+  - rozliczone miesiące mają daty rozliczenia z pierwszych dni następnego
+    miesiąca, nie dzień wejścia do demo.
 - **Powiadomienia:** demo nie wysyła żadnych maili. Ustawienia pokazują
-  podgląd maili, które wersja prywatna wysłałaby dla danych piaskownicy
-  (5.10).
+  wyłącznie podgląd maili, które wersja prywatna wysłałaby teraz dla danych
+  piaskownicy, bez pola adresu, przełączników i testowego maila (5.10).
 - **Baner** na każdym ekranie demo: „Wersja demonstracyjna. Dane są
   przykładowe, widzisz je tylko Ty i znikną po 24 godzinach.”
 - **Czas życia:** piaskownica działa 24 godziny od wejścia. Potem jej dane są
@@ -230,126 +244,169 @@ nie ma dostępu do danych z wersji prywatnej.
 
 ### 5.9 Kurs EUR z NBP
 - Aplikacja sama pobiera średni kurs EUR z tabeli A NBP. NBP publikuje
-  tabelę w dni robocze; w weekendy i święta obowiązuje ostatnia
-  opublikowana.
+  tabelę w dni robocze (ok. południa); w weekendy i święta obowiązuje
+  ostatnia opublikowana.
 - **Bieżący kurs** to najnowsza pobrana tabela NBP. Służy do orientacyjnych
   kwot w EUR na „Ten miesiąc”, przeliczenia źródeł EUR na Majątku, bieżącego
   punktu wykresu i prognoz celów EUR.
 - **Kurs rozliczenia** miesiąca to kurs z jego ostatniego dnia (reguła 6.10),
   niezależnie od dnia, w którym użytkownik rozlicza.
 - Pobieranie nie wymaga żadnej akcji użytkownika. Gdy aplikacja potrzebuje
-  kursu, sprawdza w NBP nowszą tabelę (najwyżej raz na godzinę). Brak
-  odpowiedzi NBP nie blokuje ekranu: aplikacja używa ostatnio pobranego
-  kursu i pokazuje jego datę.
+  kursu (bieżącego, do rozliczenia albo z końca miesiąca do wykresu),
+  sprawdza w NBP brakujące tabele (najwyżej raz na godzinę). Brak odpowiedzi
+  NBP nie blokuje ekranu: aplikacja używa ostatnio pobranego kursu i pokazuje
+  jego datę.
 - Ustawienia pokazują bieżący kurs z pochodzeniem i datą, np. „4,2731 zł ·
   NBP, tabela z 27.10.2026”. Gdy najnowszy pobrany kurs jest starszy niż
   7 dni, obok jest ostrzeżenie „Nie udało się pobrać nowszego kursu z NBP”.
 - **Kurs zapasowy** (pole w Ustawieniach, dawny kurs ręczny) jest używany
-  tylko wtedy, gdy aplikacja nie ma żadnego pasującego kursu z NBP
-  (reguła 6.10), np. przy pierwszym uruchomieniu bez internetu. Kurs
-  wpisany ręcznie przed Etapem 2 staje się kursem zapasowym. Kurs zapasowy
-  w użyciu jest zawsze oznaczony: „4,3000 zł · kurs zapasowy”.
+  tylko wtedy, gdy aplikacja nie ma pasującego kursu z NBP (reguła 6.10),
+  np. przy pierwszym uruchomieniu bez internetu. Kurs wpisany ręcznie przed
+  Etapem 2 staje się kursem zapasowym. Kurs zapasowy w użyciu jest zawsze
+  oznaczony: „4,3000 zł · kurs zapasowy”.
 - Majątek przy sumie źródeł EUR podaje użyty kurs z datą.
 - Dotyczy tylko EUR. Inne waluty pozostają poza zakresem (rozdz. 9).
 
 ### 5.10 Powiadomienia e-mail
 - Dotyczy wersji prywatnej. Maile wysyła serwer poczty (SMTP) skonfigurowany
   przez właściciela w pliku konfiguracji wersji prywatnej, domyślnie Gmail
-  z hasłem aplikacji. Instrukcja konfiguracji jest w dokumentacji
-  uruchomienia.
-- **Kiedy aplikacja sprawdza powiadomienia:** przy uruchomieniu wersji
-  prywatnej, codziennie przez zadanie w Harmonogramie zadań Windows (działa
-  także, gdy aplikacja jest wyłączona; wymaga uruchomionego Dockera) oraz
-  zaraz po rozliczeniu miesiąca. Jeśli komputer był wyłączony w dniu
-  zdarzenia, mail wychodzi przy najbliższym sprawdzeniu, o ile jest nadal
-  aktualny (szczegóły przy każdym zdarzeniu). Każdy mail wychodzi najwyżej
-  raz, niezależnie od liczby sprawdzeń.
+  z hasłem aplikacji, zawsze przez połączenie szyfrowane. Instrukcja
+  konfiguracji jest w dokumentacji uruchomienia.
+- **Kiedy aplikacja sprawdza powiadomienia:**
+  - przy uruchomieniu wersji prywatnej;
+  - codziennie przez zadanie w Harmonogramie zadań Windows, także po
+    zalogowaniu, gdy komputer był wyłączony o zaplanowanej porze; działa przy
+    wyłączonej aplikacji, ale wymaga Dockera uruchamianego automatycznie przy
+    logowaniu (P21);
+  - zaraz po rozliczeniu miesiąca;
+  - zaraz po zapisie Planu podziału albo celu (status terminu celu).
+- **Mail jest wysłany**, gdy serwer SMTP go przyjął. Każdy mail jest
+  wysyłany najwyżej raz, niezależnie od liczby sprawdzeń.
 - **Adresat:** domyślnie e-mail konta; w Ustawieniach można wpisać inny adres.
-- **Zdarzenia** (każda grupa włączana osobno w Ustawieniach, domyślnie
-  włączone):
-  1. **Przychody** — 10. dnia każdego miesiąca mail „Uzupełnij przychody
-     z listopada 2026” z listą wpisanych dotąd pozycji przychodu bieżącego
-     miesiąca i ich sumą albo informacją, że żadnej jeszcze nie ma. Wysyłany
-     zawsze, raz w miesiącu; jeśli 10. dnia nie było sprawdzenia, wychodzi
-     przy pierwszym sprawdzeniu po 10. dniu tego samego miesiąca.
-     W kolejnym miesiącu już nie.
-  2. **Rozliczenie** — od ostatniego dnia miesiąca, który istnieje i nie
-     jest rozliczony, mail „Październik 2026 czeka na rozliczenie”. Gdy
-     czeka kilka miesięcy, jeden mail wymienia wszystkie, od najstarszego
-     („2 miesiące czekają na rozliczenie”). Przypomnienie powtarza się, gdy
-     od poprzedniego maila tej grupy minęło co najmniej 7 dni i nadal jakiś
-     miesiąc czeka. Po rozliczeniu wszystkich miesięcy maile ustają.
-  3. **Cele**:
-     - **Cel osiągnięty** — mail „Cel „Wakacje” osiągnięty” po rozliczeniu,
-       w którym postęp celu doszedł do kwoty docelowej. Raz dla danej kwoty
-       docelowej; po jej zmianie i ponownym osiągnięciu wychodzi nowy mail.
-       Nie wychodzi, jeśli to rozliczenie było więcej niż 30 dni temu.
-     - **Cel zagrożony** — mail „Cel „Wakacje” jest zagrożony”, gdy cel
-       z terminem zmienia status na „zagrożony” (5.12). Treść: postęp,
-       termin, prognoza, wymagana wpłata miesięczna i sugerowany procent
-       puli. Kolejny mail dla tego celu dopiero po tym, jak cel wróci do
-       statusu „zdążysz” (albo straci termin) i znów stanie się zagrożony.
-- **Treść maili** jest po polsku, z kwotami w formacie z rozdz. 8 (P15),
-  i zawiera adres wersji prywatnej (`http://127.0.0.1:4000`) z linkiem do
-  właściwego ekranu.
+- **Zdarzenia** w trzech grupach, każda włączana osobno w Ustawieniach
+  (domyślnie włączone). Mail wychodzi przy pierwszym sprawdzeniu, w którym
+  spełniony jest warunek „Kiedy”, o ile jest nadal aktualny:
+
+  | Grupa | Mail (temat) | Kiedy | Aktualny |
+  | --- | --- | --- | --- |
+  | Przychody | „Uzupełnij przychody z listopada 2026” | od 10. dnia miesiąca, raz w miesiącu | do ostatniego dnia tego miesiąca |
+  | Rozliczenie | „Październik 2026 czeka na rozliczenie” albo „2 miesiące czekają na rozliczenie” | gdy pojawia się nowy miesiąc do rozliczenia (od jego ostatniego dnia) albo minęło co najmniej 7 dni kalendarzowych od dnia ostatniego wysłanego maila tej grupy | dopóki jakiś miesiąc czeka na rozliczenie |
+  | Cele | „Cel „Wakacje” osiągnięty” | po rozliczeniu, w którym postęp doszedł do kwoty docelowej | do 30 dni od tego rozliczenia |
+  | Cele | „Cel „Wakacje” jest zagrożony” | gdy status terminu celu staje się „zagrożony” (5.12) | dopóki status jest „zagrożony” |
+
+  - **Przychody:** wysyłany zawsze, także gdy przychody są już wpisane.
+    Treść: lista wpisanych dotąd pozycji przychodu bieżącego miesiąca i ich
+    suma albo informacja, że żadnej jeszcze nie ma.
+  - **Rozliczenie:** jeden mail wymienia wszystkie czekające miesiące, od
+    najstarszego; liczba w temacie z odmianą („2 miesiące czekają”,
+    „5 miesięcy czeka”). Nowy miesiąc do rozliczenia daje mail od razu,
+    nawet gdy przypomnienie wyszło niedawno; 7 dni liczy się wtedy od nowa.
+    Dni liczone w strefie Europe/Warsaw, niezależnie od godziny.
+  - **Cel osiągnięty:** raz dla danej kwoty docelowej; po jej zmianie
+    i ponownym osiągnięciu przy rozliczeniu wychodzi nowy mail. Obniżenie
+    kwoty docelowej do postępu lub poniżej (bez rozliczenia) nie wysyła
+    maila.
+  - **Cel zagrożony:** status jest oceniany przy każdym sprawdzeniu, także
+    po zapisie planu lub celu. Pierwsza ocena „zagrożony” (np. zaraz po
+    ustawieniu terminu) też jest zmianą statusu. Kolejny mail dla tego celu
+    wychodzi dopiero, gdy status przestał być „zagrożony” (dowolny inny
+    status albo brak terminu) i znów nim jest. Treść: postęp, termin,
+    prognoza i teksty z Planu podziału (wymagana wpłata, sugestia procentu
+    albo komunikat, gdy sugestii nie ma).
+- **Ponowne próby:** mail niewysłany z powodu błędu, wyłączonej grupy albo
+  braku konfiguracji SMTP wychodzi przy najbliższym sprawdzeniu, w którym
+  jest nadal aktualny (tabela wyżej). Np. grupa „Przychody” włączona 15.11
+  wysyła mail za listopad; włączona 1.12 — dopiero 10.12 za grudzień.
+- **Treść maili:** zwykły tekst (bez HTML), po polsku, z kwotami
+  w formacie z rozdz. 8 (P15), z adresem wersji prywatnej
+  (`http://127.0.0.1:4000`) i linkiem do właściwego ekranu.
 - **Ustawienia → Powiadomienia:** adres e-mail, trzy przełączniki grup,
   przycisk „Wyślij testowy mail” (temat „Testowy mail z BuildYourWealth”)
-  i lista 10 ostatnich maili (data, temat, wysłany albo błąd).
+  i lista 10 ostatnich maili, także testowych: data, temat i ostatni stan
+  (wysłany, błąd z powodem, oczekuje).
 - **Brak konfiguracji SMTP:** sekcja pokazuje „Wysyłka maili nie jest
   skonfigurowana” z odnośnikiem do instrukcji; nic nie jest wysyłane, a brak
   konfiguracji nie jest błędem aplikacji.
 - **Błąd wysyłki** (np. brak internetu, złe hasło): mail nie jest uznany za
-  wysłany i aplikacja próbuje ponownie przy kolejnym sprawdzeniu, o ile jest
-  nadal aktualny. Lista ostatnich maili pokazuje błąd. Test mail pokazuje
-  wynik od razu: „Wysłano testowy mail na …” albo „Nie udało się wysłać:
-  <powód>”.
-- **Demo:** żadnych maili. Sekcja „Powiadomienia” pokazuje „W wersji demo
-  maile nie są wysyłane. Tak wyglądałyby maile dla tych danych:” i podgląd
-  tematów oraz treści maili, które byłyby teraz do wysłania.
+  wysłany; lista ostatnich maili pokazuje błąd. Test mail pokazuje wynik od
+  razu: „Wysłano testowy mail na …” albo „Nie udało się wysłać: <powód>”.
+- **Demo:** żadnych maili. Sekcja „Powiadomienia” pokazuje tylko „W wersji
+  demo maile nie są wysyłane. Tak wyglądałyby maile dla tych danych:”
+  i podgląd tematów oraz treści maili, które byłyby teraz aktualne.
 
 ### 5.11 Historia wartości majątku i wykres
-- Od wdrożenia Etapu 2 aplikacja zapisuje każdą zmianę wartości źródła
-  z datą i powodem: dodanie źródła, ręczna edycja, rozliczenie miesiąca,
-  archiwizacja. W chwili wdrożenia zapisuje stan wszystkich istniejących
-  źródeł jako punkt startowy. Historii sprzed wdrożenia nie odtwarza się
-  ani nie uzupełnia (P17).
+- Od wdrożenia zapisu historii aplikacja zapisuje każdą zmianę wartości
+  źródła z datą, powodem i walutą źródła w tej chwili: dodanie źródła, ręczna
+  edycja, rozliczenie miesiąca, archiwizacja. W chwili wdrożenia zapisuje
+  stan wszystkich istniejących źródeł jako punkt startowy. Historii sprzed
+  wdrożenia nie odtwarza się ani nie uzupełnia (P17).
 - Ekran Majątek pokazuje nad listą źródeł wykres „Wartość majątku”: jedna
   linia z sumą majątku w PLN na koniec każdego miesiąca (reguła 6.11), od
   miesiąca wdrożenia do bieżącego. Punkt bieżącego miesiąca to stan na
-  teraz.
+  teraz. Wygląd: rozdz. 8.1.
 - Zakres: cała historia, bez przełączników zakresu.
 - Najechanie albo dotknięcie punktu (także fokus z klawiatury) pokazuje
   miesiąc, kwotę i zmianę względem poprzedniego punktu, np. „Październik
-  2026 · 48 230,00 zł · +1 120,00 zł”.
+  2026 · 48 230,00 zł · +1 120,00 zł”; pierwszy punkt bez zmiany.
 - Dane wykresu są dostępne także jako tabela dla czytników ekranu.
-- Gdy jest mniej niż dwa punkty: zamiast wykresu tekst „Wykres pojawi się
-  po pierwszym pełnym miesiącu historii.”
-- Zmiana bieżącego kursu nie zmienia punktów z poprzednich miesięcy.
+- Gdy jest mniej niż dwa punkty (miesiąc wdrożenia): zamiast wykresu tekst
+  „Wykres pojawi się w przyszłym miesiącu.”
+- Zmiana bieżącego kursu ani zmiana waluty źródła nie zmienia punktów
+  z poprzednich miesięcy. Punkt policzony po kursie zapasowym (brak tabeli
+  NBP) może się zmienić, gdy aplikacja pobierze brakującą tabelę.
+- Gdy źródło EUR nie ma żadnego kursu (ani NBP, ani zapasowego), zamiast
+  wykresu jest prośba o kurs zapasowy, jak przy sumie majątku.
 - Zapisy historii nie są edytowalne. Korekta wartości źródła to nowa zmiana
   z bieżącą datą.
 
 ### 5.12 Termin celu i prognoza
 - **Termin:** opcjonalne pole celu w Planie podziału, miesiąc i rok (np.
   „czerwiec 2027”). Wymaga kwoty docelowej. Usunięcie kwoty docelowej
-  usuwa termin.
+  usuwa termin. Walidacja: rozdz. 7.1.
 - **Prognoza** dla każdego celu z kwotą docelową, który nie jest osiągnięty
-  (reguła 6.12): „Osiągniesz ok. w styczniu 2027”. Gdy średnia wpłata
-  wynosi 0: „Przy obecnych wpłatach cel nie zostanie osiągnięty”.
-- **Status celu z terminem** (reguła 6.13):
-  - „zdążysz” — prognoza nie później niż termin;
-  - „zagrożony” — prognoza później niż termin albo brak prognozy;
-  - „termin minął” — termin jest wcześniejszy niż pierwszy miesiąc
-    prognozy, a cel nie jest osiągnięty.
-  Cel osiągnięty pokazuje „osiągnięty”, jak dotąd, bez statusu terminu.
-- **„Ten miesiąc”**, przelewy do wykonania: pod paskiem postępu jedna linia,
-  np. „Osiągniesz ok. w styczniu 2027” albo „Termin: grudzień 2026 ·
-  zagrożony”. Status „zagrożony” prowadzi do Planu podziału.
-- **Plan podziału**, przy celu z terminem: wymagana wpłata i sugestia,
-  np. „Do grudnia 2026 potrzebujesz 650,00 zł miesięcznie (średnio
-  wpłacasz 566,66 zł). Ustaw ok. 33,17% puli Oszczędności (teraz 30,00%).”
-  Gdy sugerowany procent przekracza 100%: „Nawet 100% puli nie wystarczy.
-  Zwiększ procent puli albo przesuń termin.” Aplikacja niczego nie zmienia
-  sama; procenty zmienia użytkownik, z regułami z 5.3.
+  (reguła 6.12), ma jeden z trzech wyników:
+  - „Osiągniesz ok. w styczniu 2027”;
+  - „Przy obecnych wpłatach cel nie zostanie osiągnięty” (średnia wpłata 0);
+  - „Prognoza pojawi się, gdy cel trafi do planu miesiąca.” (brak danych:
+    cel nie był jeszcze w planie żadnego miesiąca).
+- Prognoza opiera się na faktycznych wpłatach (P19), więc zmiana procentu
+  celu działa na nią dopiero po rozliczeniu miesięcy z nowym planem. Gdy
+  procent celu w bieżącym planie różni się od procentu w najnowszym miesiącu
+  z tym celem, pod prognozą jest dopisek „Prognoza uwzględni nowy procent po
+  rozliczeniu miesięcy z nowym planem.” (P22).
+- **Status celu z terminem** (reguła 6.13): „zdążysz”, „zagrożony”, „termin
+  minął” albo „brak danych” (P23). Cel osiągnięty pokazuje „osiągnięty”, jak
+  dotąd, bez statusu terminu.
+- **„Ten miesiąc”**, przelewy do wykonania: pod paskiem postępu jedna linia:
+
+  | Cel | Linia |
+  | --- | --- |
+  | bez terminu | wynik prognozy, np. „Osiągniesz ok. w styczniu 2027” |
+  | „zdążysz” | „Termin: marzec 2027 · zdążysz (ok. styczeń 2027)” |
+  | „zagrożony” | „Termin: grudzień 2026 · zagrożony” (link do Planu podziału) |
+  | „termin minął” | „Termin: grudzień 2026 · termin minął” |
+  | „brak danych” | „Termin: czerwiec 2027 · brak danych” |
+
+  Dopisek o nowym procencie (wyżej) jest drugą linią.
+- **Plan podziału**, przy celu z terminem i statusem innym niż „termin
+  minął”: brakująca kwota i wymagana wpłata, np. „Do grudnia 2026 brakuje
+  1 300,00 zł. Listopad ma już zaplanowane 588,00 zł, więc w każdym
+  kolejnym miesiącu potrzebujesz 712,00 zł (średnio wpłacasz 566,66 zł).”
+  Gdy średnia pochodzi z planu (reguła 6.12), zamiast „średnio wpłacasz”
+  jest „planujesz”. Bez istniejących miesięcy z celem zdanie o zaplanowanej
+  kwocie jest pominięte.
+- Przy statusie „zagrożony” albo „brak danych” pod spodem jest sugestia,
+  np. „Ustaw ok. 36,33% puli Oszczędności (teraz 30,00%) i zmniejsz
+  pozostałe cele albo zwiększ procent puli.” Zamiast sugestii, zależnie od
+  reguły 6.13:
+  - „Nawet 100% puli nie wystarczy. Zwiększ procent puli albo przesuń
+    termin.”;
+  - „Zmiana procentu nie zdąży przed terminem. Przesuń termin albo przy
+    rozliczeniu wpisz wyższą faktyczną kwotę.”;
+  - „Zaplanowane wpłaty wystarczą do terminu.”;
+  - „Ustaw kurs EUR, aby zobaczyć sugestię procentu.” (cel EUR bez kursu).
+  Aplikacja niczego nie zmienia sama; procenty zmienia użytkownik,
+  z regułami z 5.3.
 - Dla celu EUR kwoty prognozy i wymaganej wpłaty są w EUR; sugerowany
   procent liczy się z kwoty przeliczonej na PLN po bieżącym kursie.
 
@@ -381,53 +438,64 @@ przecinku. Bez arytmetyki zmiennoprzecinkowej.
    zablokowana, jeśli cel ma kwotę docelową, startową albo rozliczone wpłaty.
 10. Kursy EUR (5.9). Dzień roboczy NBP to dzień, dla którego NBP opublikował
     tabelę A.
-    - `bieżący kurs` = kurs z najnowszej pobranej tabeli NBP; gdy żadnej nie
-      ma — kurs zapasowy; gdy i jego brak — kursu nie ma.
-    - `kurs na dzień D` = kurs z ostatniej tabeli NBP z datą ≤ D.
-    - `kurs rozliczenia` miesiąca M = `kurs na dzień` ostatniego dnia M,
-      z tabel dostępnych w chwili rozliczenia (jeśli rozliczenie następuje
-      ostatniego dnia M przed publikacją tabeli z tego dnia, liczy się
-      poprzednia tabela). Gdy NBP nie odpowiada i aplikacja nie ma zapisanej
-      tabeli z ostatnich 7 dni przed końcem M — kurs zapasowy; gdy i jego
-      brak — rozliczenia nie da się zatwierdzić.
-    - Zapisywany jest kurs, data tabeli i pochodzenie (NBP / zapasowy).
+    - `kurs na dzień D` = kurs z ostatniej pobranej tabeli NBP z datą ≤ D.
+    - `bieżący kurs` = `kurs na dzień` dzisiejszy; gdy żadnej tabeli nie ma —
+      kurs zapasowy; gdy i jego brak — kursu nie ma.
+    - `kurs rozliczenia` miesiąca M: D = ostatni dzień M; najnowsza tabela
+      z datą od D − 6 do D dostępna w chwili zatwierdzenia (rozliczenie
+      w dniu D przed publikacją tabeli z D bierze poprzednią). Gdy takiej
+      tabeli nie ma — kurs zapasowy; gdy i jego brak — rozliczenia nie da się
+      zatwierdzić. Miesiąc bez celu EUR nie ma kursu rozliczenia.
+    - Zapisywany jest kurs, data tabeli (dla NBP) i pochodzenie: NBP,
+      zapasowy albo — dla miesięcy rozliczonych przed Etapem 2 — ręczny.
 11. Stan majątku na koniec miesiąca M (punkt wykresu, 5.11):
-    - wartość źródła = ostatnia zapisana w historii wartość z chwilą ≤ koniec
-      M (Europe/Warsaw); źródło bez zapisu do tej chwili ma 0;
-    - źródło EUR przeliczone na PLN regułą 8 po `kursie na dzień` ostatniego
-      dnia M (reguła 10), zapasowym, gdy go nie ma;
+    - wartość źródła = ostatni zapis historii z chwilą ≤ koniec M
+      (Europe/Warsaw), w walucie zapisanej razem z nim; źródło bez zapisu do
+      tej chwili ma 0;
+    - zapis w EUR przeliczony na PLN regułą 8 po `kursie na dzień` ostatniego
+      dnia M, a gdy go nie ma — po kursie zapasowym;
     - punkt bieżącego miesiąca: bieżące wartości źródeł i `bieżący kurs`;
     - suma jak w regule 7.
 12. Prognoza celu z kwotą docelową, nieosiągniętego (5.12), w walucie
-    źródła celu:
+    źródła celu. „Miesiąc z celem” to miesiąc, w którego migawce planu jest
+    cel; „ostatnie” miesiące liczy się według miesiąca kalendarzowego, nie
+    daty rozliczenia.
     - `pozostało` = kwota docelowa − postęp (reguła 6);
     - `średnia wpłata` = średnia arytmetyczna faktycznych kwot celu
-      z ostatnich (najwyżej) 3 rozliczonych miesięcy, w których cel był
-      w migawce planu, zaokrąglona w dół do grosza (centa). Gdy takich
-      miesięcy nie ma: kwota celu z najstarszego nierozliczonego miesiąca
-      z tym celem (dla celu EUR przeliczona regułą 8 po `bieżącym kursie`),
-      a gdy i takiego nie ma — prognozy nie ma;
+      z ostatnich (najwyżej) 3 rozliczonych miesięcy z celem, zaokrąglona
+      w dół do grosza (centa). Gdy takich miesięcy nie ma: kwota celu
+      z najstarszego nierozliczonego miesiąca z celem (dla celu EUR
+      przeliczona regułą 8 po `bieżącym kursie`), opisywana jako
+      „planujesz”. Gdy i takiego nie ma — **brak danych**, prognozy nie ma;
     - `pierwszy miesiąc wpłaty` P = najstarszy nierozliczony miesiąc
-      z tym celem; gdy takiego nie ma — bieżący miesiąc kalendarzowy, jeśli
-      nie jest rozliczony, w przeciwnym razie następny;
+      z celem; gdy takiego nie ma — bieżący miesiąc kalendarzowy, jeśli nie
+      jest rozliczony, w przeciwnym razie następny;
+    - `średnia wpłata` = 0 → prognozy nie ma („nie zostanie osiągnięty”);
     - `liczba wpłat` n = `pozostało` ÷ `średnia wpłata`, zaokrąglone w górę;
-    - `miesiąc osiągnięcia` = P + (n − 1) miesięcy;
-    - `średnia wpłata` = 0 → prognozy nie ma („nie zostanie osiągnięty”).
+    - `miesiąc osiągnięcia` = P + (n − 1) miesięcy.
 13. Termin celu (5.12), dla celu nieosiągniętego z terminem T:
-    - T wcześniejszy niż P → status „termin minął”, bez wymaganej wpłaty;
-    - `liczba wpłat do terminu` k = liczba miesięcy od P do T włącznie;
-    - `wymagana wpłata` = `pozostało` ÷ k, zaokrąglone w górę do grosza
-      (centa);
-    - status „zdążysz”, gdy `miesiąc osiągnięcia` ≤ T, w przeciwnym razie
-      (także bez prognozy) „zagrożony”;
+    - T wcześniejszy niż P → status „termin minął”, dalszych obliczeń nie ma;
+    - brak danych (reguła 12) → status „brak danych”;
+    - `miesiąc osiągnięcia` ≤ T → „zdążysz”; w przeciwnym razie (także przy
+      średniej 0) → „zagrożony”;
+    - `zaplanowane` = suma kwot celu (reguła 3) z istniejących
+      nierozliczonych miesięcy od P do T (dla celu EUR przeliczona na EUR
+      regułą 8 po `bieżącym kursie`);
+    - k = liczba miesięcy od P do T włącznie, które jeszcze nie istnieją;
+    - `brakuje` = `pozostało` − `zaplanowane`; gdy ≤ 0 — „Zaplanowane wpłaty
+      wystarczą do terminu.”; gdy > 0 i k = 0 — „Zmiana procentu nie zdąży
+      przed terminem…”;
+    - `wymagana wpłata` = `brakuje` ÷ k, zaokrąglone w górę do grosza
+      (centa) — kwota w każdym miesiącu, który jeszcze nie istnieje;
     - `średnia kwota bazowa puli` = średnia arytmetyczna kwot bazowych puli
       celu (reguła 2) z ostatnich (najwyżej) 3 rozliczonych miesięcy,
       zaokrąglona w dół do grosza; gdy takich miesięcy nie ma — kwota bazowa
       puli najnowszego istniejącego miesiąca; gdy i jego brak albo kwota
       wynosi 0 — sugestii procentu nie ma;
-    - `sugerowany procent celu` = `wymagana wpłata` (w PLN; dla celu EUR
-      przeliczona regułą 8 po `bieżącym kursie`) ÷ `średnia kwota bazowa
-      puli`, w setnych procenta, zaokrąglony w górę. Powyżej 100,00% —
+    - `sugerowany procent celu` (tylko przy statusie „zagrożony” albo „brak
+      danych”) = `wymagana wpłata` (w PLN; dla celu EUR przeliczona regułą 8
+      po `bieżącym kursie`, a bez kursu sugestii nie ma) ÷ `średnia kwota
+      bazowa puli`, w setnych procenta, zaokrąglony w górę. Powyżej 100,00% —
       komunikat „Nawet 100% puli nie wystarczy…” zamiast procentu.
 
 Przykład: przychód 9 800,00 zł, oszczędności 20%, inwestycje 15% →
@@ -441,14 +509,17 @@ pokazywana 1 447,49 zł, a 0,01 zł przechodzi do „do wydania”.
 Przykład prognozy (reguły 12–13): 10 listopada 2026 cel „Wakacje”
 (Oszczędności, 30% puli, kwota docelowa 5 000 zł, startowa 2 000 zł) ma
 rozliczone wpłaty z sierpnia, września i października: 588,00, 512,00
-i 600,00 zł; listopad jest nierozliczony. Przychód każdego z tych miesięcy
-9 800,00 zł, Oszczędności 20%. Postęp 3 700,00 zł, `pozostało` 1 300,00 zł,
-`średnia wpłata` 566,66 zł (1 700,00 ÷ 3 = 566,666…), P = listopad 2026,
-n = 3 (2,29… w górę), prognoza: styczeń 2027. Przy terminie grudzień 2026:
-k = 2, `wymagana wpłata` 650,00 zł, status „zagrożony”, `średnia kwota
-bazowa puli` 1 960,00 zł, sugerowany procent 33,17% (650 ÷ 1 960 =
-33,163…% w górę). Przy terminie marzec 2027: k = 5, `wymagana wpłata`
-260,00 zł, status „zdążysz”.
+i 600,00 zł. Listopad istnieje (przychód 9 800,00 zł, plan z celem 30%,
+kwota celu 588,00 zł) i nie jest rozliczony. Przychód każdego z tych
+miesięcy 9 800,00 zł, Oszczędności 20%. Postęp 3 700,00 zł, `pozostało`
+1 300,00 zł, `średnia wpłata` 566,66 zł (1 700,00 ÷ 3 = 566,666…), P =
+listopad 2026, n = 3 (2,29… w górę), prognoza: styczeń 2027.
+Przy terminie grudzień 2026: status „zagrożony”, `zaplanowane` 588,00 zł
+(listopad), k = 1 (grudzień), `brakuje` 712,00 zł, `wymagana wpłata`
+712,00 zł, `średnia kwota bazowa puli` 1 960,00 zł, sugerowany procent
+36,33% (712 ÷ 1 960 = 36,326…% w górę; grudzień przy 36,33% to
+712,06 zł). Przy terminie marzec 2027: status „zdążysz”, k = 4 (grudzień–
+marzec), `wymagana wpłata` 178,00 zł, bez sugestii procentu.
 
 ## 7. Przypadki brzegowe
 
@@ -471,9 +542,15 @@ bazowa puli` 1 960,00 zł, sugerowany procent 33,17% (650 ÷ 1 960 =
 | Termin celu już minął | Status „termin minął”; mail „Cel zagrożony” nie wychodzi. Zapisany termin z przeszłości zostaje, dopóki użytkownik go nie zmieni. |
 | Usunięcie celu z planu | Prognoza i powiadomienia o tym celu znikają; wysłane maile zostają na liście ostatnich maili. |
 | Dwa sprawdzenia powiadomień naraz (Harmonogram i start aplikacji) | Każdy mail wychodzi najwyżej raz. |
-| Grupa powiadomień wyłączona, potem włączona | Po włączeniu wychodzą tylko maile nadal aktualne (np. nierozliczony miesiąc), bez zaległych z okresu wyłączenia. |
+| Grupa powiadomień wyłączona, potem włączona | Po włączeniu wychodzą maile nadal aktualne według tabeli w 5.10 i jeszcze niewysłane (np. przychody za bieżący miesiąc po 10. dniu). |
 | Zmiana adresu e-mail powiadomień | Kolejne maile idą na nowy adres; wysłane wcześniej nie są powtarzane. |
 | Archiwizacja źródła | Historia wartości zostaje; źródło ma w niej wartość 0 od chwili archiwizacji. |
+| Zmiana waluty źródła (dozwolona wg 5.2) | Zapisy historii zachowują walutę z chwili zapisu; punkty z poprzednich miesięcy się nie zmieniają. |
+| Kurs rozliczenia zmienia się między otwarciem ekranu a zatwierdzeniem | Zatwierdzenie odrzucone: „Kurs rozliczenia się zmienił. Sprawdź kwoty i zatwierdź ponownie.” (5.5). |
+| Rozliczenie miesiąca bez celu EUR | Kurs nie jest potrzebny ani zapisywany; brak NBP i kursu zapasowego nie blokuje rozliczenia. |
+| Cel dodany do planu po utworzeniu bieżącego miesiąca | Do czasu pierwszego miesiąca z celem status „brak danych” (jeśli ma termin), bez maila „zagrożony”. |
+| Obniżenie kwoty docelowej do postępu lub poniżej | Cel jest osiągnięty, bez maila (mail tylko po rozliczeniu). |
+| Cel EUR bez żadnego kursu | Prognoza i wymagana wpłata w EUR działają; zamiast sugestii procentu prośba o kurs (5.12). |
 | Ponowne rozliczenie tego samego miesiąca | Odrzucone: „Ten miesiąc jest już rozliczony”. |
 | Błąd zapisu lub serwer budzący się po uśpieniu | Komunikat „Nie udało się zapisać. Spróbuj ponownie.”; wpisane dane zostają w formularzu. Długie ładowanie pokazuje wskaźnik. |
 
@@ -490,7 +567,7 @@ bazowa puli` 1 960,00 zł, sugerowany procent 33,17% (650 ÷ 1 960 =
 | Suma pul | ≤ 100%. | „Pule przekraczają przychód o X%” |
 | Suma celów w puli | = 100,00%. Pula > 0% bez celów ma sumę 0% i wpada pod tę regułę (komunikat „Suma celów: 0%. Brakuje 100%”). | „Suma celów: X%. Brakuje Y%” albo „…Za dużo o Y%” |
 | Kurs zapasowy EUR | > 0, najwyżej 4 miejsca po przecinku. Puste = brak. | „Wpisz kurs, np. 4,2850” |
-| Termin celu | Miesiąc i rok, nie wcześniejszy niż bieżący miesiąc (sprawdzane przy zmianie terminu). | „Wybierz termin od bieżącego miesiąca” |
+| Termin celu | Miesiąc i rok, nie wcześniejszy niż pierwszy miesiąc wpłaty P (reguła 6.12) i nie późniejszy niż grudzień 2099 (sprawdzane przy zmianie terminu). | „Wybierz termin od listopada 2026” (miesiąc P) |
 | Termin celu bez kwoty docelowej | Niedozwolony. | „Termin wymaga kwoty docelowej” |
 | Adres e-mail powiadomień | Wymagany, poprawny adres, najwyżej 254 znaki. | „Wpisz adres e-mail, np. jan@example.com” |
 | Nazwy (źródło, cel, przychód) | Wymagane, najwyżej 60 znaków. | „Wpisz nazwę” |
@@ -528,6 +605,29 @@ Wybrany wariant: **B, „Przepływ pieniędzy”**
   bez osobnych makiet.
 - Źródła makiet są w repozytorium: [`docs/design/`](docs/design/README.md).
 
+### 8.1 Elementy Etapu 2
+
+Kierunek wizualny opisuje rozdz. 8; odświeżenie „Portfel” aktualizuje go
+przed zadaniami interfejsu Etapu 2 (P20). Niezależnie od kierunku:
+
+- **Wykres „Wartość majątku”** (Majątek): karta nad listą źródeł z tytułem
+  i bieżącą sumą. Linia w kolorze akcentu z punktami na końcach miesięcy,
+  oś Y od 0 z trzema poziomymi liniami pomocniczymi i skróconymi etykietami
+  („50 tys. zł”), oś X ze skrótami miesięcy („lis”; styczeń z rokiem: „sty
+  2027”). Na wąskim ekranie co druga lub co trzecia etykieta, tak by się
+  nie nakładały. Wysokość ok. 200 px (ok. 160 px przy 360 px). Podpowiedź
+  w dymku przy punkcie.
+- **Prognoza na „Ten miesiąc”:** mały tekst pod paskiem postępu; status jako
+  mała pigułka: „zdążysz” w kolorze sukcesu, „zagrożony” w kolorze
+  ostrzeżenia, pozostałe neutralne. Kontrast co najmniej 4.5:1.
+- **Plan podziału:** wymagana wpłata i sugestia w neutralnym bloku
+  informacyjnym pod wierszem celu.
+- **Ustawienia → Powiadomienia:** sekcja jak pozostałe sekcje Ustawień: pole
+  adresu, trzy przełączniki z jednozdaniowym opisem, drugorzędny przycisk
+  „Wyślij testowy mail”, lista ostatnich maili (data, temat, stan).
+- **Podgląd maili w demo:** lista kart z tematem i treścią jako zwykły tekst
+  z zachowaniem podziału na wiersze.
+
 ## 9. Poza zakresem (świadomie odłożone)
 
 Kurs z NBP, powiadomienia e-mail, wykres majątku i termin celu, odłożone
@@ -562,7 +662,8 @@ w MVP, są w Etapie 2 (5.9–5.12). Nadal poza zakresem:
 - **Połączenia wersji prywatnej z internetem** (Etap 2): tylko dwa,
   wychodzące. API NBP (zapytanie nie zawiera danych użytkownika) oraz serwer
   poczty, przez który maile z kwotami trafiają do skrzynki właściciela
-  (P15). Aplikacja nadal nie przyjmuje połączeń z sieci.
+  (P15), zawsze przez połączenie szyfrowane (TLS). Aplikacja nadal nie
+  przyjmuje połączeń z sieci.
 - Dane trwałe w bazie danych.
 - Wybór stosu technologicznego: etap C (`STACK.md`), bez preferencji właściciela produktu.
 
@@ -594,15 +695,19 @@ z piaskownicą dla każdego odwiedzającego (P8, 2026-10-21). Decyzja
 **Decyzje Etapu 2 (właściciel produktu, 2026-10-27):**
 - P9: kurs EUR automatycznie z tabeli A NBP.
 - P10: rozliczenie po kursie z ostatniego dnia rozliczanego miesiąca.
+  Wyjątek (po review B, D3): rozliczenie w tym dniu przed publikacją
+  tabeli NBP używa poprzedniej tabeli, a ekran pokazuje jej datę.
 - P11: kurs ręczny zostaje wyłącznie jako zapasowy, gdy NBP nie odpowiada.
 - P12: tylko EUR; bez historii kursu w interfejsie.
 - P13: powiadomienia mailowe przez dowolny serwer SMTP (domyślnie Gmail),
-  sprawdzane codziennie przez Harmonogram zadań Windows, przy starcie
-  i po rozliczeniu; zaległe wysyłane przy najbliższym sprawdzeniu.
+  sprawdzane codziennie przez Harmonogram zadań Windows, przy starcie,
+  po rozliczeniu i po zapisie planu; zaległe wysyłane przy najbliższym
+  sprawdzeniu, jeśli nadal aktualne.
 - P14: zdarzenia: przypomnienie o przychodach 10. dnia (zawsze, za bieżący
-  miesiąc), miesiąc do rozliczenia (w dniu końca i co 7 dni), cel
+  miesiąc), miesiąc do rozliczenia (gdy pojawia się nowy i co 7 dni), cel
   osiągnięty, cel zagrożony. Adresat: e-mail konta z możliwością zmiany.
-- P15: maile zawierają kwoty, choć przechodzą przez serwer poczty.
+- P15: maile zawierają kwoty, choć przechodzą przez serwer poczty;
+  połączenie z serwerem zawsze szyfrowane.
 - P16: demo nie wysyła maili, pokazuje podgląd.
 - P17: historia wartości od wdrożenia, bez odtwarzania przeszłości; wykres
   sumy majątku na ekranie Majątek, punkt na koniec miesiąca, cała historia;
@@ -612,44 +717,37 @@ z piaskownicą dla każdego odwiedzającego (P8, 2026-10-21). Decyzja
 - P19: prognoza ze średniej faktycznych wpłat z 3 ostatnich rozliczonych
   miesięcy, także dla celów bez terminu.
 - P20: nowe elementy interfejsu w kierunku wizualnym „Portfel” z odświeżenia
-  wyglądu realizowanego osobno; rozdz. 8 opisuje obowiązujący kierunek.
+  wyglądu realizowanego osobno; to odświeżenie aktualizuje rozdz. 8 przed
+  zadaniami interfejsu Etapu 2, a rozdz. 8.1 opisuje elementy Etapu 2.
+- P21 (po review E, D3): Docker Desktop uruchamia się automatycznie przy
+  logowaniu — wymaganie wersji prywatnej, bez którego codzienne maile nie
+  działają.
+- P22 (po review B, D1): prognoza zostaje przy faktycznych wpłatach (P19);
+  interfejs dopisuje, że nowy procent zadziała po rozliczeniu miesięcy
+  z nowym planem.
+- P23 (po review B, D2): cel bez danych do prognozy ma status „brak danych”
+  i nie wywołuje maila „zagrożony”.
 
-**Założenia (zaproponowane przez agenta, zaakceptowane razem ze specyfikacją):**
-- Z1: brak publicznej rejestracji, konto tworzone przy pierwszym
-  uruchomieniu wersji prywatnej, reset hasła bez e-maila (operacja
-  administracyjna).
-- Z2: miesiąc powstaje przy pierwszym przychodzie i dostaje plan podziału
-  obowiązujący w tej chwili.
-- Z3: rozliczenie możliwe od ostatniego dnia miesiąca.
-- Z4: przychody zawsze w PLN; EUR dotyczy tylko źródeł.
-- Z5: zaokrąglenie w dół na poziomie puli i celu (rozdz. 6).
-- Z6: domyślny motyw zgodny z ustawieniem systemu.
-
-**Założenia wersji demo (zaproponowane przez agenta, zaakceptowane przez
-właściciela produktu razem z P8, 2026-10-21):**
-- Z7: piaskownica żyje 24 godziny; „Wyloguj” kończy ją od razu.
-- Z8: limity 10 piaskownic na godzinę z jednego adresu IP i 500 aktywnych
-  naraz (ochrona darmowej bazy).
-- Z9: wersja prywatna zachowuje logowanie hasłem (ochrona przed innymi
-  użytkownikami tego samego komputera).
-
-**Założenia Etapu 2 (zaproponowane przez agenta, do akceptacji w review):**
+**Założenia Etapu 2 (zaproponowane przez agenta, zaakceptowane przez
+właściciela produktu 2026-10-27 po review B i E):**
 - Z10: kurs zapasowy jest używany tylko przy braku pasującego kursu NBP;
-  do rozliczenia wystarcza tabela NBP z ostatnich 7 dni przed końcem
-  miesiąca (reguła 6.10).
+  do rozliczenia wystarcza tabela NBP z datą od D − 6 do D, gdzie D to
+  ostatni dzień miesiąca (reguła 6.10).
 - Z11: nowej tabeli NBP aplikacja szuka najwyżej raz na godzinę; ostrzeżenie
   o nieaktualnym kursie po 7 dniach.
 - Z12: mail „cel osiągnięty” nie wychodzi, jeśli rozliczenie, po którym cel
   został osiągnięty, było ponad 30 dni temu (np. świeżo skonfigurowany SMTP
   nie wysyła starych wiadomości).
-- Z13: grupy powiadomień domyślnie włączone; po ponownym włączeniu grupy nie
-  ma zaległych maili z okresu wyłączenia.
+- Z13: grupy powiadomień domyślnie włączone; po ponownym włączeniu grupy
+  wychodzą tylko maile nadal aktualne według tabeli w 5.10.
 - Z14: pierwszy miesiąc prognozy to najstarszy nierozliczony miesiąc z celem
-  (reguła 6.12), bo jego wpłata jeszcze nie jest w postępie.
+  (reguła 6.12), bo jego wpłata jeszcze nie jest w postępie; sugestia
+  procentu dotyczy tylko miesięcy, które jeszcze nie istnieją (reguła 6.13).
 - Z15: przy braku rozliczeń z celem prognoza bierze kwotę z planu
-  najstarszego nierozliczonego miesiąca.
-- Z16: w demo kursy rozliczeń przykładowych miesięcy są wygenerowane, bieżący
-  kurs pochodzi z NBP.
+  najstarszego nierozliczonego miesiąca („planujesz”).
+- Z16: w demo kursy rozliczeń przykładowych miesięcy są wygenerowane
+  i oznaczone jako kurs zapasowy; bieżący kurs i kursy z końców miesięcy
+  pochodzą z NBP, a gdy ich brak — z kursu zapasowego piaskownicy.
 
 **Otwarte pytania:** brak.
 
@@ -719,37 +817,44 @@ właściciela produktu razem z P8, 2026-10-21):**
 
 ### Scenariusze Etapu 2
 
+W scenariuszach z NBP dane pochodzą z atrapy NBP, która zwraca tylko
+wymienione tabele.
+
 22. **Bieżący kurs NBP:** gdy najnowsza tabela NBP jest z 27.10.2026
     z kursem 4,2731, Ustawienia pokazują „4,2731 zł · NBP, tabela
     z 27.10.2026”, a cel 220,50 zł ze źródłem EUR na „Ten miesiąc” ma
     drugą linię „≈ 51,60 €”.
-23. **Kurs rozliczenia:** NBP ma tabele z 30.10.2026 (4,2650) i z 04.11.2026
-    (4,3000). Rozliczenie października wykonane 5.11.2026 pokazuje „Kurs
-    4,2650 zł (NBP, 30.10.2026)”, pole celu 220,50 zł jest wstępnie
-    wypełnione kwotą 51,70 €, a źródło EUR o wartości 1 000,00 € po
-    zatwierdzeniu ma 1 051,70 €. Historia października pokazuje kurs
-    4,2650 z datą 30.10.2026. Majątek po bieżącym kursie 4,3000 liczy to
-    źródło jako 4 522,31 zł.
-24. **Kurs zapasowy:** NBP nie odpowiada, a aplikacja nie ma tabel z 24–31.10.
-    Przy kursie zapasowym 4,3000 ekran rozliczenia października pokazuje
-    „Kurs 4,3000 zł · kurs zapasowy” i 51,28 € dla celu 220,50 zł, a Historia
-    zapisuje pochodzenie „zapasowy”. Bez kursu zapasowego rozliczenia nie da
-    się zatwierdzić, a ekran prosi o kurs zapasowy.
+23. **Kurs rozliczenia:** atrapa NBP ma tabele z 30.10.2026 (4,2650)
+    i z 04.11.2026 (4,3000). Rozliczenie października wykonane 5.11.2026
+    pokazuje „Kurs 4,2650 zł (NBP, 30.10.2026)”, pole celu 220,50 zł jest
+    wstępnie wypełnione kwotą 51,70 €, a źródło EUR o wartości 1 000,00 € po
+    zatwierdzeniu ma 1 051,70 €. Historia października pokazuje kurs 4,2650
+    z datą 30.10.2026. Majątek po bieżącym kursie 4,3000 liczy to źródło jako
+    4 522,31 zł.
+24. **Kurs zapasowy:** NBP nie odpowiada, a aplikacja nie ma tabel
+    z 25–31.10. Przy kursie zapasowym 4,3000 ekran rozliczenia października
+    pokazuje „Kurs 4,3000 zł · kurs zapasowy” i 51,28 € dla celu 220,50 zł,
+    a Historia zapisuje pochodzenie „zapasowy”. Bez kursu zapasowego
+    rozliczenia nie da się zatwierdzić, a ekran prosi o kurs zapasowy.
+    Miesiąc bez celu EUR rozlicza się w tej sytuacji bez kursu.
 25. **Stan na koniec miesiąca:** źródło PLN o wartości 10 000,00 zł zmienione
     ręcznie 5.11.2026 na 10 500,00 zł i powiększone rozliczeniem 20.11.2026
     o 588,00 zł oraz źródło EUR 1 000,00 € bez zmian, przy tabeli NBP
     z 30.11.2026 (4,2500), dają punkt wykresu „Listopad 2026 · 15 338,00 zł”.
-    Zmiana bieżącego kursu i edycja wartości źródła w grudniu nie zmieniają
-    tego punktu.
-26. **Pusty wykres:** w miesiącu wdrożenia Etapu 2 Majątek pokazuje „Wykres
-    pojawi się po pierwszym pełnym miesiącu historii.”; w następnym miesiącu
-    wykres ma dwa punkty (koniec miesiąca wdrożenia i stan bieżący).
-27. **Prognoza z terminem:** dla danych z przykładu prognozy (rozdz. 6) Plan
-    podziału przy terminie grudzień 2026 pokazuje „Do grudnia 2026
-    potrzebujesz 650,00 zł miesięcznie (średnio wpłacasz 566,66 zł). Ustaw
-    ok. 33,17% puli Oszczędności (teraz 30,00%).”, a „Ten miesiąc” pokazuje
-    „Termin: grudzień 2026 · zagrożony”. Po zmianie terminu na marzec 2027
-    status to „zdążysz”. Procenty planu nie zmieniają się same.
+    Zmiana bieżącego kursu, edycja wartości źródła i zmiana waluty innego
+    źródła w grudniu nie zmieniają tego punktu.
+26. **Pusty wykres:** w miesiącu wdrożenia zapisu historii Majątek pokazuje
+    „Wykres pojawi się w przyszłym miesiącu.”; w następnym miesiącu wykres ma
+    dwa punkty (koniec miesiąca wdrożenia i stan bieżący).
+27. **Prognoza z terminem:** dla danych z przykładu prognozy (rozdz. 6) przy
+    terminie grudzień 2026 Plan podziału pokazuje „Do grudnia 2026 brakuje
+    1 300,00 zł. Listopad ma już zaplanowane 588,00 zł, więc w każdym
+    kolejnym miesiącu potrzebujesz 712,00 zł (średnio wpłacasz 566,66 zł).”
+    i „Ustaw ok. 36,33% puli Oszczędności (teraz 30,00%) i zmniejsz
+    pozostałe cele albo zwiększ procent puli.”, a „Ten miesiąc” pokazuje
+    „Termin: grudzień 2026 · zagrożony”. Po zmianie terminu na marzec 2027:
+    „Termin: marzec 2027 · zdążysz (ok. styczeń 2027)”, wymagana wpłata
+    178,00 zł, bez sugestii procentu. Procenty planu nie zmieniają się same.
 28. **Prognoza bez terminu:** ten sam cel bez terminu pokazuje „Osiągniesz ok.
     w styczniu 2027”. Gdy faktyczne wpłaty z trzech ostatnich rozliczonych
     miesięcy wynoszą 0, pokazuje „Przy obecnych wpłatach cel nie zostanie
@@ -760,26 +865,59 @@ właściciela produktu razem z P8, 2026-10-21):**
     w listopadzie następuje 12.11, mail wychodzi 12.11. Sprawdzenie
     1.12.2026 nie wysyła maila za listopad.
 30. **Mail o rozliczeniu:** październik 2026 z przychodem, nierozliczony:
-    sprawdzenie 31.10 wysyła „Październik 2026 czeka na rozliczenie”,
-    sprawdzenia 1–6.11 nie wysyłają nic, sprawdzenie 7.11 wysyła
-    przypomnienie. Po rozliczeniu 8.11 kolejne sprawdzenia nie wysyłają nic.
-    Gdy czekają wrzesień i październik, jeden mail wymienia oba, od
-    najstarszego.
+    sprawdzenie 31.10 wieczorem wysyła „Październik 2026 czeka na
+    rozliczenie”, sprawdzenia 1–6.11 nie wysyłają nic, pierwsze sprawdzenie
+    7.11 (o dowolnej godzinie) wysyła przypomnienie. Gdy przypomnienia
+    wyszły 7.11, 14.11, 21.11 i 28.11, sprawdzenie 30.11 od razu wysyła
+    „2 miesiące czekają na rozliczenie” (październik, listopad), a następne
+    przypomnienie wychodzi najwcześniej 7.12. Po rozliczeniu wszystkich
+    miesięcy kolejne sprawdzenia nie wysyłają nic.
 31. **Mail o osiągniętym celu:** rozliczenie, po którym postęp celu z kwotą
     docelową 5 000 zł wynosi co najmniej 5 000 zł, wysyła jeden mail „Cel
     „Wakacje” osiągnięty”; kolejne rozliczenia nie wysyłają go ponownie. Po
-    zmianie kwoty docelowej na 8 000 zł i jej osiągnięciu wychodzi nowy mail.
-32. **Mail o zagrożonym celu:** gdy cel ze scen. 27 staje się zagrożony,
-    wychodzi jeden mail z kwotą 650,00 zł i sugestią 33,17%; kolejne
-    sprawdzenia go nie powtarzają. Po zmianie terminu na marzec 2027
-    („zdążysz”) i powrocie do grudnia 2026 wychodzi nowy mail.
+    zmianie kwoty docelowej na 8 000 zł i jej osiągnięciu przy rozliczeniu
+    wychodzi nowy mail. Obniżenie kwoty docelowej poniżej postępu nie wysyła
+    maila. Gdy cel osiągnięto rozliczeniem z 1.10, a pierwsze sprawdzenie
+    z działającym SMTP jest 5.11, mail nie wychodzi (ponad 30 dni).
+32. **Mail o zagrożonym celu:** zapis terminu grudzień 2026 dla celu ze
+    scen. 27 od razu wysyła jeden mail z kwotą 712,00 zł i sugestią 36,33%;
+    kolejne sprawdzenia go nie powtarzają. Zapis terminu marzec 2027
+    („zdążysz”), a zaraz potem znów grudzień 2026, bez innego sprawdzenia
+    pomiędzy, wysyła nowy mail.
 33. **Wysyłka i jej błędy:** bez konfiguracji SMTP Ustawienia pokazują
     „Wysyłka maili nie jest skonfigurowana” i nic nie jest wysyłane. Przy
-    błędnym haśle SMTP „Wyślij testowy mail” pokazuje „Nie udało się wysłać:
-    …”, a mail zdarzenia, którego nie udało się wysłać, wychodzi przy
-    kolejnym sprawdzeniu po naprawie konfiguracji, jeśli jest nadal
-    aktualny. Wyłączona grupa nie wysyła maili.
+    serwerze SMTP odrzucającym hasło „Wyślij testowy mail” pokazuje „Nie
+    udało się wysłać: …”, a lista ostatnich maili pokazuje błąd; mail
+    zdarzenia, którego nie udało się wysłać, wychodzi przy kolejnym
+    sprawdzeniu po naprawie konfiguracji, jeśli jest nadal aktualny.
+    Wyłączona grupa nie wysyła maili; grupa „Przychody” włączona 15.11
+    wysyła mail za listopad przy najbliższym sprawdzeniu.
 34. **Demo w Etapie 2:** piaskownica ma wykres z historią 12 miesięcy, cel
-    z terminem „zdążysz” i cel „zagrożony”; Ustawienia pokazują podgląd
-    maili z informacją, że demo ich nie wysyła; żadna akcja w trybie demo
-    nie łączy się z serwerem poczty.
+    z terminem „zdążysz” i cel „zagrożony”; kursy rozliczeń przykładowych
+    miesięcy są oznaczone jako kurs zapasowy, a daty rozliczeń przypadają
+    na początek następnego miesiąca. Ustawienia pokazują tylko podgląd
+    maili (zawsze z „<poprzedni miesiąc> czeka na rozliczenie” i „Cel „…”
+    jest zagrożony”), bez pola adresu, przełączników i testowego maila;
+    żadna akcja w trybie demo nie łączy się z serwerem poczty.
+35. **Rozliczenie przed publikacją tabeli:** rozliczenie listopada 30.11.2026
+    rano, gdy atrapa NBP ma tabele do 27.11 (4,2600), pokazuje „Kurs
+    4,2600 zł (NBP, 27.11.2026)”; to samo rozliczenie po publikacji tabeli
+    z 30.11 (4,2500) pokazuje „Kurs 4,2500 zł (NBP, 30.11.2026)”.
+36. **Zmiana kursu w trakcie rozliczenia:** ekran rozliczenia otwarty
+    z kursem z 27.11; zanim użytkownik zatwierdzi, pojawia się tabela
+    z 30.11. Zatwierdzenie jest odrzucone komunikatem „Kurs rozliczenia się
+    zmienił. Sprawdź kwoty i zatwierdź ponownie.”, wartości źródeł się nie
+    zmieniają, a ekran pokazuje kurs 4,2500 i przeliczone kwoty.
+37. **Nowy procent a prognoza:** po zmianie procentu celu ze scen. 27 na
+    36,33% (i zmniejszeniu innych celów) „Ten miesiąc” nadal pokazuje
+    „zagrożony”, z dopiskiem „Prognoza uwzględni nowy procent po rozliczeniu
+    miesięcy z nowym planem.”; nowy mail „zagrożony” nie wychodzi.
+38. **Brak danych:** cel dodany 5.11.2026 z kwotą docelową 3 000 zł
+    i terminem czerwiec 2027 (listopad istnieje bez niego) pokazuje „Termin:
+    czerwiec 2027 · brak danych” i „Prognoza pojawi się, gdy cel trafi do
+    planu miesiąca.”; Plan podziału pokazuje wymaganą wpłatę 428,58 zł
+    (3 000 ÷ 7 miesięcy grudzień–czerwiec, w górę) i sugestię procentu; mail
+    „zagrożony” nie wychodzi.
+39. **Rozliczenia sprzed Etapu 2:** miesiąc rozliczony w MVP z celem EUR po
+    kursie ręcznym 4,3000 pokazuje w Historii „Kurs 4,3000 zł (ręczny,
+    sprzed Etapu 2)”; miesiąc bez celu EUR nie pokazuje kursu.
