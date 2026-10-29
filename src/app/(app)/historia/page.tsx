@@ -7,6 +7,7 @@ import { convertEurToPln } from "@/domain/currency";
 import { formatMoney, formatPercent } from "@/domain/format";
 import { formatMonthTitle } from "@/domain/month-name";
 import { computeMonthPlan, type Pool } from "@/domain/plan";
+import { settledRateText } from "@/rates/label";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -73,6 +74,8 @@ type MonthView = {
   settled: boolean;
   statusLabel: string;
   incomeLabel: string;
+  /** Kurs rozliczenia z pochodzeniem (SPEC 5.6); `null` bez celu EUR. */
+  rateLabel: string | null;
   pools: PoolView[];
   /** Edycja przychodów nierozliczonego miesiąca (SPEC 5.4); `null` dla rozliczonego. */
   editHref: string | null;
@@ -155,12 +158,25 @@ function buildMonthView(month: HistoryMonth): MonthView {
     });
   }
 
+  // Kurs rozliczenia pokazujemy tylko dla miesiąca z celem EUR; wtedy kurs
+  // i pochodzenie są zapisane (CHECK spójności, T19a). Miesiąc bez celu EUR
+  // nie ma kursu (scen. 39).
+  const rateLabel =
+    month.settledEurRate !== null && month.settledRateSource !== null
+      ? settledRateText(
+          month.settledEurRate,
+          month.settledRateSource,
+          month.settledRateDate,
+        )
+      : null;
+
   return {
     month: month.month,
     title: formatMonthTitle(month.month),
     settled: month.settled,
     statusLabel: month.settled ? "Rozliczony" : "Otwarty",
     incomeLabel: formatMoney(month.income, "PLN"),
+    rateLabel,
     pools,
     editHref: month.settled ? null : `/przychody/${month.month}`,
   };
@@ -185,6 +201,10 @@ function MonthCard({ view }: { view: MonthView }) {
         <span className={styles.incomeLabel}>Przychód</span>
         <span className={styles.incomeAmount}>{view.incomeLabel}</span>
       </p>
+
+      {view.rateLabel !== null && (
+        <p className={styles.rate}>Kurs {view.rateLabel}</p>
+      )}
 
       <div className={styles.pools}>
         {view.pools.map((pool) => (

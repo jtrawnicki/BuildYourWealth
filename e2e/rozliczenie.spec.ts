@@ -3,7 +3,14 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { months, sources } from "@/db/schema";
 import { now } from "@/domain/clock";
-import { currentMonth, previousMonth } from "@/domain/time";
+import { formatDate } from "@/domain/format";
+import {
+  addDays,
+  currentMonth,
+  lastDayOfMonth,
+  previousMonth,
+} from "@/domain/time";
+import { seedRates } from "./db";
 import { expect, test, type Seed } from "./fixtures";
 
 // Rozliczamy poprzedni miesiąc: jest zawsze po ostatnim dniu, więc dostępność
@@ -165,21 +172,107 @@ test("cel w EUR: plan przeliczony po kursie trafia do źródła EUR (scen. 6)", 
   expect(await sourceValue(src.invest)).toBe(88200 + 36750);
 });
 
-test("brak kursu przy celu EUR blokuje rozliczenie (SPEC 7)", async ({
+test("bez kursu NBP i zapasowego rozliczenie prosi o kurs zapasowy (scen. 24)", async ({
   page,
   seed,
 }) => {
   await seedSettleableMonth(seed, { eur: true });
   await page.goto(`/rozliczenie/${previous}`);
-  // Pełny komunikat jest jednoznaczny (sam „kurs euro" jest też w linku).
   await expect(
     page.getByText(
-      "Najpierw ustaw kurs euro w Ustawieniach, żeby rozliczyć cel w euro.",
+      "Nie udało się ustalić kursu z NBP. Ustaw kurs zapasowy w Ustawieniach, żeby rozliczyć cel w euro.",
     ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Ustaw kurs zapasowy" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Zatwierdź rozliczenie" }),
   ).toHaveCount(0);
+});
+
+test("kurs zapasowy pokazany na ekranie rozliczenia (scen. 24)", async ({
+  page,
+  seed,
+}) => {
+  const src = await seedSettleableMonth(seed, { eur: true, rate: 43000 });
+  await page.goto(`/rozliczenie/${previous}`);
+  await expect(
+    page.getByText("Kurs " + text("4,3000 zł") + " · kurs zapasowy"),
+  ).toBeVisible();
+  // Akcje: plan 220,50 zł → 51,28 € po kursie 4,3000.
+  await expect(row(card(page, "Inwestycje"), "Akcje")).toContainText(
+    text("51,28 €"),
+  );
+  await submit(page.getByRole("button", { name: "Zatwierdź rozliczenie" }));
+  await expect(page).toHaveURL(/\/$/);
+  expect(await sourceValue(src.akcje)).toBe(105128);
+});
+
+test("kurs rozliczenia z NBP: etykieta, prefill i wpłata (scen. 23)", async ({
+  page,
+  seed,
+}) => {
+  // Tabela NBP z ostatniego dnia rozliczanego miesiąca (kurs 4,2650).
+  const day = lastDayOfMonth(previous);
+  await seedRates([{ effectiveDate: day, rate: 42650 }]);
+  const src = await seedSettleableMonth(seed, { eur: true });
+  await page.goto(`/rozliczenie/${previous}`);
+  await expect(
+    page.getByText("Kurs " + text("4,2650 zł") + ` (NBP, ${formatDate(day)})`),
+  ).toBeVisible();
+  // Akcje: plan 220,50 zł → 51,70 € po kursie 4,2650.
+  await expect(row(card(page, "Inwestycje"), "Akcje")).toContainText(
+    text("51,70 €"),
+  );
+  await submit(page.getByRole("button", { name: "Zatwierdź rozliczenie" }));
+  await expect(page).toHaveURL(/\/$/);
+  // Źródło EUR 1 000,00 € + 51,70 € = 1 051,70 €.
+  expect(await sourceValue(src.akcje)).toBe(105170);
+});
+
+test("rozliczenie przed publikacją tabeli bierze poprzednią (scen. 35)", async ({
+  page,
+  seed,
+}) => {
+  // Brak tabeli z ostatniego dnia; najnowsza w oknie jest 3 dni wcześniej.
+  const day = lastDayOfMonth(previous);
+  const earlier = addDays(day, -3);
+  await seedRates([{ effectiveDate: earlier, rate: 42600 }]);
+  await seedSettleableMonth(seed, { eur: true });
+  await page.goto(`/rozliczenie/${previous}`);
+  await expect(
+    page.getByText(
+      "Kurs " + text("4,2600 zł") + ` (NBP, ${formatDate(earlier)})`,
+    ),
+  ).toBeVisible();
+});
+
+test("zmiana kursu między otwarciem a zatwierdzeniem odrzuca zapis (scen. 36)", async ({
+  page,
+  seed,
+}) => {
+  const day = lastDayOfMonth(previous);
+  const earlier = addDays(day, -3);
+  await seedRates([{ effectiveDate: earlier, rate: 42600 }]);
+  const src = await seedSettleableMonth(seed, { eur: true });
+  await page.goto(`/rozliczenie/${previous}`);
+  await expect(
+    page.getByText(
+      "Kurs " + text("4,2600 zł") + ` (NBP, ${formatDate(earlier)})`,
+    ),
+  ).toBeVisible();
+
+  // Pojawia się nowsza tabela z ostatniego dnia; zatwierdzenie jest odrzucone.
+  await seedRates([{ effectiveDate: day, rate: 42500 }]);
+  await submit(page.getByRole("button", { name: "Zatwierdź rozliczenie" }));
+  await expect(
+    page.getByText(
+      "Kurs rozliczenia się zmienił. Sprawdź kwoty i zatwierdź ponownie.",
+    ),
+  ).toBeVisible();
+  // Wartość źródła EUR się nie zmienia (startowe 1 000,00 €).
+  expect(await sourceValue(src.akcje)).toBe(100000);
 });
 
 test("ponowne wejście na rozliczony miesiąc pokazuje komunikat (scen. 15)", async ({

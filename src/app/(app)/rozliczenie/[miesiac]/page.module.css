@@ -30,6 +30,11 @@
   font-size: 1.0625rem;
 }
 
+.rateInfo {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
 .options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
-import { getEurRate } from "@/db/settings";
 import { listSources, type SourceRow } from "@/db/sources";
+import { now } from "@/domain/clock";
 import { convertEurToPln, netWorthPln } from "@/domain/currency";
 import { formatAmount, formatMoney, formatSourceCount } from "@/domain/format";
+import { resolveCurrentRate } from "@/rates/current-rate";
+import { currentRateText } from "@/rates/label";
 import { AddSourceForm } from "./AddSourceForm";
 import { SourceItem, type SourceView } from "./SourceItem";
 import styles from "./page.module.css";
@@ -60,11 +62,15 @@ function toView(row: SourceRow, rate: number | null): SourceView {
 export default async function WealthPage() {
   const user = await requireUser();
   const db = getDb();
-  const [rows, rate] = await Promise.all([
+  const [rows, current] = await Promise.all([
     listSources(db, user.id),
-    getEurRate(db, user.id),
+    resolveCurrentRate(db, user.id, now()),
   ]);
+  // Majątek przelicza źródła EUR po bieżącym kursie NBP (SPEC 5.9, reguła 6.10)
+  // i pokazuje użyty kurs z datą, gdy jest choć jedno źródło w EUR.
+  const rate = current?.rate ?? null;
   const total = sumPln(rows, rate);
+  const hasEur = rows.some((row) => row.currency === "EUR");
 
   return (
     <>
@@ -76,7 +82,14 @@ export default async function WealthPage() {
             Majątek łącznie ({formatSourceCount(rows.length)})
           </h2>
           {total !== null ? (
-            <p className={styles.summaryTotal}>{total}</p>
+            <>
+              <p className={styles.summaryTotal}>{total}</p>
+              {hasEur && current !== null && (
+                <p className={styles.summaryRate}>
+                  Źródła EUR po kursie {currentRateText(current)}
+                </p>
+              )}
+            </>
           ) : (
             <p className={styles.summaryMissing}>
               Ustaw kurs EUR, żeby zobaczyć sumę majątku.{" "}

@@ -79,9 +79,11 @@ export const settings = pgTable(
     userId: integer("user_id")
       .primaryKey()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Dawny ręczny kurs EUR→PLN. Od Etapu 2 (SPEC 5.9) bieżący kurs pochodzi
+    // z NBP, a to ustawienie zastąpił `fallback_eur_rate` (migracja 0009
+    // przepisała wartość). Kolumnę zostawiamy dla zgodności wstecz wdrożenia.
     eurRate: integer("eur_rate"),
-    // Kurs zapasowy EUR→PLN do rozliczenia, gdy NBP nie ma tabeli w oknie
-    // kursu rozliczenia (reguła 6.10, SPEC 5.9).
+    // Kurs zapasowy EUR→PLN, gdy NBP nie ma tabeli (reguła 6.10, SPEC 5.9).
     fallbackEurRate: integer("fallback_eur_rate"),
     savingsPct: integer("savings_pct").notNull().default(0),
     investmentsPct: integer("investments_pct").notNull().default(0),

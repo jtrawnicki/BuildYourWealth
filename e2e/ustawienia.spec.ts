@@ -2,8 +2,12 @@ import { type Page } from "@playwright/test";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { settings, sources } from "@/db/schema";
+import { now } from "@/domain/clock";
+import { formatDate } from "@/domain/format";
 import { MESSAGES } from "@/domain/input";
+import { addDays, currentDay } from "@/domain/time";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { seedRates } from "./db";
 import { expect, test } from "./fixtures";
 
 const LIGHT_BG = "rgb(241, 244, 247)";
@@ -12,25 +16,28 @@ const DARK_BG = "rgb(15, 17, 23)";
 const bodyBackground = (page: Page) =>
   page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
-const rateField = (page: Page) => page.getByLabel("Kurs EUR→PLN");
+const rateField = (page: Page) => page.getByLabel("Kurs zapasowy EUR→PLN");
 // Next ma własny ogłaszacz tras z rolą `alert`, więc szukamy w sekcji kursu.
 const rateSection = (page: Page) =>
   page.getByRole("region", { name: "Kurs euro" });
+
+// Między liczbą a „zł" jest twarda spacja (NBSP).
+const text = (value: string) => value.replace(/ /g, " ");
 
 async function saveRate(page: Page, value: string) {
   await rateField(page).fill(value);
   await Promise.all([
     page.waitForResponse((r) => r.request().method() === "POST"),
-    page.getByRole("button", { name: "Zapisz kurs" }).click(),
+    page.getByRole("button", { name: "Zapisz kurs zapasowy" }).click(),
   ]);
 }
 
 async function storedRate(userId: number) {
   const [row] = await getDb()
-    .select({ eurRate: settings.eurRate })
+    .select({ fallbackEurRate: settings.fallbackEurRate })
     .from(settings)
     .where(eq(settings.userId, userId));
-  return row.eurRate;
+  return row.fallbackEurRate;
 }
 
 test("bez sesji Ustawienia przekierowują na logowanie (scen. 13)", async ({
@@ -54,7 +61,48 @@ test("zakładka Ustawienia jest aktywna", async ({ page }) => {
 });
 
 test.describe("kurs EUR", () => {
-  test("błędny kurs jest odrzucony, poprawny zapisany (SPEC 7.1)", async ({
+  test("bieżący kurs z NBP i datą tabeli (scen. 22)", async ({ page }) => {
+    const day = currentDay(now());
+    await seedRates([{ effectiveDate: day, rate: 42731 }]);
+    await page.goto("/ustawienia");
+    await expect(rateSection(page)).toContainText(
+      text("4,2731 zł") + ` · NBP, tabela z ${formatDate(day)}`,
+    );
+    // Świeża tabela: bez ostrzeżenia o starym kursie.
+    await expect(
+      page.getByText("Nie udało się pobrać nowszego kursu z NBP"),
+    ).toBeHidden();
+  });
+
+  test("stary kurs NBP pokazuje ostrzeżenie (SPEC 5.9)", async ({ page }) => {
+    const old = addDays(currentDay(now()), -10);
+    await seedRates([{ effectiveDate: old, rate: 42731 }]);
+    await page.goto("/ustawienia");
+    await expect(
+      page.getByText("Nie udało się pobrać nowszego kursu z NBP"),
+    ).toBeVisible();
+  });
+
+  test("bez tabeli NBP bieżący kurs to kurs zapasowy z ostrzeżeniem", async ({
+    page,
+    authUserId,
+  }) => {
+    await page.goto("/ustawienia");
+    await saveRate(page, "4,3000");
+    await expect(page.getByRole("status")).toHaveText(
+      "Zapisano kurs zapasowy.",
+    );
+    expect(await storedRate(authUserId)).toBe(43000);
+    await page.reload();
+    await expect(rateSection(page)).toContainText(
+      text("4,3000 zł") + " · kurs zapasowy",
+    );
+    await expect(
+      page.getByText("Nie udało się pobrać nowszego kursu z NBP"),
+    ).toBeVisible();
+  });
+
+  test("błędny kurs zapasowy jest odrzucony, poprawny zapisany (SPEC 7.1)", async ({
     page,
     authUserId,
   }) => {
@@ -68,7 +116,9 @@ test.describe("kurs EUR", () => {
     expect(await storedRate(authUserId)).toBeNull();
 
     await saveRate(page, "4.3");
-    await expect(page.getByRole("status")).toHaveText("Zapisano kurs.");
+    await expect(page.getByRole("status")).toHaveText(
+      "Zapisano kurs zapasowy.",
+    );
     await expect(page.getByText(MESSAGES.eurRate)).toBeHidden();
     expect(await storedRate(authUserId)).toBe(43000);
 
@@ -76,7 +126,7 @@ test.describe("kurs EUR", () => {
     await expect(rateField(page)).toHaveValue("4,3000");
   });
 
-  test("zmiana kursu nie zmienia wartości źródła w EUR", async ({
+  test("zmiana kursu zapasowego nie zmienia wartości źródła w EUR", async ({
     page,
     seed,
   }) => {
@@ -88,9 +138,13 @@ test.describe("kurs EUR", () => {
     });
     await page.goto("/ustawienia");
     await saveRate(page, "4,2850");
-    await expect(page.getByRole("status")).toHaveText("Zapisano kurs.");
+    await expect(page.getByRole("status")).toHaveText(
+      "Zapisano kurs zapasowy.",
+    );
     await saveRate(page, "4,5000");
-    await expect(page.getByRole("status")).toHaveText("Zapisano kurs.");
+    await expect(page.getByRole("status")).toHaveText(
+      "Zapisano kurs zapasowy.",
+    );
 
     const [row] = await getDb()
       .select({ value: sources.value })
@@ -125,8 +179,10 @@ test.describe("kurs EUR", () => {
     }
 
     // Po ustąpieniu błędu ponowny zapis tej samej wartości się udaje.
-    await page.getByRole("button", { name: "Zapisz kurs" }).click();
-    await expect(page.getByRole("status")).toHaveText("Zapisano kurs.");
+    await page.getByRole("button", { name: "Zapisz kurs zapasowy" }).click();
+    await expect(page.getByRole("status")).toHaveText(
+      "Zapisano kurs zapasowy.",
+    );
     await expect(rateSection(page).getByRole("alert")).toBeHidden();
     expect(await storedRate(authUserId)).toBe(42850);
   });

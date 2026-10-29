@@ -124,7 +124,11 @@ export async function writeDemoData(
 ): Promise<void> {
   await tx.insert(settings).values({
     userId,
+    // Kurs zapasowy demo (SPEC 5.8): bieżący kurs i tak bierze się z NBP, a gdy
+    // go brak (piaskownica bez pobrania), z tego kursu. `eur_rate` zostaje dla
+    // zgodności wstecz, ale ekranów już nie dotyczy (SPEC 5.9, T19b).
     eurRate: data.eurRate,
+    fallbackEurRate: data.eurRate,
     savingsPct: data.savingsPct,
     investmentsPct: data.investmentsPct,
   });

@@ -64,6 +64,13 @@
       "when": 1793269066512,
       "tag": "0008_goals_deadline",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793270341822,
+      "tag": "0009_backfill_fallback_eur_rate",
+      "breakpoints": true
     }
   ]
 }

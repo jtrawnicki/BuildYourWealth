@@ -69,6 +69,12 @@ export function formatEurRate(rate: number): string {
   return `${sign}${whole},${fraction}`;
 }
 
+/** Data tabeli NBP `YYYY-MM-DD` → `DD.MM.RRRR` (SPEC 5.9). */
+export function formatDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}.${month}.${year}`;
+}
+
 const SOURCE_FORMS = { one: "źródło", few: "źródła", many: "źródeł" } as const;
 const plural = new Intl.PluralRules("pl-PL");
 

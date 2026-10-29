@@ -2,20 +2,11 @@ import { eq } from "drizzle-orm";
 import type { Db } from "./client";
 import { settings } from "./schema";
 
-/** Kurs EUR→PLN użytkownika w dziesięciotysięcznych albo `null`, gdy nieustawiony. */
-export async function getEurRate(
-  db: Db,
-  userId: number,
-): Promise<number | null> {
-  const [row] = await db
-    .select({ eurRate: settings.eurRate })
-    .from(settings)
-    .where(eq(settings.userId, userId))
-    .limit(1);
-  return row?.eurRate ?? null;
-}
-
-/** Kurs zapasowy EUR→PLN w dziesięciotysięcznych albo `null` (reguła 6.10). */
+/**
+ * Kurs zapasowy EUR→PLN w dziesięciotysięcznych albo `null` (SPEC 5.9, reguła
+ * 6.10). Używany, gdy aplikacja nie ma pasującego kursu z NBP; bieżący kurs na
+ * ekranach bierze się z NBP (`rates/current-rate.ts`), nie z ustawienia.
+ */
 export async function getFallbackEurRate(
   db: Db,
   userId: number,
@@ -29,16 +20,19 @@ export async function getFallbackEurRate(
 }
 
 /**
- * Zapisuje kurs. Zmienia tylko ustawienie: wartości EUR źródeł i kursy zapisane
- * przy rozliczeniu zostają bez zmian (SPEC 7).
+ * Zapisuje kurs zapasowy. Zmienia tylko ustawienie: wartości EUR źródeł i kursy
+ * zapisane przy rozliczeniu zostają bez zmian (SPEC 7).
  */
-export async function setEurRate(
+export async function setFallbackEurRate(
   db: Db,
   userId: number,
-  eurRate: number,
+  fallbackEurRate: number,
 ): Promise<void> {
   await db
     .insert(settings)
-    .values({ userId, eurRate })
-    .onConflictDoUpdate({ target: settings.userId, set: { eurRate } });
+    .values({ userId, fallbackEurRate })
+    .onConflictDoUpdate({
+      target: settings.userId,
+      set: { fallbackEurRate },
+    });
 }
