@@ -184,6 +184,8 @@ export async function writeDemoData(
         investmentsPct: month.investmentsPct,
         settledAt: month.settledAt,
         settledEurRate: month.settledEurRate,
+        // Kursy rozliczeń demo zawsze jako kurs zapasowy (SPEC Z16, scen. 34).
+        settledRateSource: month.settledRateSource,
       })
       .returning({ id: months.id });
 

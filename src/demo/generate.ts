@@ -55,6 +55,8 @@ export type DemoMonth = {
   /** Pierwsze dni następnego miesiąca (SPEC 5.8); `null` dla nierozliczonego. */
   settledAt: Date | null;
   settledEurRate: number | null;
+  /** Pochodzenie kursu rozliczenia: w demo zawsze `fallback` (SPEC Z16). */
+  settledRateSource: "fallback" | null;
   incomes: { name: string; amount: number }[];
   goals: DemoMonthGoal[];
 };
@@ -355,6 +357,7 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
       settled: true,
       settledAt,
       settledEurRate: eurRate,
+      settledRateSource: "fallback",
       incomes: splitIncome(rng, income, randInt(rng, 2, 3)),
       goals: PLAN_GOALS.map((g) => ({
         goalKey: g.key,
@@ -370,6 +373,7 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
     settled: false,
     settledAt: null,
     settledEurRate: null,
+    settledRateSource: null,
     incomes: splitIncome(
       rng,
       randInt(rng, 850000, 1150000),

@@ -1,9 +1,26 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { computeMonthPlan } from "@/domain/plan";
 import { plannedActual } from "@/domain/settlement";
+import type { ChosenRate } from "@/rates/select";
 import type { Db } from "./client";
-import { incomes, months, monthGoals, settings, sources } from "./schema";
+import { incomes, months, monthGoals, sources } from "./schema";
 import { changeSourceValue } from "./sources";
+
+/** Czy istniejący miesiąc ma w migawce cel ze źródłem EUR (reguła 6.10). */
+export async function monthHasEurGoal(
+  db: Db,
+  userId: number,
+  month: string,
+): Promise<{ exists: boolean; hasEur: boolean }> {
+  const rows = await db
+    .select({ currency: sources.currency })
+    .from(months)
+    .leftJoin(monthGoals, eq(monthGoals.monthId, months.id))
+    .leftJoin(sources, eq(sources.id, monthGoals.sourceId))
+    .where(and(eq(months.userId, userId), eq(months.month, month)));
+  if (rows.length === 0) return { exists: false, hasEur: false };
+  return { exists: true, hasEur: rows.some((r) => r.currency === "EUR") };
+}
 
 // Rozliczenie miesiąca (SPEC 5.5). Faktyczne kwoty celów są dopisywane do
 // wartości połączonych źródeł, zapisywane w migawce (`month_goals.actual_amount`)
@@ -37,14 +54,18 @@ export type SettleResult =
 /**
  * Rozlicza miesiąc atomowo (SPEC 5.5). Reguły pól (kwota ≥ 0) sprawdza `domain`
  * przed zapisem; tutaj pilnujemy spójności i współbieżności. Kwoty EUR są
- * zapisywane w walucie źródła, a użyty kurs trafia do `months.settled_eur_rate`,
- * żeby historia nie zmieniała się po zmianie kursu (SPEC 6.9, 5.6).
+ * zapisywane w walucie źródła, a użyty kurs rozliczenia (reguła 6.10) wraz
+ * z datą tabeli i pochodzeniem trafia do `months`, żeby historia nie zmieniała
+ * się po zmianie kursu (SPEC 6.9, 5.6). Kurs ustala wcześniej akcja (poza
+ * transakcją, STACK „Kurs NBP”) i podaje go w `rate`; miesiąc bez celu EUR
+ * dostaje `rate = null` i nie zapisuje żadnego kursu.
  */
 export async function settleMonth(
   db: Db,
   userId: number,
   month: string,
   input: SettleInput,
+  rate: ChosenRate | null,
 ): Promise<SettleResult> {
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -76,13 +97,10 @@ export async function settleMonth(
 
     const hasEur = snapshot.some((goal) => goal.currency === "EUR");
 
-    const [setting] = await tx
-      .select({ eurRate: settings.eurRate })
-      .from(settings)
-      .where(eq(settings.userId, userId))
-      .limit(1);
-    const rate = setting?.eurRate ?? null;
+    // Kurs ustala akcja przed transakcją (reguła 6.10). Miesiąc z celem EUR bez
+    // kursu nie da się rozliczyć; miesiąc bez celu EUR kursu nie potrzebuje.
     if (hasEur && rate === null) return { status: "no-rate" };
+    const rateValue = hasEur ? rate!.rate : null;
 
     const actualByGoal = new Map<number, number>();
     if (input.mode === "plan") {
@@ -106,7 +124,7 @@ export async function settleMonth(
         const amount = plannedActual(
           planByGoal.get(goal.goalId) ?? 0,
           goal.currency,
-          rate,
+          rateValue,
         );
         actualByGoal.set(goal.goalId, amount);
       }
@@ -154,7 +172,12 @@ export async function settleMonth(
 
     await tx
       .update(months)
-      .set({ settledAt: sql`now()`, settledEurRate: hasEur ? rate : null })
+      .set({
+        settledAt: sql`now()`,
+        settledEurRate: rateValue,
+        settledRateSource: hasEur ? rate!.source : null,
+        settledRateDate: hasEur && rate!.source === "nbp" ? rate!.date : null,
+      })
       .where(and(eq(months.id, row.id), eq(months.userId, userId)));
 
     return { status: "ok" };

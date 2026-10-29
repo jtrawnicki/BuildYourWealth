@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
 import { getMonth, getMonthSnapshot, type MonthData } from "@/db/months";
-import { getEurRate } from "@/db/settings";
+import { resolveSettlementRate } from "@/rates/settlement-rate";
+import type { ChosenRate } from "@/rates/select";
 import { now } from "@/domain/clock";
 import { convertEurToPln } from "@/domain/currency";
 import { formatAmount, formatEurRate, formatMoney } from "@/domain/format";
@@ -42,10 +43,7 @@ export default async function SettlePage({
   if (!MONTH_PATTERN.test(miesiac)) notFound();
 
   const db = getDb();
-  const [data, eurRate] = await Promise.all([
-    getMonth(db, user.id, miesiac),
-    getEurRate(db, user.id),
-  ]);
+  const data = await getMonth(db, user.id, miesiac);
   // Rozliczyć można tylko istniejący miesiąc z przychodem (SPEC 5.4, 5.5).
   if (data === null || data.incomes.length === 0) notFound();
   if (data.settled) return <Info month={miesiac} message="alreadySettled" />;
@@ -54,12 +52,22 @@ export default async function SettlePage({
   }
 
   const snapshot = await getMonthSnapshot(db, data.id);
-  if (snapshot.some((goal) => goal.currency === "EUR") && eurRate === null) {
-    return <Info month={miesiac} message="noRate" />;
+  // Kurs rozliczenia (reguła 6.10) tylko dla miesiąca z celem EUR; brak kursu
+  // (NBP i zapasowego) blokuje rozliczenie i prosi o kurs zapasowy (SPEC 5.5).
+  const hasEur = snapshot.some((goal) => goal.currency === "EUR");
+  let rate: ChosenRate | null = null;
+  if (hasEur) {
+    rate = await resolveSettlementRate(db, user.id, miesiac, now());
+    if (rate === null) return <Info month={miesiac} message="noRate" />;
   }
+  const rateValue = rate?.rate ?? null;
 
   return (
-    <SettleForm view={buildView(data, snapshot, eurRate)} eurRate={eurRate} />
+    <SettleForm
+      view={buildView(data, snapshot, rateValue)}
+      eurRate={rateValue}
+      rate={rate}
+    />
   );
 }
 
