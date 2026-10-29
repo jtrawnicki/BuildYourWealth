@@ -175,6 +175,9 @@ export const goals = pgTable(
     sourceId: integer("source_id").notNull(),
     targetAmount: amount("target_amount"),
     startAmount: amount("start_amount"),
+    // Termin celu `YYYY-MM` (SPEC 5.12). Tylko z kwotą docelową; usunięcie kwoty
+    // docelowej usuwa termin (reguła pilnowana w `db/plan.ts` i przez CHECK).
+    deadline: text("deadline"),
     position: integer("position").notNull(),
     removedAt: timestamptz("removed_at"),
   },
@@ -190,6 +193,14 @@ export const goals = pgTable(
     check("goals_pct_check", sql`${t.pct} > 0 and ${t.pct} <= 10000`),
     check("goals_target_amount_check", sql`${t.targetAmount} >= 0`),
     check("goals_start_amount_check", sql`${t.startAmount} >= 0`),
+    check(
+      "goals_deadline_format_check",
+      sql`${t.deadline} is null or ${t.deadline} ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'`,
+    ),
+    check(
+      "goals_deadline_target_check",
+      sql`${t.deadline} is null or ${t.targetAmount} is not null`,
+    ),
     check("goals_position_check", sql`${t.position} >= 0`),
   ],
 );

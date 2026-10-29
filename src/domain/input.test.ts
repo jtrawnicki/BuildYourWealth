@@ -11,6 +11,7 @@ import {
   parseName,
   parseOptionalAmount,
   parsePoolPercent,
+  validateDeadline,
 } from "./input";
 
 const value = <T>(v: T) => ({ ok: true, value: v });
@@ -184,5 +185,23 @@ describe("nazwy (źródło, cel, przychód)", () => {
 
   it.each(["", "   ", " ", "a".repeat(61)])("„%s” → wpisz nazwę", (input) => {
     expect(parseName(input)).toEqual(error(MESSAGES.name));
+  });
+});
+
+describe("termin celu (SPEC 7.1)", () => {
+  it("przyjmuje termin od P do grudnia 2099", () => {
+    expect(validateDeadline("2026-11", "2026-11")).toEqual(value("2026-11"));
+    expect(validateDeadline("2027-06", "2026-11")).toEqual(value("2027-06"));
+    expect(validateDeadline("2099-12", "2026-11")).toEqual(value("2099-12"));
+  });
+
+  it("odrzuca termin wczeĹ›niejszy niĹĽ P, z nazwÄ… miesiÄ…ca P", () => {
+    expect(validateDeadline("2026-10", "2026-11")).toEqual(
+      error("Wybierz termin od listopada 2026"),
+    );
+  });
+
+  it("odrzuca termin po grudniu 2099", () => {
+    expect(validateDeadline("2100-01", "2026-11").ok).toBe(false);
   });
 });

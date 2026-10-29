@@ -46,6 +46,26 @@ export function previousMonth(key: string): string {
   return month === 1 ? monthKey(year - 1, 12) : monthKey(year, month - 1);
 }
 
+/**
+ * Miesiąc `key` przesunięty o `delta` miesięcy (ujemne cofa), z przejściem przez
+ * granice lat. Służy prognozie celu (reguły 6.12–6.13).
+ */
+export function addMonths(key: string, delta: number): string {
+  const { year, month } = parseMonth(key);
+  const total = year * 12 + (month - 1) + delta;
+  const y = Math.floor(total / 12);
+  return monthKey(y, total - y * 12 + 1);
+}
+
+/**
+ * Porównanie miesięcy `YYYY-MM` chronologicznie: ujemne gdy `a` wcześniejszy,
+ * dodatnie gdy późniejszy, 0 gdy ten sam. Format ma stałą długość, więc
+ * porównanie tekstowe jest zarazem chronologiczne.
+ */
+export function compareMonths(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /** Liczba dni w miesiącu `YYYY-MM` (kalendarzowo, niezależnie od strefy). */
 export function daysInMonth(key: string): number {
   const { year, month } = parseMonth(key);

@@ -92,6 +92,8 @@ function toInput(draft: PlanDraft): PlanInput | null {
       sourceId,
       targetAmount: target.value,
       startAmount: start.value,
+      // Pole terminu w formularzu wprowadza T22; na razie plan go nie ustawia.
+      deadline: null,
     });
   }
 

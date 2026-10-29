@@ -2,6 +2,9 @@
 // kwoty w groszach lub eurocentach, procenty w setnych procenta, kurs
 // w dziesięciotysięcznych (STACK 4).
 
+import { monthGenitive } from "./month-name";
+import { compareMonths } from "./time";
+
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export const MESSAGES = {
@@ -12,7 +15,11 @@ export const MESSAGES = {
   goalPercent: "Wpisz procent większy od 0",
   eurRate: "Wpisz kurs, np. 4,2850",
   name: "Wpisz nazwę",
+  deadlineNeedsTarget: "Termin wymaga kwoty docelowej",
 } as const;
+
+/** Najpóźniejszy dozwolony termin celu (SPEC 7.1): grudzień 2099. */
+export const MAX_DEADLINE = "2099-12";
 
 /** Największa wpisywana kwota (2 mld zł lub €), STACK 4. */
 export const MAX_AMOUNT = 200_000_000_000;
@@ -84,6 +91,27 @@ export function parseEurRate(input: string): Parsed<number> {
     return fail(MESSAGES.eurRate);
   }
   return ok(value);
+}
+
+/**
+ * Walidacja terminu celu (SPEC 7.1): miesiąc `YYYY-MM` nie wcześniejszy niż
+ * pierwszy miesiąc wpłaty P (reguła 6.12) i nie późniejszy niż grudzień 2099.
+ * Komunikat nazywa miesiąc P. Zgodność terminu z kwotą docelową pilnuje zapis
+ * (`db/plan.ts`) i CHECK; komunikat dla formularza to `deadlineNeedsTarget`.
+ */
+export function validateDeadline(
+  deadline: string,
+  firstMonth: string,
+): Parsed<string> {
+  if (
+    compareMonths(deadline, firstMonth) < 0 ||
+    compareMonths(deadline, MAX_DEADLINE) > 0
+  ) {
+    return fail(
+      `Wybierz termin od ${monthGenitive(firstMonth)} ${firstMonth.slice(0, 4)}`,
+    );
+  }
+  return ok(deadline);
 }
 
 /** Nazwa źródła, celu lub przychodu; zwraca ją bez skrajnych spacji. */

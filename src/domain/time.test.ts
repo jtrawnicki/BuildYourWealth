@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  addMonths,
   canCreateMonth,
   canSettleMonth,
+  compareMonths,
   currentDay,
   currentMonth,
   currentTime,
@@ -135,5 +137,22 @@ describe("currentTime i isWeekend", () => {
     expect(isWeekend("2026-10-31")).toBe(true);
     expect(isWeekend("2026-11-01")).toBe(true);
     expect(isWeekend("2026-11-02")).toBe(false);
+  });
+});
+
+describe("addMonths i compareMonths (reguły 6.12–6.13)", () => {
+  it("przesuwa miesiąc przez granice lat w obie strony", () => {
+    expect(addMonths("2026-11", 0)).toBe("2026-11");
+    expect(addMonths("2026-11", 2)).toBe("2027-01");
+    expect(addMonths("2026-12", 3)).toBe("2027-03");
+    expect(addMonths("2027-01", -1)).toBe("2026-12");
+    expect(addMonths("2026-11", -14)).toBe("2025-09");
+    expect(addMonths("2026-11", 13)).toBe("2027-12");
+  });
+
+  it("porównuje miesiące chronologicznie", () => {
+    expect(compareMonths("2026-11", "2026-12")).toBeLessThan(0);
+    expect(compareMonths("2027-01", "2026-12")).toBeGreaterThan(0);
+    expect(compareMonths("2026-11", "2026-11")).toBe(0);
   });
 });

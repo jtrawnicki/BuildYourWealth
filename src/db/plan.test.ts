@@ -72,6 +72,7 @@ const goal = (over: Partial<PlanGoalInput>): PlanGoalInput => ({
   sourceId: 0,
   targetAmount: null,
   startAmount: null,
+  deadline: null,
   ...over,
 });
 
@@ -321,5 +322,61 @@ describe("savePlan", () => {
       savingsPct: 0,
       goals: [],
     });
+  });
+
+  it("zapisuje i odczytuje termin celu z kwotą docelową", async () => {
+    const source = await addSource({});
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        goal({ sourceId: source, targetAmount: 500000, deadline: "2027-06" }),
+      ],
+    });
+    const plan = await getPlan(getDb(), userId);
+    expect(plan.goals[0]).toMatchObject({
+      targetAmount: 500000,
+      deadline: "2027-06",
+    });
+  });
+
+  it("nie zapisuje terminu bez kwoty docelowej (SPEC 5.12)", async () => {
+    const source = await addSource({});
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        goal({ sourceId: source, targetAmount: null, deadline: "2027-06" }),
+      ],
+    });
+    const plan = await getPlan(getDb(), userId);
+    expect(plan.goals[0].deadline).toBeNull();
+  });
+
+  it("usunięcie kwoty docelowej usuwa termin istniejącego celu", async () => {
+    const source = await addSource({});
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        goal({ sourceId: source, targetAmount: 500000, deadline: "2027-06" }),
+      ],
+    });
+    const saved = (await getPlan(getDb(), userId)).goals[0];
+
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [
+        goal({
+          id: saved.id,
+          sourceId: source,
+          targetAmount: null,
+          deadline: "2027-06",
+        }),
+      ],
+    });
+    const plan = await getPlan(getDb(), userId);
+    expect(plan.goals[0]).toMatchObject({ targetAmount: null, deadline: null });
   });
 });

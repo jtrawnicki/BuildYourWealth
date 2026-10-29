@@ -543,4 +543,30 @@ describe("ograniczenia schematu", () => {
       );
     });
   });
+
+  describe("termin celu", () => {
+    it("odrzuca termin bez kwoty docelowej", async () => {
+      expect(
+        await rejection("update goals set deadline = '2027-06' where id = $1", [
+          goalId,
+        ]),
+      ).toEqual({ code: "23514", constraint: "goals_deadline_target_check" });
+    });
+
+    it("odrzuca termin w złym formacie", async () => {
+      expect(
+        await rejection(
+          "update goals set target_amount = 500000, deadline = '2027-6' where id = $1",
+          [goalId],
+        ),
+      ).toEqual({ code: "23514", constraint: "goals_deadline_format_check" });
+    });
+
+    it("przyjmuje termin YYYY-MM z kwotą docelową", async () => {
+      await client.query(
+        "update goals set target_amount = 500000, deadline = '2027-06' where id = $1",
+        [goalId],
+      );
+    });
+  });
 });
