@@ -1,12 +1,17 @@
 .wrap {
   position: relative;
   width: 100%;
+  /* Element flex w kolumnowej karcie: bez tego nie kurczy się poniżej
+     wewnętrznej szerokości SVG i rozpycha stronę w poziomie (scen. 12). */
+  min-width: 0;
 }
 
 .svg {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: auto;
+  overflow: hidden;
   touch-action: pan-y;
 }
 
