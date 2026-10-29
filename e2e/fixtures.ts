@@ -37,6 +37,8 @@ export type Seed = {
   /** Ustawia procenty pul w bieżącym planie (w setnych procenta). */
   setPools(savingsPct: number, investmentsPct: number): Promise<void>;
   setEurRate(rate: number): Promise<void>;
+  /** Kurs zapasowy do rozliczenia, gdy NBP nie ma tabeli (reguła 6.10). */
+  setFallbackEurRate(rate: number): Promise<void>;
   /** Miesiąc z pozycjami przychodu; `settled` oznacza rozliczony (SPEC 5.4). */
   addMonth(input: MonthInput): Promise<number>;
 };
@@ -121,6 +123,12 @@ function makeSeed(userId: number): Seed {
         .set({ eurRate: rate })
         .where(eq(settings.userId, userId));
     },
+    async setFallbackEurRate(rate) {
+      await getDb()
+        .update(settings)
+        .set({ fallbackEurRate: rate })
+        .where(eq(settings.userId, userId));
+    },
     async addMonth({
       month,
       settled = false,
@@ -139,6 +147,9 @@ function makeSeed(userId: number): Seed {
           investmentsPct,
           settledAt: settled ? new Date() : null,
           settledEurRate: settled ? (settledEurRate ?? null) : null,
+          // Kurs rozliczenia wymaga pochodzenia (CHECK spójności, T19a).
+          settledRateSource:
+            settled && settledEurRate != null ? "fallback" : null,
         })
         .returning({ id: months.id });
       if (items.length > 0) {
