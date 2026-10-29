@@ -21,6 +21,9 @@ export const MESSAGES = {
 /** Najpóźniejszy dozwolony termin celu (SPEC 7.1): grudzień 2099. */
 export const MAX_DEADLINE = "2099-12";
 
+/** Poprawny zapis terminu: `YYYY-MM` z miesiącem 01–12. */
+const DEADLINE_FORMAT = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 /** Największa wpisywana kwota (2 mld zł lub €), STACK 4. */
 export const MAX_AMOUNT = 200_000_000_000;
 export const MAX_PERCENT = 10_000;
@@ -94,16 +97,18 @@ export function parseEurRate(input: string): Parsed<number> {
 }
 
 /**
- * Walidacja terminu celu (SPEC 7.1): miesiąc `YYYY-MM` nie wcześniejszy niż
- * pierwszy miesiąc wpłaty P (reguła 6.12) i nie późniejszy niż grudzień 2099.
- * Komunikat nazywa miesiąc P. Zgodność terminu z kwotą docelową pilnuje zapis
- * (`db/plan.ts`) i CHECK; komunikat dla formularza to `deadlineNeedsTarget`.
+ * Walidacja terminu celu (SPEC 7.1): poprawny zapis `YYYY-MM`, miesiąc nie
+ * wcześniejszy niż pierwszy miesiąc wpłaty P (reguła 6.12) i nie późniejszy niż
+ * grudzień 2099. Komunikat nazywa miesiąc P (jedyny komunikat tego pola wg SPEC
+ * 7.1). Zgodność terminu z kwotą docelową pilnuje zapis (`db/plan.ts`) i CHECK;
+ * komunikat dla formularza to `deadlineNeedsTarget`.
  */
 export function validateDeadline(
   deadline: string,
   firstMonth: string,
 ): Parsed<string> {
   if (
+    !DEADLINE_FORMAT.test(deadline) ||
     compareMonths(deadline, firstMonth) < 0 ||
     compareMonths(deadline, MAX_DEADLINE) > 0
   ) {

@@ -195,7 +195,7 @@ describe("termin celu (SPEC 7.1)", () => {
     expect(validateDeadline("2099-12", "2026-11")).toEqual(value("2099-12"));
   });
 
-  it("odrzuca termin wczeĹ›niejszy niĹĽ P, z nazwÄ… miesiÄ…ca P", () => {
+  it("odrzuca termin wcześniejszy niż P, z nazwą miesiąca P", () => {
     expect(validateDeadline("2026-10", "2026-11")).toEqual(
       error("Wybierz termin od listopada 2026"),
     );
@@ -204,4 +204,11 @@ describe("termin celu (SPEC 7.1)", () => {
   it("odrzuca termin po grudniu 2099", () => {
     expect(validateDeadline("2100-01", "2026-11").ok).toBe(false);
   });
+
+  it.each(["2027-13", "2027-00", "2027-1", "202706", "pusty", ""])(
+    "odrzuca niepoprawny zapis „%s”",
+    (bad) => {
+      expect(validateDeadline(bad, "2026-11").ok).toBe(false);
+    },
+  );
 });

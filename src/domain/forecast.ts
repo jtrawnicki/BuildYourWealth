@@ -119,7 +119,9 @@ function planInGoalCurrency(
   currency: Currency,
   rate: number | null,
 ): number | null {
-  if (currency === "PLN") return planPln;
+  // Zero przelicza się na zero bez kursu; tylko niezerowa kwota celu EUR
+  // wymaga kursu (SPEC 7: bez kursu prosimy o niego zamiast sugestii).
+  if (currency === "PLN" || planPln === 0) return planPln;
   if (rate === null) return null;
   return convertPlnToEur(planPln, rate);
 }
@@ -139,9 +141,20 @@ function averageOfLast3(values: number[]): number {
  * przypadkach miesiąc osiągnięcia.
  */
 export function forecastGoal(input: GoalInput): Forecast {
-  const remaining = input.targetAmount - input.progress;
   const sorted = sortedByMonth(input.months);
-  const firstMonth = firstPaymentMonth(input, sorted);
+  return forecastFrom(input, sorted, firstPaymentMonth(input, sorted));
+}
+
+/**
+ * Prognoza z już posortowanymi miesiącami i wyliczonym P — wspólna dla
+ * `forecastGoal` i `goalDeadline`, żeby nie sortować i nie liczyć P dwa razy.
+ */
+function forecastFrom(
+  input: GoalInput,
+  sorted: GoalMonth[],
+  firstMonth: string,
+): Forecast {
+  const remaining = input.targetAmount - input.progress;
   if (remaining <= 0) return { status: "reached" };
 
   const settledWithGoal = sorted.filter((m) => m.hasGoal && m.settled);
@@ -224,9 +237,9 @@ export function goalDeadline(
   input: GoalInput,
   deadline: string,
 ): DeadlineResult {
-  const forecast = forecastGoal(input);
   const sorted = sortedByMonth(input.months);
   const firstMonth = firstPaymentMonth(input, sorted);
+  const forecast = forecastFrom(input, sorted, firstMonth);
 
   if (compareMonths(deadline, firstMonth) < 0) {
     return { status: "overdue", firstMonth };
@@ -235,15 +248,18 @@ export function goalDeadline(
   let status: "no-data" | "on-track" | "at-risk";
   if (forecast.status === "no-data") {
     status = "no-data";
-  } else if (forecast.status === "forecast") {
+  } else if (forecast.status === "never") {
+    // Średnia 0 → cel nie zdąży przed terminem (SPEC 6.13).
+    status = "at-risk";
+  } else if (forecast.status === "reached") {
+    // Cel osiągnięty nie ma statusu terminu (SPEC 5.12) — tu trafia tylko, gdy
+    // warstwa wyżej nie odfiltrowała celu; nic nie jest zagrożone.
+    status = "on-track";
+  } else {
     status =
       compareMonths(forecast.achievementMonth, deadline) <= 0
         ? "on-track"
         : "at-risk";
-  } else {
-    // `never` (średnia 0) oraz skrajny `reached` traktujemy jak zagrożony:
-    // bez prognozy osiągnięcia cel nie zdąży przed terminem.
-    status = "at-risk";
   }
 
   const inRange = (month: string) =>

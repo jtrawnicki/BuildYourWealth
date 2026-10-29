@@ -375,4 +375,13 @@ describe("goalDeadline (reguła 6.13)", () => {
       suggestion: { kind: "eur-no-rate" },
     });
   });
+
+  it("cel osiągnięty z terminem nie jest zagrożony", () => {
+    const g = input({ targetAmount: 100_000, progress: 100_000, months: [] });
+    expect(goalDeadline(g, "2027-06")).toMatchObject({
+      status: "on-track",
+      required: null,
+      suggestion: { kind: "none" },
+    });
+  });
 });
