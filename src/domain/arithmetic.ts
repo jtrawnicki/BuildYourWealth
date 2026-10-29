@@ -5,6 +5,7 @@
 // w bezpiecznym zakresie liczb całkowitych.
 
 const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+const ONE = BigInt(1);
 const TWO = BigInt(2);
 
 /** Zamienia `BigInt` na `number`, zgłaszając błąd poza bezpiecznym zakresem. */
@@ -38,4 +39,15 @@ export function roundMulDivHalfUp(
   const numerator = BigInt(a) * BigInt(b);
   const d = BigInt(divisor);
   return toSafeInteger((numerator * TWO + d) / (d * TWO));
+}
+
+/**
+ * Zaokrąglenie w górę ilorazu `(a × b) / divisor` dla nieujemnych `a` i `b`
+ * oraz dodatniego `divisor` (SPEC 6.12–6.13: liczba wpłat, wymagana wpłata,
+ * sugerowany procent).
+ */
+export function ceilMulDiv(a: number, b: number, divisor: number): number {
+  const numerator = BigInt(a) * BigInt(b);
+  const d = BigInt(divisor);
+  return toSafeInteger((numerator + d - ONE) / d);
 }

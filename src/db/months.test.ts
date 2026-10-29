@@ -52,6 +52,7 @@ async function seedPlan() {
         sourceId,
         targetAmount: null,
         startAmount: null,
+        deadline: null,
       },
     ],
   });
@@ -203,6 +204,7 @@ describe("tworzenie miesiąca pierwszym przychodem (SPEC 5.4, Z2)", () => {
           sourceId: secondSource,
           targetAmount: null,
           startAmount: null,
+          deadline: null,
         },
       ],
     });
@@ -421,6 +423,7 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
           sourceId,
           targetAmount: 500000,
           startAmount: 200000,
+          deadline: null,
         },
       ],
     });
@@ -490,6 +493,7 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
           sourceId,
           targetAmount: null,
           startAmount: null,
+          deadline: null,
         },
       ],
     });
@@ -518,6 +522,7 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
           sourceId,
           targetAmount: null,
           startAmount: null,
+          deadline: null,
         },
       ],
     });

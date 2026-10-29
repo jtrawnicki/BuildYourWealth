@@ -73,6 +73,7 @@ async function seedScenario1(
     sourceId,
     targetAmount,
     startAmount,
+    deadline: null,
   });
   await savePlan(getDb(), userId, {
     savingsPct: 2000,
@@ -276,6 +277,7 @@ describe("postęp celu po rozliczeniu (SPEC 6.6, scen. 11)", () => {
           sourceId: poduszka,
           targetAmount: 500000,
           startAmount: 200000,
+          deadline: null,
         },
       ],
     });

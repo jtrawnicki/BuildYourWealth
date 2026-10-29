@@ -128,6 +128,7 @@ describe("zapis", () => {
           sourceId: 9,
           targetAmount: 100000,
           startAmount: null,
+          deadline: null,
         },
         {
           id: null,
@@ -137,6 +138,7 @@ describe("zapis", () => {
           sourceId: 9,
           targetAmount: null,
           startAmount: null,
+          deadline: null,
         },
       ],
     });

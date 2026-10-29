@@ -27,6 +27,8 @@ export type PlanGoalRow = {
   currency: Currency;
   targetAmount: number | null;
   startAmount: number | null;
+  /** Termin celu `YYYY-MM` albo null (SPEC 5.12). */
+  deadline: string | null;
   hasSettled: boolean;
 };
 
@@ -57,6 +59,7 @@ export async function getPlan(db: Db, userId: number): Promise<PlanData> {
       currency: sources.currency,
       targetAmount: goals.targetAmount,
       startAmount: goals.startAmount,
+      deadline: goals.deadline,
       hasSettled: sql<boolean>`exists (
         select 1 from ${monthGoals}
         join ${months} on ${months.id} = ${monthGoals.monthId}
@@ -102,6 +105,8 @@ export type PlanGoalInput = {
   sourceId: number;
   targetAmount: number | null;
   startAmount: number | null;
+  /** Termin celu `YYYY-MM`; bez kwoty docelowej termin nie jest zapisywany. */
+  deadline: string | null;
 };
 
 export type PlanInput = {
@@ -194,6 +199,8 @@ export async function savePlan(
         sourceId: goal.sourceId,
         targetAmount: goal.targetAmount,
         startAmount: goal.startAmount,
+        // Termin wymaga kwoty docelowej: jej brak usuwa termin (SPEC 5.12).
+        deadline: goal.targetAmount === null ? null : goal.deadline,
         position,
       };
       if (goal.id === null) {

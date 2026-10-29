@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { floorMulDiv, roundMulDivHalfUp, toSafeInteger } from "./arithmetic";
+import {
+  ceilMulDiv,
+  floorMulDiv,
+  roundMulDivHalfUp,
+  toSafeInteger,
+} from "./arithmetic";
 
 describe("toSafeInteger", () => {
   it("przepuszcza wartości w bezpiecznym zakresie", () => {
@@ -51,5 +56,18 @@ describe("roundMulDivHalfUp", () => {
     expect(roundMulDivHalfUp(200_000_000_000, 45_036, 10_000)).toBe(
       900_720_000_000,
     );
+  });
+});
+
+describe("ceilMulDiv", () => {
+  it("zaokrągla w górę, a wynik dokładny zostawia", () => {
+    expect(ceilMulDiv(130_000, 1, 56_666)).toBe(3); // 2,29… → 3 (liczba wpłat)
+    expect(ceilMulDiv(300_000, 1, 7)).toBe(42_858); // 428,57… → 428,58
+    expect(ceilMulDiv(71_200, 10_000, 196_000)).toBe(3_633); // 36,32…% → 36,33%
+    expect(ceilMulDiv(71_200, 1, 4)).toBe(17_800); // dzieli się równo
+  });
+
+  it("liczy dokładnie przy iloczynie pośrednim powyżej MAX_SAFE_INTEGER", () => {
+    expect(ceilMulDiv(200_000_000_000, 10_000, 196_000)).toBe(10_204_081_633);
   });
 });

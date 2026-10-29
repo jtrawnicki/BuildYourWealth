@@ -57,6 +57,13 @@
       "when": 1793218104175,
       "tag": "0007_settled_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793269066512,
+      "tag": "0008_goals_deadline",
+      "breakpoints": true
     }
   ]
 }
