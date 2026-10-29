@@ -194,25 +194,30 @@ export function NetWorthChart({ points, yLabels, yMax }: Props) {
         </div>
       )}
 
-      <table className={styles.srTable}>
-        <caption>Wartość majątku na koniec miesiąca</caption>
-        <thead>
-          <tr>
-            <th scope="col">Miesiąc</th>
-            <th scope="col">Wartość majątku</th>
-            <th scope="col">Zmiana</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((p) => (
-            <tr key={p.month}>
-              <th scope="row">{p.title}</th>
-              <td>{p.amount}</td>
-              <td>{p.change ?? "—"}</td>
+      {/* Opakowanie bloku, nie sama tabela: `<table>` z treścią szerszą niż
+          1px i tak rozciągnęłaby się do szerokości treści i rozpychała stronę
+          (scen. 12). Blok respektuje width/overflow i przycina tabelę. */}
+      <div className={styles.srTable}>
+        <table>
+          <caption>Wartość majątku na koniec miesiąca</caption>
+          <thead>
+            <tr>
+              <th scope="col">Miesiąc</th>
+              <th scope="col">Wartość majątku</th>
+              <th scope="col">Zmiana</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((p) => (
+              <tr key={p.month}>
+                <th scope="row">{p.title}</th>
+                <td>{p.amount}</td>
+                <td>{p.change ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
