@@ -13,6 +13,7 @@ import {
 import {
   archiveSource,
   createSource,
+  listSourceHistory,
   listSources,
   updateSource,
   type SourceInput,
@@ -381,5 +382,42 @@ describe("historia wartości (SPEC 5.11, T17)", () => {
     await updateSource(getDb(), userId, foreign, { ...POLISH, value: 5 });
     await archiveSource(getDb(), userId, foreign);
     expect(await history(foreign)).toHaveLength(1);
+  });
+});
+
+describe("listSourceHistory (wykres majątku, reguła 6.11)", () => {
+  it("zwraca całą historię konta, także zarchiwizowanych źródeł, rosnąco", async () => {
+    const active = await createSource(getDb(), userId, {
+      ...POLISH,
+      value: 1000,
+    });
+    await updateSource(getDb(), userId, active, { ...POLISH, value: 1500 });
+    const gone = await createSource(getDb(), userId, { ...POLISH, value: 0 });
+    await archiveSource(getDb(), userId, gone);
+    // Źródło innego konta nie może wejść do wyniku.
+    await createSource(getDb(), otherId, POLISH);
+
+    const entries = await listSourceHistory(getDb(), userId);
+    expect(entries).toEqual([
+      expect.objectContaining({
+        sourceId: active,
+        value: 1000,
+        currency: "PLN",
+      }),
+      expect.objectContaining({
+        sourceId: active,
+        value: 1500,
+        currency: "PLN",
+      }),
+      expect.objectContaining({ sourceId: gone, value: 0, currency: "PLN" }),
+      expect.objectContaining({ sourceId: gone, value: 0, currency: "PLN" }),
+    ]);
+    for (const e of entries) expect(e.recordedAt).toBeInstanceOf(Date);
+    const times = entries.map((e) => e.recordedAt.getTime());
+    expect(times).toEqual([...times].sort((a, b) => a - b));
+  });
+
+  it("puste konto nie ma historii", async () => {
+    expect(await listSourceHistory(getDb(), userId)).toEqual([]);
   });
 });

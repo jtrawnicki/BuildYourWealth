@@ -9,6 +9,7 @@ import {
   months,
   settings,
   sources,
+  sourceValues,
 } from "@/db/schema";
 import { createSource } from "@/db/sources";
 import {
@@ -40,6 +41,16 @@ export type Seed = {
   setFallbackEurRate(rate: number): Promise<void>;
   /** Miesiąc z pozycjami przychodu; `settled` oznacza rozliczony (SPEC 5.4). */
   addMonth(input: MonthInput): Promise<number>;
+  /** Wpisuje zapis historii wartości z konkretną chwilą (wykres, reguła 6.11). */
+  addSourceValue(input: ValuePointInput): Promise<void>;
+};
+
+type ValuePointInput = {
+  sourceId: number;
+  value: number;
+  recordedAt: Date;
+  currency?: "PLN" | "EUR";
+  reason?: "initial" | "created" | "manual" | "settlement" | "archived";
 };
 
 /**
@@ -182,6 +193,17 @@ function makeSeed(userId: number): Seed {
           });
       }
       return row.id;
+    },
+    async addSourceValue({
+      sourceId,
+      value,
+      recordedAt,
+      currency = "PLN",
+      reason = "manual",
+    }) {
+      await getDb()
+        .insert(sourceValues)
+        .values({ userId, sourceId, value, currency, recordedAt, reason });
     },
   };
 }

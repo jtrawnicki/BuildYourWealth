@@ -2,13 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
-import { listSources, type SourceRow } from "@/db/sources";
+import { listSourceHistory, listSources, type SourceRow } from "@/db/sources";
 import { now } from "@/domain/clock";
 import { convertEurToPln, netWorthPln } from "@/domain/currency";
 import { formatAmount, formatMoney, formatSourceCount } from "@/domain/format";
-import { resolveCurrentRate } from "@/rates/current-rate";
+import { netWorthChart } from "@/domain/networth-chart";
+import {
+  addMonths,
+  compareMonths,
+  currentDay,
+  currentMonth,
+  lastDayOfMonth,
+} from "@/domain/time";
+import { resolveChartRates } from "@/rates/chart-rates";
 import { currentRateText } from "@/rates/label";
 import { AddSourceForm } from "./AddSourceForm";
+import { buildChartView } from "./chart-view";
+import { NetWorthChart } from "./NetWorthChart";
 import { SourceItem, type SourceView } from "./SourceItem";
 import styles from "./page.module.css";
 
@@ -59,22 +69,88 @@ function toView(row: SourceRow, rate: number | null): SourceView {
   };
 }
 
+/** Liczba miesięcy od `from` do `to` włącznie (`YYYY-MM`). */
+function monthSpan(from: string, to: string): number {
+  let count = 0;
+  for (let m = from; compareMonths(m, to) <= 0; m = addMonths(m, 1)) count++;
+  return count;
+}
+
 export default async function WealthPage() {
   const user = await requireUser();
   const db = getDb();
-  const [rows, current] = await Promise.all([
+  const nowDate = now();
+  const [rows, history] = await Promise.all([
     listSources(db, user.id),
-    resolveCurrentRate(db, user.id, now()),
+    listSourceHistory(db, user.id),
   ]);
+
+  // Wykres rysuje się od miesiąca pierwszego zapisu historii (SPEC 5.11). Kursy
+  // EUR — bieżący do sumy majątku i kurs na koniec każdego miesiąca na wykres —
+  // bierzemy jednym pobraniem z zakresu od tego miesiąca do dziś.
+  const deploymentMonth = history.length
+    ? currentMonth(history[0].recordedAt)
+    : null;
+  const ratesFrom = deploymentMonth
+    ? lastDayOfMonth(deploymentMonth)
+    : currentDay(nowDate);
+  const chartRates = await resolveChartRates(db, user.id, ratesFrom, nowDate);
+
   // Majątek przelicza źródła EUR po bieżącym kursie NBP (SPEC 5.9, reguła 6.10)
   // i pokazuje użyty kurs z datą, gdy jest choć jedno źródło w EUR.
+  const current = chartRates.current;
   const rate = current?.rate ?? null;
   const total = sumPln(rows, rate);
   const hasEur = rows.some((row) => row.currency === "EUR");
 
+  // Stan wykresu: za mało punktów (miesiąc wdrożenia), brak kursu dla źródła EUR
+  // albo gotowe punkty reguły 6.11.
+  const chart =
+    deploymentMonth && monthSpan(deploymentMonth, currentMonth(nowDate)) >= 2
+      ? netWorthChart({
+          history,
+          deploymentMonth,
+          now: nowDate,
+          rateForDay: chartRates.rateForDay,
+          currentRate: rate,
+        })
+      : null;
+  const chartView = chart?.ok ? buildChartView(chart.points) : null;
+
   return (
     <>
       <h1 className={styles.title}>Majątek</h1>
+
+      {deploymentMonth !== null && (
+        <section className={styles.card} aria-labelledby="wykres">
+          <div className={styles.chartHead}>
+            <h2 id="wykres" className={styles.groupTitle}>
+              Wartość majątku
+            </h2>
+            {total !== null && (
+              <span className={styles.groupTotal}>{total}</span>
+            )}
+          </div>
+          {chartView ? (
+            <NetWorthChart
+              points={chartView.points}
+              yLabels={chartView.yLabels}
+              yMax={chartView.yMax}
+            />
+          ) : chart && !chart.ok ? (
+            <p className={styles.chartMissing}>
+              Ustaw kurs zapasowy EUR, żeby zobaczyć wykres.{" "}
+              <Link href="/ustawienia" className={styles.summaryLink}>
+                Ustaw kurs EUR
+              </Link>
+            </p>
+          ) : (
+            <p className={styles.chartHint}>
+              Wykres pojawi się w przyszłym miesiącu.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className={styles.summary} aria-labelledby="suma">
         <div className={styles.summaryMain}>

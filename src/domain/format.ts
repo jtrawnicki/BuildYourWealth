@@ -13,7 +13,8 @@ function assertInteger(value: number): void {
   }
 }
 
-function groupThousands(digits: string): string {
+/** Wstawia twarde spacje co trzy cyfry od prawej: `1234567` → `1 234 567`. */
+export function groupThousands(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
 }
 

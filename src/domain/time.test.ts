@@ -12,6 +12,7 @@ import {
   isWeekend,
   lastDayOfMonth,
   previousMonth,
+  startOfMonthInstant,
 } from "./time";
 
 describe("currentMonth w strefie Europe/Warsaw (SPEC 5.4)", () => {
@@ -154,5 +155,25 @@ describe("addMonths i compareMonths (reguły 6.12–6.13)", () => {
     expect(compareMonths("2026-11", "2026-12")).toBeLessThan(0);
     expect(compareMonths("2027-01", "2026-12")).toBeGreaterThan(0);
     expect(compareMonths("2026-11", "2026-11")).toBe(0);
+  });
+});
+
+describe("startOfMonthInstant w strefie Europe/Warsaw (reguła 6.11)", () => {
+  it("początek listopada 2026 to 31.10 23:00 UTC (CET, UTC+1)", () => {
+    expect(startOfMonthInstant("2026-11").toISOString()).toBe(
+      "2026-10-31T23:00:00.000Z",
+    );
+  });
+
+  it("początek lipca 2026 to 30.06 22:00 UTC (czas letni, UTC+2)", () => {
+    expect(startOfMonthInstant("2026-07").toISOString()).toBe(
+      "2026-06-30T22:00:00.000Z",
+    );
+  });
+
+  it("początek stycznia 2027 to 31.12 23:00 UTC (przełom roku)", () => {
+    expect(startOfMonthInstant("2027-01").toISOString()).toBe(
+      "2026-12-31T23:00:00.000Z",
+    );
   });
 });

@@ -37,6 +37,21 @@ function parseMonth(key: string): { year: number; month: number } {
   return { year, month };
 }
 
+const SHORT = [
+  "sty",
+  "lut",
+  "mar",
+  "kwi",
+  "maj",
+  "cze",
+  "lip",
+  "sie",
+  "wrz",
+  "paź",
+  "lis",
+  "gru",
+] as const;
+
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -49,4 +64,14 @@ export function formatMonthTitle(key: string): string {
 /** `2026-10` → `października`: dopełniacz do zdania „Wpisz przychód z …". */
 export function monthGenitive(key: string): string {
   return GENITIVE[parseMonth(key).month - 1];
+}
+
+/**
+ * Skrót miesiąca na oś X wykresu (SPEC 8.1): `2026-11` → `lis`; styczeń z rokiem
+ * jako punkt orientacyjny na przełomie lat: `2027-01` → `sty 2027`.
+ */
+export function formatMonthShort(key: string): string {
+  const { year, month } = parseMonth(key);
+  const short = SHORT[month - 1];
+  return month === 1 ? `${short} ${year}` : short;
 }

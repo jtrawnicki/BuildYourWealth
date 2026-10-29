@@ -3,8 +3,12 @@ import { eq, sql } from "drizzle-orm";
 import { SOURCE_MESSAGES } from "@/app/(app)/majatek/state";
 import { getDb } from "@/db/client";
 import { sources } from "@/db/schema";
+import { now } from "@/domain/clock";
 import { MESSAGES } from "@/domain/input";
+import { formatMonthTitle } from "@/domain/month-name";
+import { currentMonth, lastDayOfMonth, previousMonth } from "@/domain/time";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { seedRates } from "./db";
 import { expect, test } from "./fixtures";
 
 // Kwoty na ekranie mają twarde spacje (SPEC 8); w oczekiwaniach piszemy zwykłe.
@@ -269,9 +273,128 @@ test("przy błędzie zapisu widać komunikat, a wpis zostaje (SPEC 7)", async ({
   expect(await seed.countSources()).toBe(1);
 });
 
+const chartCard = (page: Page) =>
+  page.getByRole("region", { name: "Wartość majątku" });
+
+/** Chwila dnia `day` miesiąca `YYYY-MM` o 12:00 UTC (bezpiecznie w Europe/Warsaw). */
+function dayOf(monthKey: string, day: number): Date {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12));
+}
+
+/**
+ * Historia scenariusza 25 w poprzednim miesiącu: źródło PLN na 1 108 800
+ * (10 500 + rozliczenie 588) i źródło EUR 1 000,00 €, z kursem 4,2500 na koniec
+ * miesiąca — punkt wykresu „15 338,00 zł". Bieżący miesiąc daje drugi punkt.
+ */
+async function seedTwoMonthHistory(seed: {
+  addSource: (i: {
+    name: string;
+    kind: "savings" | "investments";
+    currency?: "PLN" | "EUR";
+    value?: number;
+  }) => Promise<number>;
+  addSourceValue: (i: {
+    sourceId: number;
+    value: number;
+    recordedAt: Date;
+    currency?: "PLN" | "EUR";
+    reason?: "initial" | "created" | "manual" | "settlement" | "archived";
+  }) => Promise<void>;
+  setFallbackEurRate: (r: number) => Promise<void>;
+}): Promise<string> {
+  const previous = previousMonth(currentMonth(now()));
+  const pln = await seed.addSource({
+    name: "Konto",
+    kind: "savings",
+    value: 1_108_800,
+  });
+  const eur = await seed.addSource({
+    name: "Akcje EUR",
+    kind: "investments",
+    currency: "EUR",
+    value: 100_000,
+  });
+  await seed.addSourceValue({
+    sourceId: pln,
+    value: 1_000_000,
+    recordedAt: dayOf(previous, 1),
+    reason: "initial",
+  });
+  await seed.addSourceValue({
+    sourceId: pln,
+    value: 1_108_800,
+    recordedAt: dayOf(previous, 20),
+    reason: "settlement",
+  });
+  await seed.addSourceValue({
+    sourceId: eur,
+    value: 100_000,
+    currency: "EUR",
+    recordedAt: dayOf(previous, 1),
+    reason: "initial",
+  });
+  return previous;
+}
+
+test("miesiąc wdrożenia: zamiast wykresu tekst o przyszłym miesiącu (scen. 26)", async ({
+  page,
+  seed,
+}) => {
+  await seed.addSource({ name: "Poduszka", kind: "savings", value: 500_000 });
+  await page.goto("/majatek");
+  await expect(chartCard(page)).toContainText(
+    "Wykres pojawi się w przyszłym miesiącu.",
+  );
+  await expect(chartCard(page).getByRole("table")).toHaveCount(0);
+});
+
+test("wykres z dwoma punktami: koniec miesiąca ze źródłem EUR (scen. 25, 26)", async ({
+  page,
+  seed,
+}) => {
+  const previous = await seedTwoMonthHistory(seed);
+  await seedRates([{ effectiveDate: lastDayOfMonth(previous), rate: 42_500 }]);
+  await seed.setFallbackEurRate(42_500);
+  await page.goto("/majatek");
+
+  const srTable = chartCard(page).getByRole("table");
+  await expect(srTable).toBeVisible();
+  // Tabela dla czytników ekranu: punkt poprzedniego miesiąca = 15 338,00 zł.
+  const prevRow = srTable.getByRole("row", {
+    name: formatMonthTitle(previous),
+  });
+  await expect(prevRow).toContainText(text("15 338,00 zł"));
+  // Dwa punkty: poprzedni i bieżący miesiąc.
+  await expect(
+    srTable.getByRole("row", {
+      name: formatMonthTitle(currentMonth(now())),
+    }),
+  ).toBeVisible();
+});
+
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`360 px, motyw ${colorScheme}`, () => {
     test.use({ viewport: { width: 360, height: 740 }, colorScheme });
+
+    test("wykres majątku bez przewijania w poziomie (scen. 12)", async ({
+      page,
+      seed,
+    }) => {
+      const previous = await seedTwoMonthHistory(seed);
+      await seedRates([
+        { effectiveDate: lastDayOfMonth(previous), rate: 42_500 },
+      ]);
+      await seed.setFallbackEurRate(42_500);
+      await page.goto("/majatek");
+      await expect(chartCard(page).getByRole("table")).toBeVisible();
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      );
+      expect(overflow).toBe(0);
+    });
 
     test("Majątek bez przewijania w poziomie", async ({ page, seed }) => {
       await seed.addSource({
