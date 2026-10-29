@@ -80,11 +80,15 @@ export const settings = pgTable(
       .primaryKey()
       .references(() => users.id, { onDelete: "cascade" }),
     eurRate: integer("eur_rate"),
+    // Kurs zapasowy EUR→PLN do rozliczenia, gdy NBP nie ma tabeli w oknie
+    // kursu rozliczenia (reguła 6.10, SPEC 5.9).
+    fallbackEurRate: integer("fallback_eur_rate"),
     savingsPct: integer("savings_pct").notNull().default(0),
     investmentsPct: integer("investments_pct").notNull().default(0),
   },
   (t) => [
     check("settings_eur_rate_check", sql`${t.eurRate} > 0`),
+    check("settings_fallback_eur_rate_check", sql`${t.fallbackEurRate} > 0`),
     check("settings_savings_pct_check", pctRange(t.savingsPct)),
     check("settings_investments_pct_check", pctRange(t.investmentsPct)),
     check(
@@ -217,6 +221,11 @@ export const months = pgTable(
     investmentsPct: integer("investments_pct").notNull(),
     settledAt: timestamptz("settled_at"),
     settledEurRate: integer("settled_eur_rate"),
+    // Kurs rozliczenia miesiąca z celem EUR (reguła 6.10, SPEC 5.5): data tabeli
+    // NBP (tylko dla pochodzenia `nbp`) i pochodzenie kursu. `manual` oznacza
+    // ręczny kurs sprzed Etapu 2.
+    settledRateDate: date("settled_rate_date", { mode: "string" }),
+    settledRateSource: text("settled_rate_source"),
   },
   (t) => [
     unique("months_user_id_month_key").on(t.userId, t.month),
@@ -231,6 +240,23 @@ export const months = pgTable(
     check(
       "months_settled_eur_rate_settled_check",
       sql`${t.settledEurRate} is null or ${t.settledAt} is not null`,
+    ),
+    check(
+      "months_settled_rate_source_check",
+      sql`${t.settledRateSource} in ('nbp', 'fallback', 'manual')`,
+    ),
+    // Pochodzenie istnieje dokładnie wtedy, gdy zapisano kurs rozliczenia
+    // (miesiąc z celem EUR); miesiąc bez celu EUR nie ma ani kursu, ani
+    // pochodzenia (SPEC 5.5).
+    check(
+      "months_settled_rate_source_eur_rate_check",
+      sql`(${t.settledEurRate} is null) = (${t.settledRateSource} is null)`,
+    ),
+    // Data tabeli NBP istnieje dokładnie dla pochodzenia `nbp`; `fallback`
+    // i `manual` jej nie mają.
+    check(
+      "months_settled_rate_date_check",
+      sql`(${t.settledRateDate} is not null) = (${t.settledRateSource} = 'nbp')`,
     ),
   ],
 );

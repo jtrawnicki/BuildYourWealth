@@ -54,8 +54,8 @@
     {
       "idx": 7,
       "version": "7",
-      "when": 1793218510705,
-      "tag": "0007_goals_deadline",
+      "when": 1793218104175,
+      "tag": "0007_settled_rate",
       "breakpoints": true
     }
   ]

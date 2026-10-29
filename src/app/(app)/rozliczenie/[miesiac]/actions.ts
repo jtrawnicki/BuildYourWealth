@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
 import {
+  monthHasEurGoal,
   settleMonth,
   type ActualAmount,
   type SettleInput,
@@ -11,11 +12,32 @@ import {
 import { now } from "@/domain/clock";
 import { parseActualAmount } from "@/domain/input";
 import { canSettleMonth } from "@/domain/time";
+import { resolveSettlementRate, sameChosenRate } from "@/rates/settlement-rate";
+import type { ChosenRate } from "@/rates/select";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
 import { field } from "@/app/form-data";
 import { SETTLE_MESSAGES, type SettleState } from "./state";
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/**
+ * Kurs rozliczenia pokazany na ekranie, odtworzony z pól formularza (data
+ * i pochodzenie); akcja porównuje go z kursem ustalonym teraz (scen. 36).
+ * `null`, gdy pola są niespójne — traktowane jak zmiana kursu.
+ */
+function parseShownRate(formData: FormData): ChosenRate | null {
+  const rate = Number(field(formData, "rate"));
+  if (!Number.isSafeInteger(rate) || rate <= 0) return null;
+  const source = field(formData, "rateSource");
+  const date = field(formData, "rateDate");
+  if (source === "nbp") {
+    return /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? { source: "nbp", rate, date }
+      : null;
+  }
+  if (source === "fallback") return date === "" ? { source, rate } : null;
+  return null;
+}
 
 type ActualDraft = { goalId: number; amount: string };
 
@@ -82,9 +104,28 @@ export async function settleAction(
     return { formError: SETTLE_MESSAGES.invalid };
   }
 
+  // Kurs rozliczenia ustalamy przed transakcją (reguła 6.10, STACK „Kurs NBP”):
+  // tylko dla miesiąca z celem EUR, i tylko gdy się nie zmienił od pokazania
+  // ekranu (scen. 36). Pobranie z NBP nie dzieje się w transakcji.
+  const db = getDb();
+  let rate: ChosenRate | null = null;
+  const eur = await monthHasEurGoal(db, user.id, month);
+  if (eur.exists && eur.hasEur) {
+    rate = await resolveSettlementRate(db, user.id, month, now());
+    if (rate === null) {
+      refresh();
+      return { formError: SETTLE_MESSAGES.noRate };
+    }
+    const shown = parseShownRate(formData);
+    if (shown === null || !sameChosenRate(shown, rate)) {
+      refresh();
+      return { formError: SETTLE_MESSAGES.rateChanged };
+    }
+  }
+
   let result;
   try {
-    result = await settleMonth(getDb(), user.id, month, input);
+    result = await settleMonth(db, user.id, month, input, rate);
   } catch (error) {
     // Błąd zapisu lub budzącej się bazy (SPEC 7).
     console.error(SAVE_ERROR_MESSAGE, error);

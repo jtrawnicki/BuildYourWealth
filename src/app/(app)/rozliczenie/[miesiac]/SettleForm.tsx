@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { convertEurToPln } from "@/domain/currency";
 import { formatMoney } from "@/domain/format";
 import { parseActualAmount } from "@/domain/input";
+import type { ChosenRate } from "@/rates/select";
 import { SaveError } from "@/ui/SaveError";
 import { settleAction } from "./actions";
 import type { SettleState } from "./state";
@@ -70,9 +71,12 @@ function totalPln(
 export function SettleForm({
   view,
   eurRate,
+  rate,
 }: {
   view: SettleView;
   eurRate: number | null;
+  /** Kurs rozliczenia pokazany na ekranie (reguła 6.10); `null` bez celu EUR. */
+  rate: ChosenRate | null;
 }) {
   const [mode, setMode] = useState<Mode>("plan");
   const [values, setValues] = useState<Record<number, string>>(() => {
@@ -125,6 +129,19 @@ export function SettleForm({
       <input type="hidden" name="month" value={view.month} />
       <input type="hidden" name="mode" value={mode} />
       <input type="hidden" name="actuals" value={actualsPayload} />
+      {/* Kurs pokazany na ekranie: akcja odrzuca zapis, gdy zmienił się od
+          otwarcia ekranu (reguła 6.10, scen. 36). */}
+      {rate && (
+        <>
+          <input type="hidden" name="rate" value={rate.rate} />
+          <input type="hidden" name="rateSource" value={rate.source} />
+          <input
+            type="hidden"
+            name="rateDate"
+            value={rate.source === "nbp" ? rate.date : ""}
+          />
+        </>
+      )}
 
       <section className={styles.intro}>
         <p className={styles.meta}>

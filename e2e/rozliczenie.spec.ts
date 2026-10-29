@@ -48,7 +48,9 @@ async function seedSettleableMonth(
       })
     : invest;
   await seed.setPools(2000, 1500);
-  if (opts.rate) await seed.setEurRate(opts.rate);
+  // Kurs rozliczenia bierze się z NBP, a gdy go brak (w E2E `NBP_API_URL`
+  // wskazuje zamknięty port) — z kursu zapasowego (reguła 6.10, T19a).
+  if (opts.rate) await seed.setFallbackEurRate(opts.rate);
   const ids: Record<string, number> = {
     poduszka: await seed.addGoal(savings, { name: "Poduszka", pct: 5000 }),
     wakacje: await seed.addGoal(savings, { name: "Wakacje", pct: 3000 }),

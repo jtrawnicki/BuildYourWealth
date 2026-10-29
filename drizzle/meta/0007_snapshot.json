@@ -1,5 +1,5 @@
 {
-  "id": "4c70785b-1671-440e-b9db-a24fcfee6f57",
+  "id": "471e5aa6-b6ef-4731-88af-44459fe4e35d",
   "prevId": "a54b2847-9514-4a2b-8e17-7e63777f42d8",
   "version": "7",
   "dialect": "postgresql",
@@ -128,12 +128,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "deadline": {
-          "name": "deadline",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "position": {
           "name": "position",
           "type": "integer",
@@ -217,14 +211,6 @@
         "goals_start_amount_check": {
           "name": "goals_start_amount_check",
           "value": "\"goals\".\"start_amount\" >= 0"
-        },
-        "goals_deadline_format_check": {
-          "name": "goals_deadline_format_check",
-          "value": "\"goals\".\"deadline\" is null or \"goals\".\"deadline\" ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'"
-        },
-        "goals_deadline_target_check": {
-          "name": "goals_deadline_target_check",
-          "value": "\"goals\".\"deadline\" is null or \"goals\".\"target_amount\" is not null"
         },
         "goals_position_check": {
           "name": "goals_position_check",
@@ -539,6 +525,18 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "settled_rate_date": {
+          "name": "settled_rate_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "settled_rate_source": {
+          "name": "settled_rate_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -593,6 +591,18 @@
         "months_settled_eur_rate_settled_check": {
           "name": "months_settled_eur_rate_settled_check",
           "value": "\"months\".\"settled_eur_rate\" is null or \"months\".\"settled_at\" is not null"
+        },
+        "months_settled_rate_source_check": {
+          "name": "months_settled_rate_source_check",
+          "value": "\"months\".\"settled_rate_source\" in ('nbp', 'fallback', 'manual')"
+        },
+        "months_settled_rate_source_eur_rate_check": {
+          "name": "months_settled_rate_source_eur_rate_check",
+          "value": "(\"months\".\"settled_eur_rate\" is null) = (\"months\".\"settled_rate_source\" is null)"
+        },
+        "months_settled_rate_date_check": {
+          "name": "months_settled_rate_date_check",
+          "value": "(\"months\".\"settled_rate_date\" is not null) = (\"months\".\"settled_rate_source\" = 'nbp')"
         }
       },
       "isRLSEnabled": false
@@ -710,6 +720,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "fallback_eur_rate": {
+          "name": "fallback_eur_rate",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "savings_pct": {
           "name": "savings_pct",
           "type": "integer",
@@ -748,6 +764,10 @@
         "settings_eur_rate_check": {
           "name": "settings_eur_rate_check",
           "value": "\"settings\".\"eur_rate\" > 0"
+        },
+        "settings_fallback_eur_rate_check": {
+          "name": "settings_fallback_eur_rate_check",
+          "value": "\"settings\".\"fallback_eur_rate\" > 0"
         },
         "settings_savings_pct_check": {
           "name": "settings_savings_pct_check",

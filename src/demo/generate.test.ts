@@ -182,10 +182,13 @@ describe("generator danych demo (SPEC 5.8, T16)", () => {
           }
           if (m.settled) {
             expect(m.settledEurRate).toBe(data.eurRate);
+            // Kursy rozliczeń demo zawsze jako kurs zapasowy (SPEC Z16, scen. 34).
+            expect(m.settledRateSource).toBe("fallback");
             for (const mg of m.goals)
               expect(mg.actualAmount).toBeGreaterThanOrEqual(0);
           } else {
             expect(m.settledEurRate).toBeNull();
+            expect(m.settledRateSource).toBeNull();
             for (const mg of m.goals) expect(mg.actualAmount).toBeNull();
           }
         }
