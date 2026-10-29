@@ -7,9 +7,9 @@ import {
   listOverdueMonths,
   type MonthData,
 } from "@/db/months";
-import { getEurRate } from "@/db/settings";
 import { listSources } from "@/db/sources";
 import { now } from "@/domain/clock";
+import { resolveCurrentRate } from "@/rates/current-rate";
 import {
   convertEurToPln,
   convertPlnToEur,
@@ -48,14 +48,16 @@ export default async function Home() {
   const db = getDb();
   const current = currentMonth(now());
   const previous = previousMonth(current);
-  const [currentData, previousData, overdue, sources, eurRate] =
+  const [currentData, previousData, overdue, sources, currentRate] =
     await Promise.all([
       getMonth(db, user.id, current),
       getMonth(db, user.id, previous),
       listOverdueMonths(db, user.id, current),
       listSources(db, user.id),
-      getEurRate(db, user.id),
+      resolveCurrentRate(db, user.id, now()),
     ]);
+  // Orientacyjne kwoty EUR i majątek po bieżącym kursie NBP (SPEC 5.9, 5.4).
+  const eurRate = currentRate?.rate ?? null;
 
   const hasIncome = currentData !== null && currentData.incomes.length > 0;
   const planView = hasIncome

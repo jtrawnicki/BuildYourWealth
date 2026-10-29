@@ -19,6 +19,32 @@
   font-size: 1.125rem;
 }
 
+.currentRate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.currentRateLabel {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.currentRateValue {
+  font-weight: 600;
+}
+
+.rateWarning {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-size: 0.875rem;
+}
+
 .form {
   display: flex;
   flex-direction: column;

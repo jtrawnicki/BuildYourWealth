@@ -7,7 +7,7 @@ import { resolveSettlementRate } from "@/rates/settlement-rate";
 import type { ChosenRate } from "@/rates/select";
 import { now } from "@/domain/clock";
 import { convertEurToPln } from "@/domain/currency";
-import { formatAmount, formatEurRate, formatMoney } from "@/domain/format";
+import { formatAmount, formatMoney } from "@/domain/format";
 import { formatMonthTitle } from "@/domain/month-name";
 import { computeMonthPlan, type Pool } from "@/domain/plan";
 import { plannedActual } from "@/domain/settlement";
@@ -100,7 +100,7 @@ function buildView(
   const planByGoal = new Map(plan.goals.map((goal) => [goal.id, goal.amount]));
   const rateHint =
     eurRate !== null
-      ? `Przeliczono po kursie ${formatEurRate(eurRate)}; możesz poprawić.`
+      ? "Kwota w euro po kursie rozliczenia; możesz poprawić."
       : null;
 
   const groups: SettleGroupView[] = [];
@@ -151,7 +151,8 @@ function buildView(
 const INFO: Record<string, string> = {
   alreadySettled: "Ten miesiąc jest już rozliczony.",
   notAvailable: "Rozliczenie będzie dostępne od ostatniego dnia miesiąca.",
-  noRate: "Najpierw ustaw kurs euro w Ustawieniach, żeby rozliczyć cel w euro.",
+  noRate:
+    "Nie udało się ustalić kursu z NBP. Ustaw kurs zapasowy w Ustawieniach, żeby rozliczyć cel w euro.",
 };
 
 /** Widok zastępczy, gdy rozliczenia nie da się teraz pokazać (SPEC 5.5, 7). */
@@ -172,7 +173,7 @@ function Info({
         </Link>
         {message === "noRate" && (
           <Link href="/ustawienia" className={styles.back}>
-            Ustaw kurs euro
+            Ustaw kurs zapasowy
           </Link>
         )}
       </div>

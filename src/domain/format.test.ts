@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   NBSP,
   formatAmount,
+  formatDate,
   formatEurRate,
   formatMoney,
   formatPercent,
@@ -92,6 +93,13 @@ describe("kurs EUR", () => {
     [123456, "12,3456"],
   ])("%i → %s", (rate, text) => {
     expect(formatEurRate(rate)).toBe(text);
+  });
+});
+
+describe("data tabeli NBP", () => {
+  it("formatuje datę ISO jako DD.MM.RRRR", () => {
+    expect(formatDate("2026-10-30")).toBe("30.10.2026");
+    expect(formatDate("2027-01-04")).toBe("04.01.2027");
   });
 });
 

@@ -36,8 +36,7 @@ export type Seed = {
   removeGoal(goalId: number): Promise<void>;
   /** Ustawia procenty pul w bieżącym planie (w setnych procenta). */
   setPools(savingsPct: number, investmentsPct: number): Promise<void>;
-  setEurRate(rate: number): Promise<void>;
-  /** Kurs zapasowy do rozliczenia, gdy NBP nie ma tabeli (reguła 6.10). */
+  /** Kurs zapasowy, gdy NBP nie ma tabeli (reguła 6.10); też „bieżący" w E2E. */
   setFallbackEurRate(rate: number): Promise<void>;
   /** Miesiąc z pozycjami przychodu; `settled` oznacza rozliczony (SPEC 5.4). */
   addMonth(input: MonthInput): Promise<number>;
@@ -55,6 +54,10 @@ type MonthInput = {
   savingsPct?: number;
   investmentsPct?: number;
   settledEurRate?: number;
+  /** Pochodzenie kursu rozliczenia (domyślnie `fallback`); `manual` bez daty. */
+  settledRateSource?: "nbp" | "fallback" | "manual";
+  /** Data tabeli NBP (`YYYY-MM-DD`); wymagana dla `settledRateSource: "nbp"`. */
+  settledRateDate?: string;
   incomes?: { name: string; amount: number }[];
   snapshot?: SnapshotInput[];
 };
@@ -117,12 +120,6 @@ function makeSeed(userId: number): Seed {
         .set({ savingsPct, investmentsPct })
         .where(eq(settings.userId, userId));
     },
-    async setEurRate(rate) {
-      await getDb()
-        .update(settings)
-        .set({ eurRate: rate })
-        .where(eq(settings.userId, userId));
-    },
     async setFallbackEurRate(rate) {
       await getDb()
         .update(settings)
@@ -135,9 +132,14 @@ function makeSeed(userId: number): Seed {
       savingsPct = 0,
       investmentsPct = 0,
       settledEurRate,
+      settledRateSource = "fallback",
+      settledRateDate,
       incomes: items = [],
       snapshot = [],
     }) {
+      // Kurs rozliczenia wymaga pochodzenia, a data tabeli tylko dla NBP
+      // (CHECK spójności, T19a).
+      const withRate = settled && settledEurRate != null;
       const [row] = await getDb()
         .insert(months)
         .values({
@@ -147,9 +149,11 @@ function makeSeed(userId: number): Seed {
           investmentsPct,
           settledAt: settled ? new Date() : null,
           settledEurRate: settled ? (settledEurRate ?? null) : null,
-          // Kurs rozliczenia wymaga pochodzenia (CHECK spójności, T19a).
-          settledRateSource:
-            settled && settledEurRate != null ? "fallback" : null,
+          settledRateSource: withRate ? settledRateSource : null,
+          settledRateDate:
+            withRate && settledRateSource === "nbp"
+              ? (settledRateDate ?? null)
+              : null,
         })
         .returning({ id: months.id });
       if (items.length > 0) {

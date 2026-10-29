@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { convertEurToPln } from "@/domain/currency";
 import { formatMoney } from "@/domain/format";
 import { parseActualAmount } from "@/domain/input";
+import { chosenRateText } from "@/rates/label";
 import type { ChosenRate } from "@/rates/select";
 import { SaveError } from "@/ui/SaveError";
 import { settleAction } from "./actions";
@@ -151,6 +152,8 @@ export function SettleForm({
         <p className={styles.sub}>
           Plan: <strong>{view.planSumLabel}</strong> na {view.goalCountLabel}.
         </p>
+        {/* Kurs rozliczenia miesiąca z celem EUR (SPEC 5.5, scen. 23, 24). */}
+        {rate && <p className={styles.rateInfo}>Kurs {chosenRateText(rate)}</p>}
       </section>
 
       {state.saveFailed && <SaveError />}

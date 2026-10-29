@@ -5,8 +5,9 @@ import { months } from "@/db/schema";
 import { now } from "@/domain/clock";
 import { MESSAGES } from "@/domain/input";
 import { formatMonthTitle } from "@/domain/month-name";
-import { currentMonth, previousMonth } from "@/domain/time";
+import { currentDay, currentMonth, previousMonth } from "@/domain/time";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
+import { seedRates } from "./db";
 import { expect, test, type Seed } from "./fixtures";
 
 // Kwoty na ekranie mają twarde spacje (SPEC 8); w oczekiwaniach piszemy zwykłe.
@@ -416,10 +417,35 @@ test("cel w EUR ma drugą linię kwoty, a bez kursu link do ustawień (SPEC 5.4)
   await expect(row.getByRole("link", { name: "Ustaw kurs EUR" })).toBeVisible();
 
   // Z kursem 4,3000: 1 470,00 zł ≈ 341,86 €.
-  await seed.setEurRate(43000);
+  await seed.setFallbackEurRate(43000);
   await page.reload();
   await expect(item(card(page, "Inwestycje"), "Akcje")).toContainText(
     text("≈ 341,86 €"),
+  );
+});
+
+test("cel EUR: druga linia po bieżącym kursie NBP (scen. 22)", async ({
+  page,
+  seed,
+}) => {
+  // Bieżąca tabela NBP 4,2731; cel 15% inwestycji = 220,50 zł ≈ 51,60 €.
+  await seedRates([{ effectiveDate: currentDay(now()), rate: 42731 }]);
+  const source = await seed.addSource({
+    name: "Konto EUR",
+    kind: "investments",
+    currency: "EUR",
+  });
+  await seed.setPools(0, 1500);
+  const goalId = await seed.addGoal(source, { name: "Akcje", pct: 1500 });
+  await seed.addMonth({
+    month: current,
+    investmentsPct: 1500,
+    incomes: [{ name: "Pensja", amount: 980000 }],
+    snapshot: [{ goalId }],
+  });
+  await page.goto("/");
+  await expect(item(card(page, "Inwestycje"), "Akcje")).toContainText(
+    text("≈ 51,60 €"),
   );
 });
 

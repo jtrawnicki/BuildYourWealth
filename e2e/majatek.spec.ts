@@ -104,7 +104,7 @@ test("dodanie źródeł: sumy, wartość EUR z przeliczeniem i prośba o kurs (S
   expect(await seed.countSources()).toBe(2);
 
   // Scen. 6: 1 051,28 € po kursie 4,3000 to 4 520,50 zł.
-  await seed.setEurRate(43000);
+  await seed.setFallbackEurRate(43000);
   await page.reload();
   await expect(eur).toContainText(text("≈ 4 520,50 zł"));
   await expect(summary(page)).toContainText(text("(2 źródła)"));

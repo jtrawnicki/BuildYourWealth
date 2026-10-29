@@ -3,8 +3,9 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { goals } from "@/db/schema";
 import { now } from "@/domain/clock";
+import { formatDate } from "@/domain/format";
 import { formatMonthTitle } from "@/domain/month-name";
-import { currentMonth, previousMonth } from "@/domain/time";
+import { currentMonth, lastDayOfMonth, previousMonth } from "@/domain/time";
 import { expect, test, type Seed } from "./fixtures";
 
 // Kwoty na ekranie mają twarde spacje (SPEC 8); w oczekiwaniach piszemy zwykłe.
@@ -149,11 +150,69 @@ test("wykonanie celu EUR w EUR i PLN po kursie rozliczenia, odporne na zmianę k
   await expect(row).toContainText(text("387,00 zł"));
 
   // Zmiana bieżącego kursu nie zmienia historii (liczona po kursie rozliczenia).
-  await seed.setEurRate(50000);
+  await seed.setFallbackEurRate(50000);
   await page.reload();
   const after = goalRow(monthRegion(page, previous), "Akcje");
   await expect(after).toContainText(text("387,00 zł"));
   await expect(after).not.toContainText(text("450,00 zł"));
+});
+
+test("Historia pokazuje pochodzenie kursu rozliczenia (scen. 23, 39)", async ({
+  page,
+  seed,
+}) => {
+  const eurSrc = await seed.addSource({
+    name: "Konto EUR",
+    kind: "investments",
+    currency: "EUR",
+  });
+  const goalId = await seed.addGoal(eurSrc, { name: "Akcje", pct: 10000 });
+  const dayP = lastDayOfMonth(previous);
+  // Miesiąc rozliczony po kursie NBP z datą tabeli (scen. 23).
+  await seed.addMonth({
+    month: previous,
+    settled: true,
+    investmentsPct: 1500,
+    settledEurRate: 42650,
+    settledRateSource: "nbp",
+    settledRateDate: dayP,
+    incomes: [{ name: "Pensja", amount: 980000 }],
+    snapshot: [{ goalId, actualAmount: 9000 }],
+  });
+  // Starszy miesiąc rozliczony w MVP po kursie ręcznym (scen. 39).
+  await seed.addMonth({
+    month: twoAgo,
+    settled: true,
+    investmentsPct: 1500,
+    settledEurRate: 43000,
+    settledRateSource: "manual",
+    incomes: [{ name: "Pensja", amount: 980000 }],
+    snapshot: [{ goalId, actualAmount: 9000 }],
+  });
+  await page.goto("/historia");
+
+  await expect(monthRegion(page, previous)).toContainText(
+    "Kurs " + text("4,2650 zł") + ` (NBP, ${formatDate(dayP)})`,
+  );
+  await expect(monthRegion(page, twoAgo)).toContainText(
+    "Kurs " + text("4,3000 zł") + " (ręczny, sprzed Etapu 2)",
+  );
+});
+
+test("miesiąc bez celu EUR nie pokazuje kursu (scen. 39)", async ({
+  page,
+  seed,
+}) => {
+  await seedSettledSavings(seed, {
+    month: previous,
+    income: 980000,
+    savingsPct: 2000,
+    goalPct: 5000,
+    actual: 98000,
+  });
+  await page.goto("/historia");
+  await expect(monthRegion(page, previous)).toContainText("Rozliczony");
+  await expect(monthRegion(page, previous)).not.toContainText("Kurs ");
 });
 
 test("zmiana nazwy celu widać także w starszych miesiącach", async ({

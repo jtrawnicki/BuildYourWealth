@@ -14,7 +14,7 @@ export const SETTLE_MESSAGES = {
   alreadySettled: "Ten miesiąc jest już rozliczony.",
   notAvailable: "Rozliczenie będzie dostępne od ostatniego dnia miesiąca.",
   notFound: "Tego miesiąca już nie ma.",
-  noRate: "Ustaw kurs euro w Ustawieniach, żeby rozliczyć cel w euro.",
+  noRate: "Ustaw kurs zapasowy w Ustawieniach, żeby rozliczyć cel w euro.",
   invalid: "Popraw faktyczne kwoty i spróbuj ponownie.",
   rateChanged:
     "Kurs rozliczenia się zmienił. Sprawdź kwoty i zatwierdź ponownie.",

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
 import { canCreateMonth } from "@/domain/time";
+import type { SettledRateSource } from "@/rates/label";
 import type { Db, Tx } from "./client";
 import {
   goals,
@@ -146,6 +147,10 @@ export type HistoryMonth = {
   settled: boolean;
   /** Kurs zapisany przy rozliczeniu (SPEC 6.9); historia liczy EUR po nim. */
   settledEurRate: number | null;
+  /** Data tabeli NBP kursu rozliczenia; `null` dla zapasowego i ręcznego. */
+  settledRateDate: string | null;
+  /** Pochodzenie kursu rozliczenia (SPEC 5.6): `nbp`, `fallback` albo `manual`. */
+  settledRateSource: SettledRateSource | null;
   income: number;
   goals: HistoryGoal[];
 };
@@ -169,6 +174,8 @@ export async function listHistory(
       investmentsPct: months.investmentsPct,
       settledAt: months.settledAt,
       settledEurRate: months.settledEurRate,
+      settledRateDate: months.settledRateDate,
+      settledRateSource: months.settledRateSource,
       // Suma `bigint` wraca ze sterownika jako string; rzutujemy na liczbę.
       income: sql<string>`coalesce(sum(${incomes.amount}), 0)`,
     })
@@ -215,6 +222,8 @@ export async function listHistory(
     investmentsPct: row.investmentsPct,
     settled: row.settledAt !== null,
     settledEurRate: row.settledEurRate,
+    settledRateDate: row.settledRateDate,
+    settledRateSource: row.settledRateSource as SettledRateSource | null,
     income: Number(row.income),
     goals: goalsByMonth.get(row.id) ?? [],
   }));
