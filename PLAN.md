@@ -3,8 +3,10 @@
 Status: **MVP zatwierdzone po review etapu E (2026-10-20)**; zmiana koncepcji
 wdrożenia z 2026-10-21 (SPEC P8, STACK 9.4): nowe zadania T4a i T16,
 zmienione T4 (opis historyczny) i T15. MVP zamknięte (T15).
-**Etap 2** (T17–T26, rozdział „Etap 2” na końcu): z 2026-10-27, po
-review etapów B i E i rozstrzygnięciach właściciela.
+**Etap 2** (T17–T29, rozdział „Etap 2” na końcu): z 2026-10-27, po
+review etapów B i E i rozstrzygnięciach właściciela; zmiana zakresu
+z 2026-10-29 (SPEC P24–P30): powiadomienia (T23a–T25) wycofane, w ich
+miejsce prognoza majątku (T27–T29).
 Źródła: [`SPEC.md`](SPEC.md) (co budujemy), [`STACK.md`](STACK.md) (jak),
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (proces). Plan opisuje rezultaty,
 nie kod. Po review etapu E każde zadanie dostaje Issue na GitHub, a ten plan
@@ -381,8 +383,9 @@ czy to decyzje produktowe dla człowieka:
 
 # Etap 2
 
-Zakres: SPEC 5.9–5.12 i 8.1, reguły 6.10–6.13, scenariusze 22–39, STACK
-„Kurs NBP”, „Historia wartości”, „Prognoza celu”, „Powiadomienia”.
+Zakres: SPEC 5.9, 5.11–5.13 i 8.1, reguły 6.10–6.14, scenariusze 22–28
+i 34–47, STACK „Kurs NBP”, „Historia wartości”, „Prognoza celu”, „Prognoza
+majątku”.
 Oznaczenia jak w MVP. Plan po niezależnym review etapu E
 ([`docs/reviews/plan-review-etap2-E.md`](docs/reviews/plan-review-etap2-E.md))
 i rozstrzygnięciach właściciela z 2026-10-27.
@@ -392,7 +395,8 @@ i rozstrzygnięciach właściciela z 2026-10-27.
 (zakładane razem z T17–T26); kryterium „gotowe” to merge do `main`
 z aktualizacją SPEC 8 (SPEC P20). R zmienia wyłącznie pliki interfejsu
 (`src/app/(app)/*`, `src/ui/*`), więc z R kolidują tylko zadania
-z interfejsem: T19b, T20, T22, T25. Zadania bez interfejsu idą od razu.
+z interfejsem: T19b, T20, T22. Zadania bez interfejsu idą od razu. R jest
+już zmergowane, więc T28 i T29 na nie nie czekają.
 
 ## Milestone'y Etapu 2
 
@@ -401,7 +405,7 @@ z interfejsem: T19b, T20, T22, T25. Zadania bez interfejsu idą od razu.
 | M7 Fundamenty | Aplikacja zapisuje historię wartości, ma kursy NBP i termin celu w bazie oraz obliczenia prognozy. | T17, T18, T21 |
 | M8 Kurs NBP | Rozliczenie po kursie z końca miesiąca; kurs EUR bez ręcznego wpisywania na wszystkich ekranach. | T19a, T19b |
 | M9 Wykres i prognoza | Wykres majątku na Majątku; termin, prognoza i sugestia procentu przy celach. | T20, T22 |
-| M10 Powiadomienia | Wersja prywatna wysyła maile o przychodach, rozliczeniu i celach; demo pokazuje podgląd. | T23a, T23b, T24, T25 |
+| M10 Prognoza majątku | Zakładka „Prognoza” ze scenariuszami +5/+10/+15% wpływów i zakładaną stopą zwrotu per źródło; powiadomienia e-mail wycofane (SPEC P24). | T27, T28, T29 |
 | M11 Wydanie Etapu 2 | Pełna weryfikacja poziomu 3. | T26 |
 
 Graf zależności:
@@ -410,13 +414,14 @@ Graf zależności:
 Bez R (od razu, równolegle):
 T17 (historia wartości)
 T18 (kursy NBP) ─ T19a (kurs w rozliczeniu, dane)
-T21 (termin: dane + domena prognozy) ─ T23a (wybór i treści maili) ─ T23b (wysyłka)
-T23b + T19a ─ T24 (wyzwalacze, Harmonogram)
+T21 (termin: dane + domena prognozy)
+T27 (domena prognozy majątku)            ← równolegle z T28
+T28 (stopa zwrotu źródła: dane, Majątek, demo)
 
 Po R:
 T19a ─ T19b (kurs na ekranach) ─ T20 (wykres; wymaga też T17)
 T21 + T18 ─ T22 (termin i prognoza w interfejsie)
-T23b ─ T25 (Ustawienia, podgląd demo)
+T27 + T28 ─ T29 (zakładka Prognoza, nawigacja)
 
 wszystko ─ T26
 ```
@@ -426,8 +431,10 @@ każdy tydzień zwłoki to tydzień bez danych na wykresie. Po jego merge'u
 właściciel aktualizuje wersję prywatną: `git pull`, **`npm run private:dump`**
 (pierwsza migracja z danymi na `byw_private`), potem `npm run private:start`.
 
-T19a i T24 zmieniają akcję rozliczenia, więc nie idą równolegle (T24 po
-T19a). T19b i T20 zmieniają `majatek/page.tsx`, więc T20 idzie po T19b.
+T19b i T20 zmieniają `majatek/page.tsx`, więc T20 idzie po T19b. T28
+zmienia formularz źródła na Majątku, a T29 nawigację i nową stronę; T22
+i T29 mogą iść równolegle (wspólny jest tylko generator demo, scalany przy
+merge'u).
 
 ## M7 Fundamenty
 
@@ -554,79 +561,69 @@ T19a). T19b i T20 zmieniają `majatek/page.tsx`, więc T20 idzie po T19b.
   miesiąc”.
 - **Weryfikacja:** E2E, testy generatora.
 
-## M10 Powiadomienia
+## M10 Prognoza majątku
 
-### T23a Wybór maili i treści
+Powiadomienia e-mail (dawne T23a, T23b, T24, T25, Issue #78–#81) są
+wycofane decyzją właściciela z 2026-10-29 (SPEC P24); ich Issue zamyka się
+jako nieplanowane. Kod ich nie zawierał.
 
-- **Rezultat:** czysta funkcja wyboru maili dla trzech grup wg tabeli
-  „Kiedy / Aktualny” z SPEC 5.10 (w tym nowy miesiąc do rozliczenia, 7 dni
-  kalendarzowych od `sent_at`, okno 30 dni, status „zagrożony” i jego
-  zerowanie), klucze deduplikacji, polskie tematy z odmianą liczby
-  miesięcy i treści jako zwykły tekst; kolumny `settings.notify_*`
-  i `goals.risk_notified_at`.
-- **Zależy od:** T21. **Poziom:** 2.
-- **Kryteria akceptacji:** scen. 29–32 jako testy z wstrzykniętym `now`
-  (w tym 30.11 w scen. 30, 1.10 → 5.11 w scen. 31, marzec → grudzień bez
-  sprawdzenia w scen. 32); scen. 33 część „grupa włączona 15.11”;
-  wyłączona grupa nie daje maili; podgląd demo z danych generatora zawiera
-  maile ze scen. 34.
-- **Weryfikacja:** testy jednostkowe, niezależne review.
+### T27 Domena prognozy majątku
 
-### T23b Wysyłka i deduplikacja
+- **Rezultat:** czysta funkcja reguły 6.14 w `src/domain/` wg STACK
+  „Prognoza majątku”: średni przychód (z liczbą miesięcy), przychód
+  i wpłata scenariusza, wpłata do każdego źródła z bieżącego planu
+  (reguły 2–3), serie miesięczne czterech scenariuszy na `BigInt`
+  z kapitalizacją miesięczną i zaokrągleniem połówek od zera, suma wpłat,
+  zysk, udział zysku, „każda złotówka”, progi i miesiące ich osiągnięcia,
+  średnia faktycznych wpłat do zdania kontrolnego; walidacja stopy
+  i horyzontu z SPEC 7.1.
+- **Zależy od:** brak. **Poziom:** 2 (obliczenia na pieniądzach).
+  **Równolegle:** z T28, T22.
+- **Kryteria akceptacji:** przykład prognozy majątku z SPEC 6 co do grosza
+  (13 050,00, 14 105,25 i 24 952,36 zł; 85 259, 88 747, 92 236
+  i 95 724 zł; k = 34 i k = 30); scen. 40–42 i 45 (część obliczeniowa);
+  przypadki: mniej niż 6 miesięcy, tylko bieżący miesiąc, brak przychodu,
+  pule 0%, źródło bez celu, dwa cele na jednym źródle, cel osiągnięty,
+  ujemna stopa, brak stóp, źródło EUR (bieżący kurs, brak kursu), więcej
+  niż 3 progi, brak progów, horyzont 40 lat bez przekroczenia bezpiecznego
+  zakresu, rozliczenia z kwotami EUR w zdaniu kontrolnym, przełom roku.
+- **Weryfikacja:** testy jednostkowe, niezależne review obliczeń.
 
-- **Rezultat:** wg STACK „Powiadomienia”: tabela `notifications` (jeden
-  wiersz na mail), przejęcie wiersza i ponowienia, wysyłka przez
-  `nodemailer` ze wstrzykiwanym transportem i wymogiem TLS dla hosta innego
-  niż `localhost`, krótkie limity czasu, funkcja „sprawdź i wyślij”, moduł
-  wysyłki odmawiający działania w trybie demo, atrapa SMTP na `node:net`
-  z trybem „odrzuć AUTH” podłączona w `playwright.config.ts`.
-- **Zależy od:** T23a. **Poziom:** 2 (nowa zależność produkcyjna, dane
-  wychodzące poza komputer).
-- **Kryteria akceptacji:** dwa równoległe sprawdzenia z różnych połączeń
-  wysyłają mail raz; proces przerwany po przejęciu nie blokuje maila na
-  stałe; błąd transportu zostawia mail do ponowienia, a wiersz pokazuje
-  błąd; brak zmiennych `SMTP_*` = brak wysyłki bez błędu; tryb demo nie
-  tworzy transportu SMTP; uzasadnienie `nodemailer` w PR (STACK 2).
-- **Weryfikacja:** testy integracyjne, niezależne review bezpieczeństwa
-  (co wychodzi poza komputer, sekrety, TLS, demo).
+### T28 Zakładana stopa zwrotu źródła
 
-### T24 Wyzwalacze w wersji prywatnej
+- **Rezultat:** kolumna `sources.expected_return` (migracja dodająca,
+  CHECK zakresu), zapis i odczyt w `db/`, pole „Zakładana stopa zwrotu
+  (opcjonalnie)” z podpowiedzią w formularzu źródła na Majątku (SPEC 5.2),
+  walidacja z SPEC 7.1; generator demo ustawia stopy części źródeł
+  i zostawia co najmniej jedno aktywne źródło bez stopy (SPEC 5.8).
+- **Zależy od:** brak. **Poziom:** 2 (migracja na `byw_private`).
+  **Równolegle:** z T27, T22.
+- **Kryteria akceptacji:** scen. 43 bez części o Prognozie (zapis 6,50%,
+  odrzucenie 60, wyczyszczenie pola); zmiana stopy nie dodaje wiersza do
+  `source_values` (test integracyjny); migracja na danych z T17 zachowuje
+  wszystkie wartości, `drizzle-kit generate` nie daje różnicy; testy
+  generatora potwierdzają źródła ze stopą i bez dla wielu dat `now`;
+  scen. 12 dla Majątku.
+- **Weryfikacja:** testy integracyjne, E2E formularza, niezależne review
+  migracji. Po merge'u właściciel aktualizuje wersję prywatną
+  z `private:dump` (nowy plik w `drizzle/`).
 
-- **Rezultat:** `npm run private:notify` (czeka na Dockera do 5 minut, nie
-  migruje, log w `logs/`, `/logs/` w `.gitignore`), sprawdzenie
-  w `private:start` równolegle ze startem serwera, sprawdzenie po
-  rozliczeniu i zapisie planu lub celu przez `after()` tylko po udanym
-  zapisie, `private:notify:install` / `:uninstall` (wyzwalacz codzienny
-  i przy logowaniu z opóźnieniem, `StartWhenAvailable`, katalog roboczy,
-  pełna ścieżka do `node`, ukryte okno), przekazanie `SMTP_*` i czyszczenie
-  `NBP_API_URL` w `scripts/private-env.ts`, `SMTP_*`
-  w `.env.private.example`, instrukcja w `AGENTS.md` (hasło aplikacji
-  Gmail, rejestracja zadania, autostart Docker Desktop — SPEC P21).
-- **Zależy od:** T23b, T19a. **Poziom:** 2.
-- **Wymaga człowieka:** hasło aplikacji Gmail i zmienne `SMTP_*`
-  w `.env.private`, włączenie autostartu Docker Desktop, rejestracja
-  zadania, sprawdzenie maila na prawdziwej skrzynce (agent nie czyta
-  `.env.private`).
-- **Kryteria akceptacji:** `private:notify` na `byw_dev` z atrapą SMTP
-  wysyła mail ze scen. 29; Docker niedostępny przez 5 minut daje czytelny
-  błąd i kod ≠ 0; oczekujące migracje dają błąd „uruchom private:start”;
-  test `private-env` (przekazanie `SMTP_*`, brak `NBP_API_URL`);
-  rozliczenie nie czeka na SMTP; skrypty instalacji są idempotentne;
-  ręczny test właściciela: wylogowanie, zalogowanie z wyłączonym Dockerem
-  → mail wychodzi bez ręcznej akcji.
-- **Weryfikacja:** testy skryptów, ręczny test właściciela.
+### T29 Zakładka „Prognoza”
 
-### T25 Ustawienia powiadomień i podgląd w demo
-
-- **Rezultat:** sekcja „Powiadomienia” w Ustawieniach (SPEC 5.10, 8.1):
-  adres, przełączniki, „Wyślij testowy mail”, lista 10 ostatnich maili
-  z ostatnim stanem, stan „nie skonfigurowano”; w demo wyłącznie podgląd
-  maili.
-- **Zależy od:** T23b, R. **Poziom:** 2.
-- **Kryteria akceptacji:** scen. 33, 34 (część powiadomień) jako E2E
-  z atrapą SMTP; walidacja adresu z SPEC 7.1; testowy mail w demo jest
-  odrzucony po stronie serwera; nowe akcje mają test „bez sesji brak
-  danych”; scen. 12 dla Ustawień.
+- **Rezultat:** SPEC 5.13 i 8.1: strona `/prognoza` z kartą „Punkt
+  wyjścia” i zdaniem kontrolnym, przełącznikiem horyzontu z polem własnej
+  liczby lat, wykresem czterech scenariuszy (dymek na hover, dotyk
+  i strzałki, znaczniki progów, tabela dla czytników ekranu), kartami
+  scenariuszy, „Wpłaty kontra zysk” z przełącznikiem scenariusza,
+  kamieniami milowymi, tabelą źródeł z dopiskami i stałym dopiskiem; stany
+  braku danych; szósta zakładka w nawigacji i ukryty przycisk motywu
+  w dolnej belce (SPEC P30).
+- **Zależy od:** T27, T28. **Poziom:** 2.
+- **Kryteria akceptacji:** scen. 40, 41, 43 (część Prognozy), 44, 46, 47
+  jako E2E, scen. 34 (część Prognozy) w trybie demo; strona ma test „bez
+  sesji brak danych” (scen. 13); scen. 12 dla Prognozy i nawigacji (oba
+  motywy, 360 px bez przewijania w poziomie); brak nowej zależności
+  produkcyjnej; zmiana horyzontu nie wysyła żądania do serwera.
 - **Weryfikacja:** E2E w obu trybach, niezależne review.
 
 ## M11 Wydanie Etapu 2
@@ -636,13 +633,13 @@ T19a). T19b i T20 zmieniają `majatek/page.tsx`, więc T20 idzie po T19b.
 - **Rezultat:** wydanie zgodne z WORKFLOW etap G, raport
   `docs/RELEASE-ETAP-2.md` (jak `RELEASE-MVP.md`).
 - **Zależy od:** wszystkie. **Poziom:** 3.
-- **Kryteria akceptacji:** scenariusze 1–39 mają zielony test albo
+- **Kryteria akceptacji:** scenariusze 1–28 i 34–47 mają zielony test albo
   odhaczony krok ręczny; audyt bezpieczeństwa: wersja prywatna nadal
-  niedostępna z sieci, jedyne połączenia wychodzące to NBP i SMTP przez TLS,
-  demo nie wysyła maili, kursy demo nie są podpisane jako NBP; smoke test
-  demo; wersja prywatna zaktualizowana z kopią przed migracją
-  (`private:dump`), testowy mail i mail z Harmonogramu odebrane przez
-  właściciela.
+  niedostępna z sieci, jedyne połączenie wychodzące to NBP, Prognoza nie
+  wysyła danych poza aplikację, kursy demo nie są podpisane jako NBP; smoke
+  test demo (w tym zakładka Prognoza); wersja prywatna zaktualizowana
+  z kopią przed migracją (`private:dump`), a właściciel wpisał stopy
+  zwrotu swoich źródeł i obejrzał Prognozę.
 - **Weryfikacja:** pełna bramka, ręczny scenariusz właściciela.
 
 ## Rozstrzygnięcia review Etapu 2
@@ -655,3 +652,7 @@ Właściciel produktu przyjął 2026-10-27 rekomendacje obu review:
   z wymogiem TLS (STACK 9.5); D2 → Z10–Z16 zaakceptowane, kursy demo jako
   `fallback`; D3 → autostart Dockera (SPEC P21, STACK 9.8); D4 → podział
   T19 na T19a i T19b, Issue dla R; B1–B5 poprawione w PLAN i STACK.
+- **Zmiana zakresu (2026-10-29):** właściciel wycofał powiadomienia e-mail
+  (SPEC P24) i dodał prognozę majątku (P25–P30) po burzy mózgów i makiecie;
+  M10 to teraz T27–T29. Zmiana SPEC przechodzi niezależne review etapu B,
+  a nowe zadania review etapu E, zanim dostaną Issue.
