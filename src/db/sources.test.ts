@@ -399,8 +399,16 @@ describe("listSourceHistory (wykres majątku, reguła 6.11)", () => {
 
     const entries = await listSourceHistory(getDb(), userId);
     expect(entries).toEqual([
-      expect.objectContaining({ sourceId: active, value: 1000, currency: "PLN" }),
-      expect.objectContaining({ sourceId: active, value: 1500, currency: "PLN" }),
+      expect.objectContaining({
+        sourceId: active,
+        value: 1000,
+        currency: "PLN",
+      }),
+      expect.objectContaining({
+        sourceId: active,
+        value: 1500,
+        currency: "PLN",
+      }),
       expect.objectContaining({ sourceId: gone, value: 0, currency: "PLN" }),
       expect.objectContaining({ sourceId: gone, value: 0, currency: "PLN" }),
     ]);

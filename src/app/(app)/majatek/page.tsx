@@ -2,11 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/auth/guard";
 import { getDb } from "@/db/client";
-import {
-  listSourceHistory,
-  listSources,
-  type SourceRow,
-} from "@/db/sources";
+import { listSourceHistory, listSources, type SourceRow } from "@/db/sources";
 import { now } from "@/domain/clock";
 import { convertEurToPln, netWorthPln } from "@/domain/currency";
 import { formatAmount, formatMoney, formatSourceCount } from "@/domain/format";
@@ -110,8 +106,7 @@ export default async function WealthPage() {
   // Stan wykresu: za mało punktów (miesiąc wdrożenia), brak kursu dla źródła EUR
   // albo gotowe punkty reguły 6.11.
   const chart =
-    deploymentMonth &&
-    monthSpan(deploymentMonth, currentMonth(nowDate)) >= 2
+    deploymentMonth && monthSpan(deploymentMonth, currentMonth(nowDate)) >= 2
       ? netWorthChart({
           history,
           deploymentMonth,
@@ -132,7 +127,9 @@ export default async function WealthPage() {
             <h2 id="wykres" className={styles.groupTitle}>
               Wartość majątku
             </h2>
-            {total !== null && <span className={styles.groupTotal}>{total}</span>}
+            {total !== null && (
+              <span className={styles.groupTotal}>{total}</span>
+            )}
           </div>
           {chartView ? (
             <NetWorthChart

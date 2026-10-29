@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  netWorthChart,
-  type ChartHistoryEntry,
-} from "./networth-chart";
+import { netWorthChart, type ChartHistoryEntry } from "./networth-chart";
 
 type RawEntry = {
   sourceId: number;
@@ -26,10 +23,30 @@ function ratesFrom(map: Record<string, number>) {
 describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
   it("scenariusz 25: punkt końca miesiąca z rozliczeniem i źródłem EUR", () => {
     const h = history([
-      { sourceId: 1, value: 1_000_000, currency: "PLN", recordedAt: "2026-11-01T09:00:00Z" },
-      { sourceId: 2, value: 100_000, currency: "EUR", recordedAt: "2026-11-01T09:00:00Z" },
-      { sourceId: 1, value: 1_050_000, currency: "PLN", recordedAt: "2026-11-05T10:00:00Z" },
-      { sourceId: 1, value: 1_108_800, currency: "PLN", recordedAt: "2026-11-20T10:00:00Z" },
+      {
+        sourceId: 1,
+        value: 1_000_000,
+        currency: "PLN",
+        recordedAt: "2026-11-01T09:00:00Z",
+      },
+      {
+        sourceId: 2,
+        value: 100_000,
+        currency: "EUR",
+        recordedAt: "2026-11-01T09:00:00Z",
+      },
+      {
+        sourceId: 1,
+        value: 1_050_000,
+        currency: "PLN",
+        recordedAt: "2026-11-05T10:00:00Z",
+      },
+      {
+        sourceId: 1,
+        value: 1_108_800,
+        currency: "PLN",
+        recordedAt: "2026-11-20T10:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -47,12 +64,27 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("zmiany w grudniu nie ruszają punktu listopadowego (SPEC 5.11)", () => {
     const base: RawEntry[] = [
-      { sourceId: 1, value: 1_108_800, currency: "PLN", recordedAt: "2026-11-20T10:00:00Z" },
-      { sourceId: 2, value: 100_000, currency: "EUR", recordedAt: "2026-11-01T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 1_108_800,
+        currency: "PLN",
+        recordedAt: "2026-11-20T10:00:00Z",
+      },
+      {
+        sourceId: 2,
+        value: 100_000,
+        currency: "EUR",
+        recordedAt: "2026-11-01T09:00:00Z",
+      },
     ];
     const withDecember = history([
       ...base,
-      { sourceId: 1, value: 2_000_000, currency: "PLN", recordedAt: "2026-12-10T10:00:00Z" },
+      {
+        sourceId: 1,
+        value: 2_000_000,
+        currency: "PLN",
+        recordedAt: "2026-12-10T10:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: withDecember,
@@ -73,7 +105,12 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("jeden punkt w miesiącu wdrożenia (SPEC 5.11, scen. 26)", () => {
     const h = history([
-      { sourceId: 1, value: 500_000, currency: "PLN", recordedAt: "2026-11-02T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 500_000,
+        currency: "PLN",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -91,8 +128,18 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("źródło dodane w trakcie miesiąca nie liczy się do wcześniejszego punktu", () => {
     const h = history([
-      { sourceId: 1, value: 300_000, currency: "PLN", recordedAt: "2026-11-02T09:00:00Z" },
-      { sourceId: 2, value: 200_000, currency: "PLN", recordedAt: "2026-12-10T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 300_000,
+        currency: "PLN",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
+      {
+        sourceId: 2,
+        value: 200_000,
+        currency: "PLN",
+        recordedAt: "2026-12-10T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -109,8 +156,18 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("zarchiwizowane źródło przestaje się liczyć od wartości 0", () => {
     const h = history([
-      { sourceId: 1, value: 400_000, currency: "PLN", recordedAt: "2026-11-02T09:00:00Z" },
-      { sourceId: 1, value: 0, currency: "PLN", recordedAt: "2026-12-05T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 400_000,
+        currency: "PLN",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
+      {
+        sourceId: 1,
+        value: 0,
+        currency: "PLN",
+        recordedAt: "2026-12-05T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -128,8 +185,18 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
   it("zmiana waluty źródła bierze walutę zapisaną z danym punktem", () => {
     const h = history([
       // Najpierw PLN, w grudniu przepięte na EUR tą samą liczbą (SPEC 7).
-      { sourceId: 1, value: 100_000, currency: "PLN", recordedAt: "2026-11-02T09:00:00Z" },
-      { sourceId: 1, value: 100_000, currency: "EUR", recordedAt: "2026-12-05T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 100_000,
+        currency: "PLN",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
+      {
+        sourceId: 1,
+        value: 100_000,
+        currency: "EUR",
+        recordedAt: "2026-12-05T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -147,8 +214,18 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("przełom roku: grudzień 2026 → styczeń 2027", () => {
     const h = history([
-      { sourceId: 1, value: 100_000, currency: "PLN", recordedAt: "2026-12-10T09:00:00Z" },
-      { sourceId: 1, value: 150_000, currency: "PLN", recordedAt: "2027-01-10T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 100_000,
+        currency: "PLN",
+        recordedAt: "2026-12-10T09:00:00Z",
+      },
+      {
+        sourceId: 1,
+        value: 150_000,
+        currency: "PLN",
+        recordedAt: "2027-01-10T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -166,7 +243,12 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("brak kursu z końca miesiąca dla źródła EUR → cały wykres prosi o kurs", () => {
     const h = history([
-      { sourceId: 1, value: 50_000, currency: "EUR", recordedAt: "2026-11-02T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 50_000,
+        currency: "EUR",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,
@@ -180,8 +262,18 @@ describe("netWorthChart — reguła 6.11 (SPEC 5.11)", () => {
 
   it("zerowe źródło EUR bez kursu nie blokuje wykresu", () => {
     const h = history([
-      { sourceId: 1, value: 200_000, currency: "PLN", recordedAt: "2026-11-02T09:00:00Z" },
-      { sourceId: 2, value: 0, currency: "EUR", recordedAt: "2026-11-02T09:00:00Z" },
+      {
+        sourceId: 1,
+        value: 200_000,
+        currency: "PLN",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
+      {
+        sourceId: 2,
+        value: 0,
+        currency: "EUR",
+        recordedAt: "2026-11-02T09:00:00Z",
+      },
     ]);
     const result = netWorthChart({
       history: h,

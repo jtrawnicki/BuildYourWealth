@@ -361,7 +361,9 @@ test("wykres z dwoma punktami: koniec miesiąca ze źródłem EUR (scen. 25, 26)
   const srTable = chartCard(page).getByRole("table");
   await expect(srTable).toBeVisible();
   // Tabela dla czytników ekranu: punkt poprzedniego miesiąca = 15 338,00 zł.
-  const prevRow = srTable.getByRole("row", { name: formatMonthTitle(previous) });
+  const prevRow = srTable.getByRole("row", {
+    name: formatMonthTitle(previous),
+  });
   await expect(prevRow).toContainText(text("15 338,00 zł"));
   // Dwa punkty: poprzedni i bieżący miesiąc.
   await expect(

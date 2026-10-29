@@ -48,6 +48,7 @@ export async function resolveChartRates(
   ]);
   return {
     current: currentRate(rates, fallback, now),
-    rateForDay: (day) => rateOnDayOrFallback(rates, day, fallback)?.rate ?? null,
+    rateForDay: (day) =>
+      rateOnDayOrFallback(rates, day, fallback)?.rate ?? null,
   };
 }

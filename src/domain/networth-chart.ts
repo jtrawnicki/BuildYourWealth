@@ -35,8 +35,7 @@ export type ChartPoint = {
  * EUR o niezerowej wartości wypada w miesiącu bez żadnego kursu (SPEC 5.11).
  */
 export type NetWorthChart =
-  | { ok: true; points: ChartPoint[] }
-  | { ok: false; reason: "brak-kursu" };
+  { ok: true; points: ChartPoint[] } | { ok: false; reason: "brak-kursu" };
 
 type Params = {
   /** Cała historia, rosnąco po `recordedAt` (przy równych — po kolejności zapisu). */

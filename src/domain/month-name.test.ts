@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatMonthShort, formatMonthTitle, monthGenitive } from "./month-name";
+import {
+  formatMonthShort,
+  formatMonthTitle,
+  monthGenitive,
+} from "./month-name";
 
 describe("formatMonthTitle", () => {
   it("daje nazwę miesiąca z wielkiej litery i rok", () => {
