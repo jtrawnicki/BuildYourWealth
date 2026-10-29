@@ -12,7 +12,7 @@ export type ChosenRate =
   | { source: "fallback"; rate: number };
 
 /** Okno kursu rozliczenia: tabele z datą od D − 6 do D (SPEC Z10). */
-const SETTLEMENT_WINDOW_DAYS = 6;
+export const SETTLEMENT_WINDOW_DAYS = 6;
 
 /** Najnowsza tabela z datą od `from` do `to` włącznie albo `null`. */
 function latestBetween(

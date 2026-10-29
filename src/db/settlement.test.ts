@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closePool, getDb, getPool } from "./client";
 import { addIncome, getMonth, getMonthSnapshot } from "./months";
 import { savePlan, type PlanGoalInput } from "./plan";
-import { months, settings, sources, sourceValues, users } from "./schema";
+import { months, sources, sourceValues, users } from "./schema";
 import { settleMonth } from "./settlement";
 import { setUserPassword } from "./users";
 
@@ -121,9 +121,13 @@ afterEach(async () => {
 describe("rozliczenie zgodne z planem (SPEC 5.5, scen. 4)", () => {
   it("dopisuje zaplanowane kwoty do źródeł i oznacza miesiąc jako rozliczony", async () => {
     const src = await seedScenario1();
-    const result = await settleMonth(getDb(), userId, "2026-10", {
-      mode: "plan",
-    });
+    const result = await settleMonth(
+      getDb(),
+      userId,
+      "2026-10",
+      { mode: "plan" },
+      null,
+    );
     expect(result).toEqual({ status: "ok" });
 
     expect(await sourceValue(src.poduszka)).toBe(98000);
@@ -151,10 +155,13 @@ describe("rozliczenie częściowe (SPEC 5.5, scen. 5)", () => {
       { goalId: await goalId(month!.id, "Akcje"), amount: 22050 },
     ];
     expect(
-      await settleMonth(getDb(), userId, "2026-10", {
-        mode: "manual",
-        actuals,
-      }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "manual", actuals },
+        null,
+      ),
     ).toEqual({ status: "ok" });
 
     // Poduszka: wpłata 500,00 zamiast planu 980,00.
@@ -173,10 +180,13 @@ describe("rozliczenie częściowe (SPEC 5.5, scen. 5)", () => {
       { goalId: await goalId(month!.id, "Poduszka"), amount: 1 },
     ];
     expect(
-      await settleMonth(getDb(), userId, "2026-10", {
-        mode: "manual",
-        actuals,
-      }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "manual", actuals },
+        null,
+      ),
     ).toEqual({ status: "invalid" });
     // Nic się nie zapisało: miesiąc nadal otwarty.
     expect((await getMonth(getDb(), userId, "2026-10"))?.settled).toBe(false);
@@ -186,25 +196,66 @@ describe("rozliczenie częściowe (SPEC 5.5, scen. 5)", () => {
 describe("cel w EUR (SPEC 5.5, 6.8, scen. 6)", () => {
   it("przelicza plan po kursie i dopisuje eurocenty do źródła EUR", async () => {
     const src = await seedScenario1({ akcjeEur: true, eurStart: 100000 });
-    await getDb()
-      .update(settings)
-      .set({ eurRate: 43000 })
-      .where(eq(settings.userId, userId));
 
+    // Kurs ustala wcześniej akcja (reguła 6.10); warstwa db dostaje go w parametrze.
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        {
+          source: "fallback",
+          rate: 43000,
+        },
+      ),
     ).toEqual({ status: "ok" });
 
     // 220,50 zł → 51,28 €; źródło 1 000,00 € → 1 051,28 €.
     expect(await sourceValue(src.akcje)).toBe(105128);
     const month = await getMonth(getDb(), userId, "2026-10");
     expect(month).toMatchObject({ settled: true, settledEurRate: 43000 });
+    const [stored] = await getDb()
+      .select({
+        source: months.settledRateSource,
+        date: months.settledRateDate,
+      })
+      .from(months)
+      .where(eq(months.id, month!.id));
+    expect(stored).toEqual({ source: "fallback", date: null });
   });
 
-  it("odmawia rozliczenia celu w EUR bez ustawionego kursu (SPEC 7)", async () => {
+  it("zapisuje datę tabeli dla kursu NBP", async () => {
+    await seedScenario1({ akcjeEur: true, eurStart: 100000 });
+    expect(
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        {
+          source: "nbp",
+          rate: 42650,
+          date: "2026-10-30",
+        },
+      ),
+    ).toEqual({ status: "ok" });
+    const month = await getMonth(getDb(), userId, "2026-10");
+    const [stored] = await getDb()
+      .select({
+        rate: months.settledEurRate,
+        source: months.settledRateSource,
+        date: months.settledRateDate,
+      })
+      .from(months)
+      .where(eq(months.id, month!.id));
+    expect(stored).toEqual({ rate: 42650, source: "nbp", date: "2026-10-30" });
+  });
+
+  it("odmawia rozliczenia celu w EUR bez ustalonego kursu (SPEC 7)", async () => {
     await seedScenario1({ akcjeEur: true });
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null),
     ).toEqual({ status: "no-rate" });
     expect((await getMonth(getDb(), userId, "2026-10"))?.settled).toBe(false);
   });
@@ -243,8 +294,8 @@ describe("postęp celu po rozliczeniu (SPEC 6.6, scen. 11)", () => {
       { name: "P", amount: 51200 },
       NOW,
     );
-    await settleMonth(getDb(), userId, "2026-09", { mode: "plan" });
-    await settleMonth(getDb(), userId, "2026-10", { mode: "plan" });
+    await settleMonth(getDb(), userId, "2026-09", { mode: "plan" }, null);
+    await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null);
 
     const month = await getMonth(getDb(), userId, "2026-10");
     const snapshot = await getMonthSnapshot(getDb(), month!.id);
@@ -265,10 +316,10 @@ describe("jednorazowość i współbieżność (SPEC 5.5, scen. 15)", () => {
   it("odrzuca drugie rozliczenie tego samego miesiąca", async () => {
     const src = await seedScenario1();
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null),
     ).toEqual({ status: "ok" });
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null),
     ).toEqual({ status: "already-settled" });
     // Wartość źródła zmieniła się tylko raz.
     expect(await sourceValue(src.poduszka)).toBe(98000);
@@ -284,9 +335,13 @@ describe("jednorazowość i współbieżność (SPEC 5.5, scen. 15)", () => {
         `select id from months where user_id = $1 and month = '2026-10' for update`,
         [userId],
       );
-      const concurrent = settleMonth(getDb(), userId, "2026-10", {
-        mode: "plan",
-      });
+      const concurrent = settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        null,
+      );
       // Czekamy, aż równoległe rozliczenie utknie na blokadzie wiersza miesiąca.
       for (let attempt = 0; attempt < 100; attempt++) {
         const { rows } = await getPool().query(
@@ -361,7 +416,7 @@ describe("jednorazowość i współbieżność (SPEC 5.5, scen. 15)", () => {
 describe("miesiąc nieistniejący", () => {
   it("zwraca not-found", async () => {
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null),
     ).toEqual({ status: "not-found" });
   });
 });
@@ -383,12 +438,17 @@ describe("historia wartości przy rozliczeniu (SPEC 5.11, T17)", () => {
 
   it("zapisuje punkt każdego źródła z wpłatą, w walucie źródła i z chwilą rozliczenia", async () => {
     const src = await seedScenario1({ akcjeEur: true, eurStart: 1000 });
-    await getDb()
-      .update(settings)
-      .set({ eurRate: 43000 })
-      .where(eq(settings.userId, userId));
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        {
+          source: "fallback",
+          rate: 43000,
+        },
+      ),
     ).toEqual({ status: "ok" });
 
     const points = await history();
@@ -409,10 +469,10 @@ describe("historia wartości przy rozliczeniu (SPEC 5.11, T17)", () => {
 
   it("odrzucone drugie rozliczenie nie zostawia wpisu (scen. 15)", async () => {
     await seedScenario1();
-    await settleMonth(getDb(), userId, "2026-10", { mode: "plan" });
+    await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null);
     const before = await history();
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }),
+      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, null),
     ).toEqual({ status: "already-settled" });
     expect(await history()).toEqual(before);
   });
@@ -425,7 +485,13 @@ describe("historia wartości przy rozliczeniu (SPEC 5.11, T17)", () => {
       goalId: g.goalId,
       amount: g.name === "Poduszka" ? 0 : 100,
     }));
-    await settleMonth(getDb(), userId, "2026-10", { mode: "manual", actuals });
+    await settleMonth(
+      getDb(),
+      userId,
+      "2026-10",
+      { mode: "manual", actuals },
+      null,
+    );
     const ids = (await history()).map((p) => p.sourceId);
     expect(ids).toHaveLength(5);
     expect(ids).not.toContain(src.poduszka);

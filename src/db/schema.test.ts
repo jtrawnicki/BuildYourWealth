@@ -99,6 +99,75 @@ describe("migracja", () => {
       await rm(mvp, { recursive: true, force: true });
     }
   }, 30_000);
+
+  it("kurs rozliczenia (0007) na danych MVP oznacza rozliczony cel EUR jako manual", async () => {
+    const name = `byw_migrate_${randomBytes(4).toString("hex")}`;
+    await getPool().query(`create database ${name}`);
+    const url = new URL(process.env.DATABASE_URL!);
+    url.pathname = `/${name}`;
+    const pool = new Pool({ connectionString: url.toString() });
+    // Kopia migracji obcięta do stanu sprzed kursu rozliczenia (0000–0006).
+    const pre = await mkdtemp(path.join(tmpdir(), "byw-pre0007-"));
+    try {
+      await cp("drizzle", pre, { recursive: true });
+      const journalPath = path.join(pre, "meta", "_journal.json");
+      const journal = JSON.parse(await readFile(journalPath, "utf8"));
+      journal.entries = journal.entries.filter(
+        (entry: { tag: string }) => entry.tag < "0007",
+      );
+      await writeFile(journalPath, JSON.stringify(journal));
+      await migrate(drizzle(pool), { migrationsFolder: pre });
+
+      const { rows: accounts } = await pool.query<{ id: number }>(
+        `insert into users (email, password_hash)
+         values ('a@example.com', 'x') returning id`,
+      );
+      const userId = accounts[0].id;
+      await pool.query(
+        `insert into months (user_id, month, savings_pct, investments_pct, settled_at, settled_eur_rate)
+         values ($1, '2026-08', 2000, 1000, now(), 43000),
+                ($1, '2026-09', 2000, 1000, now(), null),
+                ($1, '2026-10', 2000, 1000, null, null)`,
+        [userId],
+      );
+
+      await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
+
+      const { rows } = await pool.query<{
+        month: string;
+        settled_eur_rate: number | null;
+        settled_rate_source: string | null;
+        settled_rate_date: string | null;
+      }>(
+        `select month, settled_eur_rate, settled_rate_source, settled_rate_date
+         from months order by month`,
+      );
+      expect(rows).toEqual([
+        {
+          month: "2026-08",
+          settled_eur_rate: 43000,
+          settled_rate_source: "manual",
+          settled_rate_date: null,
+        },
+        {
+          month: "2026-09",
+          settled_eur_rate: null,
+          settled_rate_source: null,
+          settled_rate_date: null,
+        },
+        {
+          month: "2026-10",
+          settled_eur_rate: null,
+          settled_rate_source: null,
+          settled_rate_date: null,
+        },
+      ]);
+    } finally {
+      await pool.end();
+      await getPool().query(`drop database ${name}`);
+      await rm(pre, { recursive: true, force: true });
+    }
+  }, 30_000);
 });
 
 describe("ograniczenia schematu", () => {
@@ -189,7 +258,8 @@ describe("ograniczenia schematu", () => {
       [monthId],
     );
     await client.query(
-      "update months set settled_at = now(), settled_eur_rate = 42850 where id = $1",
+      `update months set settled_at = now(), settled_eur_rate = 42850,
+       settled_rate_source = 'nbp', settled_rate_date = '2026-10-30' where id = $1`,
       [monthId],
     );
   });
@@ -342,6 +412,81 @@ describe("ograniczenia schematu", () => {
         constraint: "months_settled_eur_rate_settled_check",
       });
     });
+  });
+
+  describe("kurs rozliczenia: data, pochodzenie i kurs zapasowy", () => {
+    it("przyjmuje rozliczenie z kursem NBP (data) i z kursem zapasowym (bez daty)", async () => {
+      await client.query(
+        `update months set settled_at = now(), settled_eur_rate = 42650,
+         settled_rate_source = 'nbp', settled_rate_date = '2026-10-30' where id = $1`,
+        [monthId],
+      );
+      await client.query(
+        `update months set settled_eur_rate = 43000,
+         settled_rate_source = 'fallback', settled_rate_date = null where id = $1`,
+        [monthId],
+      );
+    });
+
+    it("odrzuca nieznane pochodzenie kursu", async () => {
+      expect(
+        await rejection(
+          `update months set settled_at = now(), settled_eur_rate = 42650,
+           settled_rate_source = 'x' where id = $1`,
+          [monthId],
+        ),
+      ).toEqual({
+        code: "23514",
+        constraint: "months_settled_rate_source_check",
+      });
+    });
+
+    it.each([
+      ["pochodzenie bez kursu", "settled_rate_source = 'fallback'"],
+      ["kurs bez pochodzenia", "settled_at = now(), settled_eur_rate = 42650"],
+    ])("odrzuca niespójność: %s", async (_, assignment) => {
+      expect(
+        await rejection(`update months set ${assignment} where id = $1`, [
+          monthId,
+        ]),
+      ).toEqual({
+        code: "23514",
+        constraint: "months_settled_rate_source_eur_rate_check",
+      });
+    });
+
+    it.each([
+      [
+        "data przy kursie zapasowym",
+        "settled_rate_source = 'fallback', settled_rate_date = '2026-10-30'",
+      ],
+      ["kurs NBP bez daty", "settled_rate_source = 'nbp'"],
+    ])("odrzuca niespójność daty: %s", async (_, assignment) => {
+      expect(
+        await rejection(
+          `update months set settled_at = now(), settled_eur_rate = 42650, ${assignment} where id = $1`,
+          [monthId],
+        ),
+      ).toEqual({
+        code: "23514",
+        constraint: "months_settled_rate_date_check",
+      });
+    });
+
+    it.each([0, -1])(
+      "odrzuca kurs zapasowy %i w ustawieniach",
+      async (rate) => {
+        expect(
+          await rejection(
+            "insert into settings (user_id, fallback_eur_rate) values ($1, $2)",
+            [userId, rate],
+          ),
+        ).toEqual({
+          code: "23514",
+          constraint: "settings_fallback_eur_rate_check",
+        });
+      },
+    );
   });
 
   describe("miesiące", () => {

@@ -607,6 +607,9 @@ describe("historia miesięcy (SPEC 5.6, T14)", () => {
         investmentsPct: input.investmentsPct ?? 0,
         settledAt: input.settled ? new Date() : null,
         settledEurRate: input.settled ? (input.settledEurRate ?? null) : null,
+        // Kurs rozliczenia wymaga pochodzenia (CHECK spójności, T19a).
+        settledRateSource:
+          input.settled && input.settledEurRate != null ? "fallback" : null,
       })
       .returning({ id: months.id });
     if (input.income) {

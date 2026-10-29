@@ -15,6 +15,19 @@ export async function getEurRate(
   return row?.eurRate ?? null;
 }
 
+/** Kurs zapasowy EUR→PLN w dziesięciotysięcznych albo `null` (reguła 6.10). */
+export async function getFallbackEurRate(
+  db: Db,
+  userId: number,
+): Promise<number | null> {
+  const [row] = await db
+    .select({ fallbackEurRate: settings.fallbackEurRate })
+    .from(settings)
+    .where(eq(settings.userId, userId))
+    .limit(1);
+  return row?.fallbackEurRate ?? null;
+}
+
 /**
  * Zapisuje kurs. Zmienia tylko ustawienie: wartości EUR źródeł i kursy zapisane
  * przy rozliczeniu zostają bez zmian (SPEC 7).
