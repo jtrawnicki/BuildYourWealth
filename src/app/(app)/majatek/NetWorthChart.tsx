@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./NetWorthChart.module.css";
 
 /** Punkt wykresu gotowy do rysowania: liczba do geometrii, reszta do dymka. */
@@ -46,7 +40,7 @@ export function NetWorthChart({ points, yLabels, yMax }: Props) {
   const [width, setWidth] = useState(640);
   const [active, setActive] = useState<number | null>(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const update = () => setWidth(el.clientWidth);
@@ -111,67 +105,76 @@ export function NetWorthChart({ points, yLabels, yMax }: Props) {
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-hidden="true"
+        role="group"
+        aria-label="Wykres wartości majątku"
         onPointerMove={(e) => pickNearest(e.clientX)}
         onPointerLeave={() => setActive(null)}
         onPointerDown={(e) => pickNearest(e.clientX)}
       >
-        {yLabels.map((label, k) => {
-          const gy = PAD.top + (plotH * k) / (yLabels.length - 1);
-          return (
-            <g key={label + k}>
-              <line
-                className={styles.grid}
-                x1={PAD.left}
-                y1={gy}
-                x2={width - PAD.right}
-                y2={gy}
-              />
-              <text className={styles.yLabel} x={PAD.left - 8} y={gy + 4}>
-                {label}
-              </text>
-            </g>
-          );
-        })}
-
-        <polyline className={styles.line} points={line} />
-
-        {points.map((p, i) => {
-          const showLabel = (points.length - 1 - i) % step === 0;
-          return (
-            <g key={p.month}>
-              {showLabel && (
-                <text
-                  className={styles.xLabel}
-                  x={x(i)}
-                  y={height - 8}
-                  textAnchor="middle"
-                >
-                  {p.xLabel}
+        {/* Warstwa rysunku: siatka, linia, etykiety i punkty — dekoracja, więc
+            ukryta przed czytnikami ekranu (dane są na punktach i w tabeli). */}
+        <g aria-hidden="true">
+          {yLabels.map((label, k) => {
+            const gy = PAD.top + (plotH * k) / (yLabels.length - 1);
+            return (
+              <g key={label + k}>
+                <line
+                  className={styles.grid}
+                  x1={PAD.left}
+                  y1={gy}
+                  x2={width - PAD.right}
+                  y2={gy}
+                />
+                <text className={styles.yLabel} x={PAD.left - 8} y={gy + 4}>
+                  {label}
                 </text>
-              )}
-              <circle
-                className={i === active ? styles.dotActive : styles.dot}
-                cx={x(i)}
-                cy={y(p.pln)}
-                r={i === active ? 5 : 3.5}
-              />
-              {/* Niewidoczny, szeroki cel fokusu dla klawiatury; dane dla
-                  czytników ekranu są w tabeli niżej, więc tu aria-hidden. */}
-              <circle
-                className={styles.hit}
-                cx={x(i)}
-                cy={y(p.pln)}
-                r={12}
-                tabIndex={0}
-                aria-hidden="true"
-                onFocus={() => setActive(i)}
-                onBlur={() => setActive(null)}
-              />
-            </g>
-          );
-        })}
+              </g>
+            );
+          })}
+
+          <polyline className={styles.line} points={line} />
+
+          {points.map((p, i) => {
+            const showLabel = (points.length - 1 - i) % step === 0;
+            return (
+              <g key={p.month}>
+                {showLabel && (
+                  <text
+                    className={styles.xLabel}
+                    x={x(i)}
+                    y={height - 8}
+                    textAnchor="middle"
+                  >
+                    {p.xLabel}
+                  </text>
+                )}
+                <circle
+                  className={i === active ? styles.dotActive : styles.dot}
+                  cx={x(i)}
+                  cy={y(p.pln)}
+                  r={i === active ? 5 : 3.5}
+                />
+              </g>
+            );
+          })}
+        </g>
+
+        {/* Cele fokusu z nazwą: dają podpowiedź na hover/dotyk/fokus i są
+            odczytywane przez czytniki ekranu (SPEC 5.11). */}
+        {points.map((p, i) => (
+          <circle
+            key={p.month}
+            className={styles.hit}
+            cx={x(i)}
+            cy={y(p.pln)}
+            r={12}
+            tabIndex={0}
+            role="img"
+            aria-label={`${p.title}: ${p.amount}${p.change ? `, zmiana ${p.change}` : ""}`}
+            onFocus={() => setActive(i)}
+            onBlur={() => setActive(null)}
+          />
+        ))}
       </svg>
 
       {activePoint && (

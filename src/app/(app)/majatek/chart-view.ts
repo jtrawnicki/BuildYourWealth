@@ -3,7 +3,7 @@
 // groszach; komponent SVG dostaje gotowe liczby i napisy.
 
 import type { ChartPoint } from "@/domain/networth-chart";
-import { formatMoney, NBSP } from "@/domain/format";
+import { formatMoney, groupThousands, NBSP } from "@/domain/format";
 import { formatMonthShort, formatMonthTitle } from "@/domain/month-name";
 import type { ChartPointView } from "./NetWorthChart";
 
@@ -25,9 +25,6 @@ export function niceMax(maxPln: number): number {
   const safe = maxPln > 0 ? maxPln : 1;
   return niceStep(Math.ceil(safe / GRID_LINES)) * GRID_LINES;
 }
-
-const groupThousands = (digits: string) =>
-  digits.replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
 
 /**
  * Kwota skrócona na oś Y (SPEC 8.1): `5_000_000` → `50 tys. zł`,
