@@ -129,3 +129,43 @@ export function addDays(day: string, days: number): string {
     .toISOString()
     .slice(0, 10);
 }
+
+const warsawDateTimeFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: WARSAW,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Chwila `instant` odczytana jako czas ścienny w Warszawie, w milisekundach UTC. */
+function warsawWallMs(instant: Date): number {
+  const parts = warsawDateTimeFormat.formatToParts(instant);
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  );
+}
+
+/**
+ * Chwila (UTC) początku miesiąca `YYYY-MM` o 00:00 czasu Europe/Warsaw. Służy
+ * regule 6.11: wartość źródła „na koniec miesiąca M" to ostatni zapis historii
+ * z chwilą wcześniejszą niż początek następnego miesiąca. Jedno przesunięcie
+ * o różnicę stref wystarcza, bo 00:00 pierwszego dnia nie wpada w lukę zmiany
+ * czasu.
+ */
+export function startOfMonthInstant(key: string): Date {
+  const { year, month } = parseMonth(key);
+  const guess = Date.UTC(year, month - 1, 1, 0, 0, 0);
+  const offset = warsawWallMs(new Date(guess)) - guess;
+  return new Date(guess - offset);
+}

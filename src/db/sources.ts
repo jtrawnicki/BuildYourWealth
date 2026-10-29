@@ -128,6 +128,35 @@ export async function listSources(
     .orderBy(asc(sources.id));
 }
 
+/** Zapis historii wartości na wykres majątku (reguła 6.11). */
+export type SourceValueEntry = {
+  sourceId: number;
+  value: number;
+  currency: SourceCurrency;
+  recordedAt: Date;
+};
+
+/**
+ * Cała historia wartości źródeł użytkownika, także zarchiwizowanych, rosnąco po
+ * chwili zapisu (SPEC 5.11). Wykres odtwarza z niej stan na koniec każdego
+ * miesiąca, więc potrzebuje wszystkich źródeł, nie tylko aktywnych.
+ */
+export async function listSourceHistory(
+  db: Db,
+  userId: number,
+): Promise<SourceValueEntry[]> {
+  return db
+    .select({
+      sourceId: sourceValues.sourceId,
+      value: sourceValues.value,
+      currency: sourceValues.currency,
+      recordedAt: sourceValues.recordedAt,
+    })
+    .from(sourceValues)
+    .where(eq(sourceValues.userId, userId))
+    .orderBy(asc(sourceValues.recordedAt), asc(sourceValues.id));
+}
+
 export async function createSource(
   db: Db,
   userId: number,
