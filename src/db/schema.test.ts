@@ -446,10 +446,9 @@ describe("ograniczenia schematu", () => {
       ["kurs bez pochodzenia", "settled_at = now(), settled_eur_rate = 42650"],
     ])("odrzuca niespójność: %s", async (_, assignment) => {
       expect(
-        await rejection(
-          `update months set ${assignment} where id = $1`,
-          [monthId],
-        ),
+        await rejection(`update months set ${assignment} where id = $1`, [
+          monthId,
+        ]),
       ).toEqual({
         code: "23514",
         constraint: "months_settled_rate_source_eur_rate_check",
@@ -474,17 +473,20 @@ describe("ograniczenia schematu", () => {
       });
     });
 
-    it.each([0, -1])("odrzuca kurs zapasowy %i w ustawieniach", async (rate) => {
-      expect(
-        await rejection(
-          "insert into settings (user_id, fallback_eur_rate) values ($1, $2)",
-          [userId, rate],
-        ),
-      ).toEqual({
-        code: "23514",
-        constraint: "settings_fallback_eur_rate_check",
-      });
-    });
+    it.each([0, -1])(
+      "odrzuca kurs zapasowy %i w ustawieniach",
+      async (rate) => {
+        expect(
+          await rejection(
+            "insert into settings (user_id, fallback_eur_rate) values ($1, $2)",
+            [userId, rate],
+          ),
+        ).toEqual({
+          code: "23514",
+          constraint: "settings_fallback_eur_rate_check",
+        });
+      },
+    );
   });
 
   describe("miesiące", () => {

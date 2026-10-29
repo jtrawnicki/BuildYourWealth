@@ -12,10 +12,7 @@ import {
 import { now } from "@/domain/clock";
 import { parseActualAmount } from "@/domain/input";
 import { canSettleMonth } from "@/domain/time";
-import {
-  resolveSettlementRate,
-  sameChosenRate,
-} from "@/rates/settlement-rate";
+import { resolveSettlementRate, sameChosenRate } from "@/rates/settlement-rate";
 import type { ChosenRate } from "@/rates/select";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
 import { field } from "@/app/form-data";

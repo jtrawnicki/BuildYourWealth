@@ -199,10 +199,16 @@ describe("cel w EUR (SPEC 5.5, 6.8, scen. 6)", () => {
 
     // Kurs ustala wcześniej akcja (reguła 6.10); warstwa db dostaje go w parametrze.
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, {
-        source: "fallback",
-        rate: 43000,
-      }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        {
+          source: "fallback",
+          rate: 43000,
+        },
+      ),
     ).toEqual({ status: "ok" });
 
     // 220,50 zł → 51,28 €; źródło 1 000,00 € → 1 051,28 €.
@@ -222,11 +228,17 @@ describe("cel w EUR (SPEC 5.5, 6.8, scen. 6)", () => {
   it("zapisuje datę tabeli dla kursu NBP", async () => {
     await seedScenario1({ akcjeEur: true, eurStart: 100000 });
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, {
-        source: "nbp",
-        rate: 42650,
-        date: "2026-10-30",
-      }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        {
+          source: "nbp",
+          rate: 42650,
+          date: "2026-10-30",
+        },
+      ),
     ).toEqual({ status: "ok" });
     const month = await getMonth(getDb(), userId, "2026-10");
     const [stored] = await getDb()
@@ -427,10 +439,16 @@ describe("historia wartości przy rozliczeniu (SPEC 5.11, T17)", () => {
   it("zapisuje punkt każdego źródła z wpłatą, w walucie źródła i z chwilą rozliczenia", async () => {
     const src = await seedScenario1({ akcjeEur: true, eurStart: 1000 });
     expect(
-      await settleMonth(getDb(), userId, "2026-10", { mode: "plan" }, {
-        source: "fallback",
-        rate: 43000,
-      }),
+      await settleMonth(
+        getDb(),
+        userId,
+        "2026-10",
+        { mode: "plan" },
+        {
+          source: "fallback",
+          rate: 43000,
+        },
+      ),
     ).toEqual({ status: "ok" });
 
     const points = await history();
