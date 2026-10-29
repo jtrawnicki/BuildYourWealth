@@ -97,11 +97,13 @@ wyłącznie z `.env` (nie z `.env.local` ani `.env.production*`).
 
 CI (`.github/workflows/ci.yml`) uruchamia całą bramkę przy każdym PR na
 Postgres 17. Które polecenia uruchomić lokalnie, wynika z poziomu zadania
-(WORKFLOW rozdz. 5); przed PR uruchom wszystkie.
+(WORKFLOW rozdz. 5); przed PR uruchom lokalnie wszystko oprócz `npm run e2e`.
 
-`@playwright/test` jest przypięty do wersji, której przeglądarka Chromium jest
-preinstalowana w sesji chmurowej (`/opt/pw-browsers`). Podnosząc wersję,
-sprawdź, że e2e nadal działa w sesji bez pobierania przeglądarki.
+`npm run e2e` (Playwright) uruchamia **CI** — agent nie odpala go lokalnie.
+Przeglądarka Chromium jest preinstalowana w sesji chmurowej i w CI
+(`/opt/pw-browsers`), a lokalna instalacja się zacina; wynik E2E czyta się z CI.
+Podnosząc wersję `@playwright/test`, sprawdź, że e2e nadal działa w sesji
+bez pobierania przeglądarki.
 
 ## Konwencje
 

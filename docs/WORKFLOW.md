@@ -167,6 +167,12 @@ rzeczywistej decyzji albo blokadzie.
 
 ## 5. Trzy poziomy weryfikacji
 
+Testy E2E (Playwright) uruchamia CI przy każdym PR. Agent nie uruchamia ich
+lokalnie — przeglądarka jest preinstalowana tylko w sesji chmurowej i w CI,
+a lokalna instalacja się zacina. Lokalna weryfikacja obejmuje testy jednostkowe
+i integracyjne, lint, typecheck i build; wynik E2E agent czyta z CI. Dotyczy to
+każdego poziomu niżej.
+
 ### Poziom 1 — mała zmiana
 
 Przykłady: tekst, mały styl, lokalna korekta bez zmiany kontraktu.
@@ -189,7 +195,7 @@ Minimum:
 
 - pełne testy jednostkowe i integracyjne;
 - build;
-- testy zachowania użytkownika adekwatne do zmiany;
+- testy zachowania użytkownika adekwatne do zmiany (E2E w CI, zob. wyżej);
 - niezależne review;
 - ponowne sprawdzenie po poprawkach.
 
@@ -198,7 +204,7 @@ Minimum:
 Minimum:
 
 - pełna bramka projektu;
-- E2E krytycznych przepływów;
+- E2E krytycznych przepływów (w CI, zob. wyżej);
 - ręczny scenariusz akceptacyjny;
 - review zgodności ze specyfikacją;
 - niezależny audyt całości dla ryzykownego wydania;
