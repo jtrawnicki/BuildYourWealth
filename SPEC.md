@@ -2,12 +2,14 @@
 
 Status: **MVP zaakceptowane przez właściciela produktu, po review etapu B
 (2026-10-19)**; zmiana koncepcji wdrożenia (wersja prywatna i demo, P8)
-z 2026-10-21. **Etap 2** (kurs NBP, powiadomienia e-mail, historia majątku,
-termin celu; rozdz. 5.9–5.12, decyzje P9–P23) z 2026-10-27: **po
+z 2026-10-21. **Etap 2** (kurs NBP, historia majątku, termin celu,
+prognoza majątku; rozdz. 5.9–5.13, decyzje P9–P32) z 2026-10-27: **po
 niezależnym review etapu B i rozstrzygnięciach właściciela (2026-10-27,
 [`docs/reviews/spec-review-etap2-B.md`](docs/reviews/spec-review-etap2-B.md))**. Zmiana zakresu
-Etapu 2 z 2026-10-29 (P24–P30): powiadomienia e-mail wycofane, w ich miejsce
-prognoza majątku (5.13). Dokument powstał na
+Etapu 2 z 2026-10-29 (P24–P32): powiadomienia e-mail wycofane, w ich miejsce
+prognoza majątku (5.13), po niezależnym review
+([`docs/reviews/spec-review-etap2-prognoza-B.md`](docs/reviews/spec-review-etap2-prognoza-B.md))
+i rozstrzygnięciach właściciela z 2026-10-30. Dokument powstał na
 podstawie wywiadów z właścicielem produktu. Proces pracy opisuje
 [`docs/WORKFLOW.md`](docs/WORKFLOW.md).
 
@@ -78,7 +80,8 @@ Etapu 2 w rozdziałach MVP są wpisane bezpośrednio w ich treść.
   stopa zwrotu (roczna, w procentach). Pole stopy ma podpowiedź „Używana
   tylko w Prognozie. Puste pole oznacza 0%: źródło rośnie wyłącznie
   o wpłaty.” Stopę można zmieniać zawsze; jej zmiana nie trafia do historii
-  wartości (5.11) i nie zmienia wartości źródła.
+  wartości (5.11) i nie zmienia wartości źródła. Lista źródeł pokazuje
+  ustawioną stopę przy źródle, np. „stopa 6,50%”.
 - Bieżącą wartość można w każdej chwili edytować ręcznie (zmiana wyceny,
   wypłata pieniędzy).
 - Kurs EUR→PLN pochodzi z NBP, a kurs zapasowy wpisuje użytkownik (5.9).
@@ -367,8 +370,11 @@ Wygląd: rozdz. 8.1, makieta w P25.
 
 - **Punkt wyjścia** (karta na górze):
   - majątek dziś (reguła 7, aktywne źródła);
-  - średni przychód z dopiskiem, z ilu miesięcy, np. „ostatnie 6 miesięcy”
-    albo „ostatnie 2 miesiące” (reguła 6.14);
+  - średni przychód z dopiskiem, skąd pochodzi (reguła 6.14): „ostatni
+    miesiąc z przychodem”, „2 ostatnie miesiące z przychodem” (2–4),
+    „6 ostatnich miesięcy z przychodem” (5–6), a gdy średnia pochodzi tylko
+    z bieżącego miesiąca: „bieżący miesiąc, jeszcze niepełny”. Miesiące
+    z przychodem nie muszą następować po sobie;
   - procent przychodu odkładany według bieżącego planu (suma procentów pul)
     z rozbiciem na pule, np. „35,00%” i „Oszczędności 20,00% · Inwestycje
     15,00%”;
@@ -379,13 +385,15 @@ Wygląd: rozdz. 8.1, makieta w P25.
     miesiąc, a średnia faktycznych wpłat różni się od wpłaty według planu
     (reguła 6.14): „W ostatnich 6 rozliczonych miesiącach faktycznie
     odkładasz średnio 3 310,00 zł, czyli mniej niż zakłada plan (3 640,00 zł).
-    Prognoza liczy wpłaty według planu.” (przy wyższej średniej „więcej”;
-    liczba miesięcy z odmianą jak wyżej).
+    Prognoza liczy wpłaty według planu.” Przy wyższej średniej „więcej”.
+    Początek zdania zależy od liczby miesięcy: „W ostatnim rozliczonym
+    miesiącu faktycznie odkładasz 800,00 zł” (1, bez „średnio”), „W ostatnich
+    3 rozliczonych miesiącach” (2–6).
 - **Horyzont:** przełącznik „5 lat”, „10 lat”, „15 lat” (domyślnie 10 lat)
   i pole „albo … lat” na własną liczbę pełnych lat od 1 do 40. Wpisanie
   liczby 5, 10 albo 15 zaznacza odpowiedni przycisk; wybór przycisku czyści
   pole. Niepoprawna wartość w polu nie zmienia prognozy i pokazuje komunikat
-  z rozdz. 7.1.
+  z rozdz. 7.1. Puste pole zostawia bieżący wybór, bez komunikatu.
 - **Wykres „Majątek w kolejnych latach”:** cztery linie, po jednej na
   scenariusz: bazowy, „+5% wpływów”, „+10% wpływów”, „+15% wpływów” (P26).
   Każdy scenariusz to ten sam plan i te same stopy, a różni się tylko
@@ -395,8 +403,10 @@ Wygląd: rozdz. 8.1, makieta w P25.
   - Najechanie, dotknięcie albo fokus z klawiatury (strzałki przesuwają
     o rok) pokazuje miesiąc i kwoty wszystkich czterech scenariuszy, np.
     „październik 2031” i „+15% · 95 724 zł”.
-  - Na linii bazowej znaczniki kamieni milowych (niżej) z krótką etykietą
-    progu, np. „50 tys.”.
+  - Znaczniki kamieni milowych (niżej) są na linii bazowej, z krótką
+    etykietą progu, np. „50 tys.”. Próg, którego scenariusz bazowy nie
+    osiąga w horyzoncie, nie ma znacznika na wykresie, tylko wiersz
+    w tabeli.
   - Dane wykresu są dostępne także jako tabela dla czytników ekranu
     (scenariusz × koniec każdego roku horyzontu).
 - **Karty scenariuszy** pod wykresem, po jednej na scenariusz: nazwa,
@@ -405,21 +415,33 @@ Wygląd: rozdz. 8.1, makieta w P25.
   bazowego”); karta bazowa zamiast różnicy ma „średni przychód bez zmian”.
 - **„Wpłaty kontra zysk”:** wykres warstwowy dla jednego scenariusza
   (przełącznik „Bazowy”, „+5%”, „+10%”, „+15%”; domyślnie bazowy) z trzema
-  warstwami: majątek dziś, suma wpłat, zysk z założonych stóp (reguła 6.14).
-  Obok legenda z kwotami tych trzech części na koniec horyzontu i ich sumą.
-  Nad wykresem zdanie: „Za 5 lat 16% majątku to zysk z założonych stóp
-  zwrotu. Każda złotówka wpłacona według planu zamieni się średnio
-  w 1,22 zł.” Gdy żadne źródło nie ma stopy, zdanie brzmi „Żadne źródło nie
-  ma zakładanej stopy zwrotu, więc majątek rośnie tylko o wpłaty.”, a warstwy
-  zysku nie ma. Gdy wpłata scenariusza wynosi 0, drugie zdanie jest pominięte.
+  warstwami od dołu: majątek dziś, suma wpłat, zysk z założonych stóp
+  (reguła 6.14). Obok legenda z kwotami tych trzech części na koniec
+  horyzontu i ich sumą; suma to majątek scenariusza, a zysk w legendzie to
+  zaokrąglony majątek minus zaokrąglone pozostałe dwie części.
+  - Zdanie nad wykresem zależy od zysku na koniec horyzontu; „Za 5 lat”
+    z odmianą: „Za 1 rok”, „Za 2 lata” (2–4, 22–24, 32–34), „Za 5 lat”
+    (pozostałe):
+    - żadne aktywne źródło nie ma stopy: „Żadne źródło nie ma zakładanej
+      stopy zwrotu, więc majątek rośnie tylko o wpłaty.”;
+    - zysk > 0: „Za 5 lat 16% majątku to zysk z założonych stóp zwrotu.
+      Każda złotówka wpłacona według planu zamieni się średnio w 1,22 zł.”
+      Drugie zdanie jest pominięte, gdy wpłata scenariusza wynosi 0;
+    - zysk < 0: „Przy założonych stopach majątek za 5 lat będzie
+      o 1 234 zł niższy niż majątek dziś i suma wpłat.”;
+    - zysk = 0 (po zaokrągleniu): „Przy założonych stopach zysk za 5 lat
+      wynosi 0 zł.”
+  - Bez zysku dodatniego warstwy zysku nie ma; przy zysku ujemnym warstwy
+    majątku dziś i wpłat są przycięte od góry do majątku scenariusza, więc
+    wykres nigdy nie jest wyższy niż majątek.
 - **Kamienie milowe:** tabela „Próg” × scenariusze z miesiącem, w którym
   majątek scenariusza po raz pierwszy osiąga próg, albo „poza horyzontem”.
   Progi dobiera reguła 6.14 (najwyżej trzy). Bez progów zamiast tabeli tekst
   „W tym horyzoncie nie ma kolejnego progu do pokazania.”
 - **Źródła w prognozie** (scenariusz bazowy): tabela aktywnych źródeł:
-  nazwa, pula i cel (albo cele), zakładana stopa zwrotu albo „brak (0%)”,
-  miesięczna wpłata, wartość dziś (dla EUR także w EUR) i wartość na koniec
-  horyzontu. Pod tabelą:
+  nazwa, pula i cel (albo cele; źródło bez celu: „bez celu”), zakładana
+  stopa zwrotu albo „brak (0%)”, miesięczna wpłata, wartość dziś (dla EUR
+  także w EUR) i wartość na koniec horyzontu. Pod tabelą:
   - liczba źródeł bez stopy, np. „2 z 5 źródeł bez zakładanej stopy zwrotu,
     liczone jako 0%.”, a gdy wszystkie ją mają: „Wszystkie źródła mają
     zakładaną stopę zwrotu.”;
@@ -427,23 +449,29 @@ Wygląd: rozdz. 8.1, makieta w P25.
     (NBP, 28.10.2026), stałym przez cały horyzont.” (pochodzenie kursu jak
     w 5.9);
   - link „Zmień stopy na ekranie Majątek”.
-- **Kwoty prognozy** (wykres, karty, legenda, tabele) są w pełnych złotych,
-  bez groszy, np. `646 490 zł` (wyjątek od rozdz. 8). Kwoty punktu wyjścia
-  i zdania kontrolnego mają grosze, jak reszta aplikacji.
+- **Kwoty prognozy** (wykres, karty, legenda, tabela źródeł, także „wartość
+  dziś” i wpłata w tej tabeli) są w pełnych złotych, bez groszy, np.
+  `646 490 zł` (wyjątek od rozdz. 8). Kwoty punktu wyjścia i zdania
+  kontrolnego mają grosze, jak reszta aplikacji; kwota w EUR w tabeli
+  źródeł też ma grosze (`1 350,00 €`).
 - **Stały dopisek** na dole ekranu: „Symulacja na podstawie Twoich założeń,
   nie prognoza rynku. Kwoty w złotych po bieżącym kursie EUR, bez inflacji
   i podatków.”
-- **Brak danych:**
+- **Brak danych** (gdy zachodzi kilka naraz, pokazany jest pierwszy
+  z listy):
+  - brak aktywnych źródeł → „Dodaj źródło na ekranie Majątek, aby zobaczyć
+    prognozę.”;
   - żaden miesiąc nie ma przychodu → zamiast prognozy: „Prognoza pojawi się
     po wpisaniu pierwszego przychodu.” z linkiem do „Ten miesiąc”;
   - aktywne źródło EUR, a kursu brak (ani NBP, ani zapasowego) → zamiast
-    prognozy prośba o kurs zapasowy, jak przy sumie majątku (rozdz. 7);
-  - brak aktywnych źródeł → „Dodaj źródło na ekranie Majątek, aby zobaczyć
-    prognozę.”;
-  - plan z pulami 0% → prognoza działa, wpłaty wynoszą 0, a linie
-    scenariuszy pokrywają się (karty pokazują różnicę +0 zł).
-- Aplikacja nie łączy się w tym celu z żadną usługą zewnętrzną i nie używa
-  sztucznej inteligencji (P27).
+    prognozy prośba o kurs zapasowy, jak przy sumie majątku (rozdz. 7).
+- Plan z pulami 0% nie jest brakiem danych: prognoza działa, wpłaty
+  wynoszą 0, a linie scenariuszy pokrywają się (karty pokazują różnicę
+  „+0 zł względem bazowego”).
+- **Bez danych na zewnątrz** (P27): Prognoza nie używa sztucznej
+  inteligencji, a przeglądarka nie wysyła żadnego żądania poza aplikację.
+  Serwer łączy się najwyżej z NBP po bieżący kurs, tak jak na pozostałych
+  ekranach (5.9); zapytanie nie zawiera danych użytkownika.
 
 ## 6. Reguły obliczeń
 
@@ -560,7 +588,7 @@ przecinku. Bez arytmetyki zmiennoprzecinkowej.
       majątek w k = 0 − `suma wpłat` w k (może być ujemny przy ujemnej
       stopie);
     - kwoty pokazywane w prognozie zaokrągla się do pełnych złotych,
-      połówki w górę; różnica w karcie scenariusza to różnica zaokrąglonych
+      połówki od zera; różnica w karcie scenariusza to różnica zaokrąglonych
       kwot. `Udział zysku` = `zysk` ÷ `majątek scenariusza` na koniec
       horyzontu, w pełnych procentach, połówki w górę. „Każda złotówka
       zamieni się w” = (`majątek scenariusza` − majątek w k = 0) ÷ `suma
@@ -644,7 +672,9 @@ osiąga go w sierpniu 2029 (k = 34), +15% w kwietniu 2029 (k = 30).
 | Cel EUR bez żadnego kursu | Prognoza i wymagana wpłata w EUR działają; zamiast sugestii procentu prośba o kurs (5.12). |
 | Prognoza majątku: mniej niż 6 miesięcy z przychodem | Średnia z tych, które są; „Punkt wyjścia” podaje ich liczbę (reguła 6.14). |
 | Prognoza majątku: przychód tylko w bieżącym miesiącu | Średni przychód = przychód bieżącego miesiąca, także gdy pozycje są jeszcze wpisywane. |
-| Prognoza majątku: ujemna stopa zwrotu | Dozwolona (od −50%); źródło traci wartość, `zysk` może być ujemny. Wykres „Wpłaty kontra zysk” nie pokazuje wtedy warstwy zysku, a legenda pokazuje ujemną kwotę zysku. |
+| Prognoza majątku: ujemna stopa zwrotu | Dozwolona (od −50%); źródło traci wartość, `zysk` może być ujemny, także przy innych źródłach ze stopą dodatnią. „Wpłaty kontra zysk” pokazuje wtedy zdanie dla zysku ujemnego, przycięte warstwy bez zysku i ujemną kwotę zysku w legendzie (5.13). |
+| Prognoza majątku: majątek dziś 0 i plan z pulami 0% | Majątek scenariuszy wynosi 0 przez cały horyzont; zdanie „zysk … wynosi 0 zł”, karty „+0 zł względem bazowego”, brak progów. |
+| Prognoza majątku: przerwy między miesiącami z przychodem | Średnia z 6 najnowszych miesięcy z przychodem, nawet jeśli obejmują więcej niż pół roku; dopisek mówi „miesięcy z przychodem”. |
 | Prognoza majątku: zarchiwizowane źródło | Nie występuje w prognozie; jego stopa zostaje zapisana, ale nie jest używana. |
 | Prognoza majątku: zmiana planu, stopy albo przychodu | Prognoza liczy się od nowa przy kolejnym otwarciu zakładki; nic nie jest zapisywane. |
 | Ponowne rozliczenie tego samego miesiąca | Odrzucone: „Ten miesiąc jest już rozliczony”. |
@@ -665,7 +695,7 @@ osiąga go w sierpniu 2029 (k = 34), +15% w kwietniu 2029 (k = 30).
 | Kurs zapasowy EUR | > 0, najwyżej 4 miejsca po przecinku. Puste = brak. | „Wpisz kurs, np. 4,2850” |
 | Termin celu | Miesiąc i rok, nie wcześniejszy niż pierwszy miesiąc wpłaty P (reguła 6.12) i nie późniejszy niż grudzień 2099 (sprawdzane przy zmianie terminu). | „Wybierz termin od listopada 2026” (miesiąc P) |
 | Termin celu bez kwoty docelowej | Niedozwolony. | „Termin wymaga kwoty docelowej” |
-| Zakładana stopa zwrotu | Od −50 do 50, najwyżej 2 miejsca po przecinku, separator `,` lub `.`, znak `%` ignorowany. Puste = brak (liczona jako 0%). | „Wpisz stopę od −50 do 50, np. 6,5” |
+| Zakładana stopa zwrotu | Od −50 do 20, najwyżej 2 miejsca po przecinku, separator `,` lub `.`, minus jako `-` albo `−`, znak `%` ignorowany. Puste = brak (liczona jako 0%). | „Wpisz stopę od −50 do 20, np. 6,5” |
 | Horyzont prognozy (własna liczba lat) | Liczba całkowita od 1 do 40. | „Wpisz liczbę lat od 1 do 40” |
 | Nazwy (źródło, cel, przychód) | Wymagane, najwyżej 60 znaków. | „Wpisz nazwę” |
 
@@ -721,8 +751,9 @@ przed zadaniami interfejsu Etapu 2 (P20). Niezależnie od kierunku:
   informacyjnym pod wierszem celu.
 - **Nawigacja:** sześć zakładek; „Prognoza” między Historią a Ustawieniami,
   z ikoną linii trendu ze strzałką. Na wąskim ekranie dolna belka mieści
-  sześć skróconych nazw bez przycisku motywu (P30), bez przewijania
-  w poziomie przy 360 px.
+  sześć skróconych nazw (Miesiąc, Majątek, Plan, Historia, Prognoza,
+  Ustawienia) bez przycisku motywu (P30), bez przewijania w poziomie i bez
+  ucinania nazw przy 360 px.
 - **Prognoza** (makieta: P25), od góry: nagłówek „Prognoza” z jednym zdaniem
   opisu; karta „Punkt wyjścia” z czterema liczbami w rzędzie (dwa rzędy po
   dwie na wąskim ekranie) i zdaniem kontrolnym w neutralnym bloku
@@ -864,7 +895,8 @@ wycofuje P24, więc znów obowiązuje.
   to przychód wyższy o 5, 10 i 15% od tej średniej, wszystkie cztery linie
   naraz, bez własnego procentu. Faktyczne wpłaty tylko w zdaniu kontrolnym.
 - P27: bez sztucznej inteligencji i bez wywołań zewnętrznych API dla
-  prognozy; dane nie opuszczają aplikacji.
+  prognozy; dane nie opuszczają aplikacji. Pobranie bieżącego kursu NBP
+  (bez danych użytkownika, 5.9) nie jest takim wywołaniem.
 - P28: symulacja na żywo, bez zapisywania scenariuszy i ustawień ekranu.
   Horyzont 5, 10, 15 lat albo własna liczba lat (1–40).
 - P29: zakładana stopa zwrotu per źródło, opcjonalna (puste = 0%),
@@ -874,6 +906,12 @@ wycofuje P24, więc znów obowiązuje.
   kontra zysk”, kamienie milowe i tabela źródeł.
 - P30: na wąskim ekranie przycisk motywu znika z dolnej belki, żeby
   zmieściło się sześć zakładek; motyw zmienia się wtedy w Ustawieniach.
+- P31 (po review B prognozy, D1, 2026-10-30): zakładana stopa zwrotu od
+  −50 do 20%, żeby 40-letnia prognoza mieściła się w zakresie obliczeń dla
+  realnych kwot.
+- P32 (po review B prognozy, D2, 2026-10-30): prognoza pomija zaplanowane,
+  a nierozliczone wpłaty bieżącego i zaległych miesięcy (Z19); „majątek
+  dziś” jest ten sam co na pozostałych ekranach.
 
 **Założenia Etapu 2 (zaproponowane przez agenta, zaakceptowane przez
 właściciela produktu 2026-10-27 po review B i E):**
@@ -897,16 +935,17 @@ właściciela produktu 2026-10-27 po review B i E):**
   i oznaczone jako kurs zapasowy; bieżący kurs i kursy z końców miesięcy
   pochodzą z NBP, a gdy ich brak — z kursu zapasowego piaskownicy.
 
-**Założenia prognozy majątku (zaproponowane przez agenta, do akceptacji
-w review B):**
+**Założenia prognozy majątku (zaproponowane przez agenta, zaakceptowane
+w review B prognozy 2026-10-30):**
 - Z17: średni przychód pomija bieżący miesiąc, gdy są starsze miesiące
   z przychodem, bo bieżący miesiąc bywa jeszcze niepełny (reguła 6.14).
 - Z18: stopa roczna ÷ 12 z kapitalizacją co miesiąc, liczona w groszach
   bez arytmetyki zmiennoprzecinkowej (np. 6,00% daje 0,5% miesięcznie).
-- Z19: prognoza zaczyna się od bieżących wartości źródeł, a pierwsza wpłata
-  przypada na następny miesiąc kalendarzowy; zaplanowana, a jeszcze
-  nierozliczona wpłata bieżącego miesiąca nie jest doliczana. Kurs EUR
-  stały (bieżący) przez cały horyzont.
+- Z19 (zaakceptowane z P32): prognoza zaczyna się od bieżących wartości
+  źródeł, a pierwsza wpłata przypada na następny miesiąc kalendarzowy.
+  Zaplanowane, a jeszcze nierozliczone wpłaty bieżącego i zaległych
+  miesięcy nie są doliczane; uwzględnia je dopiero rozliczenie, które
+  zmienia wartości źródeł. Kurs EUR stały (bieżący) przez cały horyzont.
 
 **Otwarte pytania:** brak.
 
@@ -1062,7 +1101,7 @@ wymienione tabele.
     pod tabelą „1 z 2 źródeł bez zakładanej stopy zwrotu, liczone jako 0%.”
 41. **Punkt wyjścia i zdanie kontrolne:** przy danych ze scen. 40
     „Punkt wyjścia” pokazuje majątek 12 000,00 zł, średni przychód
-    10 000,00 zł („ostatnie 6 miesięcy”), 10,00% („Oszczędności 10,00% ·
+    10 000,00 zł („6 ostatnich miesięcy z przychodem”), 10,00% („Oszczędności 10,00% ·
     Inwestycje 0,00%”) i wpłatę 1 000,00 zł. Gdy rozliczone są tylko
     lipiec, sierpień i wrzesień z faktycznymi kwotami 1 000,00, 500,00
     i 900,00 zł, pod kartą jest „W ostatnich 3 rozliczonych miesiącach
@@ -1072,14 +1111,15 @@ wymienione tabele.
 42. **Średni przychód z mniejszej liczby miesięcy:** gdy przed
     październikiem 2026 przychód mają tylko sierpień (9 000,00 zł)
     i wrzesień (11 000,00 zł), a październik ma 4 000,00 zł, średni przychód
-    to 10 000,00 zł („ostatnie 2 miesiące”). Gdy przychód ma tylko
-    październik, średni przychód to 4 000,00 zł. Bez żadnego przychodu
+    to 10 000,00 zł („2 ostatnie miesiące z przychodem”). Gdy przychód ma
+    tylko październik, średni przychód to 4 000,00 zł („bieżący miesiąc,
+    jeszcze niepełny”). Bez żadnego przychodu
     zakładka pokazuje „Prognoza pojawi się po wpisaniu pierwszego
     przychodu.”
 43. **Stopa zwrotu na Majątku:** wpisanie „6,5” przy źródle zapisuje
     6,50%, a Prognoza pokazuje je w tabeli źródeł; „60” jest odrzucone
-    komunikatem „Wpisz stopę od −50 do 50, np. 6,5”. Wyczyszczenie pola
-    daje w Prognozie „brak (0%)”. Zmiana stopy nie dodaje zapisu do historii
+    komunikatem „Wpisz stopę od −50 do 20, np. 6,5”, a „−10” jest
+    przyjęte. Wyczyszczenie pola daje w Prognozie „brak (0%)”. Zmiana stopy nie dodaje zapisu do historii
     wartości i nie zmienia wykresu „Wartość majątku”. Gdy żadne źródło nie
     ma stopy, „Wpłaty kontra zysk” pokazuje „Żadne źródło nie ma zakładanej
     stopy zwrotu, więc majątek rośnie tylko o wpłaty.”
@@ -1097,6 +1137,15 @@ wymienione tabele.
     motywu i bez przewijania w poziomie; zmiana motywu w Ustawieniach
     działa. Na komputerze przycisk motywu jest w bocznym pasku jak dotąd.
 47. **Prognoza bez połączeń zewnętrznych:** otwarcie Prognozy i zmiana
-    horyzontu nie wysyłają żadnego żądania poza aplikację (w obu trybach),
-    a strona bez sesji przekierowuje na logowanie albo ekran startowy demo
-    (scen. 13).
+    horyzontu nie wysyłają z przeglądarki żadnego żądania poza aplikację
+    (w obu trybach); serwer łączy się najwyżej z NBP po kurs, jak na
+    pozostałych ekranach. Strona bez sesji przekierowuje na logowanie albo
+    ekran startowy demo (scen. 13).
+48. **Zysk ujemny i zerowy:** dla danych ze scen. 40 ze stopą „Konto”
+    −10,00% przy horyzoncie 5 lat majątek bazowy to 55 421 zł, a „Wpłaty
+    kontra zysk” pokazuje „Przy założonych stopach majątek za 5 lat będzie
+    o 16 579 zł niższy niż majątek dziś i suma wpłat.”, w legendzie 12 000,
+    60 000 i −16 579 zł, bez warstwy zysku. Przy horyzoncie 1 rok to samo
+    zdanie ma „za 1 rok” (o 1 490 zł), przy 22 latach „za 22 lata”. Gdy wszystkie źródła mają wartość 0 i plan ma pule 0%,
+    zakładka pokazuje majątek 0 zł we wszystkich scenariuszach i „Przy
+    założonych stopach zysk za 10 lat wynosi 0 zł.”

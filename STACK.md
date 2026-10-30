@@ -3,12 +3,14 @@
 Status: **zatwierdzony przez właściciela produktu (etap C, 2026-10-20)**,
 łącznie z decyzjami z rozdz. 9; zmiana koncepcji wdrożenia (wersja prywatna
 lokalnie, publiczne demo) z 2026-10-21, decyzja 9.4. **Etap 2** (kurs NBP,
-powiadomienia e-mail, historia wartości, prognoza celu; decyzje 9.5–9.8)
-z 2026-10-27, po niezależnym review etapu E
+historia wartości, prognoza celu i majątku) z 2026-10-27, po niezależnym
+review etapu E
 ([`docs/reviews/plan-review-etap2-E.md`](docs/reviews/plan-review-etap2-E.md))
-i akceptacji właściciela. Zmiana zakresu z 2026-10-29 (SPEC P24–P30):
-powiadomienia e-mail wycofane, dochodzi prognoza majątku (rozdz. 5
-„Prognoza majątku”, decyzja 9.9). Dokument opisuje trwałe decyzje techniczne
+i akceptacji właściciela. Zmiana zakresu z 2026-10-29 (SPEC P24–P32):
+powiadomienia e-mail wycofane (decyzje 9.5–9.8 zostają jako historia),
+dochodzi prognoza majątku (rozdz. 5 „Prognoza majątku”, decyzja 9.9), po
+review
+([`docs/reviews/plan-review-etap2-prognoza-E.md`](docs/reviews/plan-review-etap2-prognoza-E.md)). Dokument opisuje trwałe decyzje techniczne
 dla [`SPEC.md`](SPEC.md). Zakres i zachowanie produktu opisuje wyłącznie `SPEC.md`;
 w razie konfliktu agent zgłasza go, zamiast wybierać wygodniejszą wersję.
 
@@ -134,7 +136,7 @@ Etap 2 (migracje dodające):
 | `settings` | + fallback_eur_rate | Kurs zapasowy (SPEC 5.9); `eur_rate` zostaje dla zgodności wstecz. |
 | `months` | + settled_rate_date, settled_rate_source (`nbp` / `fallback` / `manual`) | Migracja ustawia `manual` tylko tam, gdzie `settled_eur_rate IS NOT NULL` (MVP zapisuje kurs tylko przy celu EUR); data null. CHECK: kurs i pochodzenie razem albo oba null; data tylko i zawsze dla `nbp`. |
 | `goals` | + deadline (`YYYY-MM`) | CHECK: termin tylko z kwotą docelową. |
-| `sources` | + expected_return (null = brak) | Zakładana stopa zwrotu w setnych procenta (6,50% = 650), CHECK od −5000 do 5000. Zmiana nie trafia do `source_values` (SPEC 5.2). |
+| `sources` | + expected_return (null = brak) | Zakładana stopa zwrotu w setnych procenta (6,50% = 650), CHECK od −5000 do 2000 (SPEC P31). Zmiana nie trafia do `source_values` (SPEC 5.2). |
 | `source_values` | id, user_id, source_id, value, currency, recorded_at, reason | Historia wartości (SPEC 5.11) z walutą z chwili zapisu. `reason`: initial / created / manual / settlement / archived. Indeks (source_id, recorded_at). Migracja wstawia `initial` z `recorded_at = now()` dla wszystkich źródeł, także zarchiwizowanych (wartość 0). |
 
 Tabele mają `user_id`, bo dostęp i tak jest sprawdzany per użytkownik; nie
@@ -221,28 +223,45 @@ powstają razem z domeną (PLAN T21); interfejs dochodzi osobno.
 
 ### Prognoza majątku (Etap 2, SPEC 5.13)
 
-- **Domena:** czysta funkcja reguły 6.14 w `src/domain/`:
-  `(źródła z wartością w PLN i stopą, bieżący plan, przychody miesięcy,
-  faktyczne wpłaty rozliczonych miesięcy, bieżący miesiąc, horyzont) →
-  punkt wyjścia, cztery serie miesięczne, wpłaty, zyski, progi i zdanie
-  kontrolne`. Kwoty celów liczą istniejące funkcje reguł 2–3, przeliczenia
-  EUR reguła 8. Wszystko w groszach na `BigInt` (480 kroków × liczba źródeł
-  to pomijalny koszt); wynik po zaokrągleniu wraca jako `number`, a wartość
-  poza bezpiecznym zakresem kończy się błędem domeny, jak w rozdz. 4.
+- **Domena** (`src/domain/wealth-forecast.ts`; `forecast.ts` to prognoza
+  celu), czyste funkcje reguły 6.14 w dwóch częściach:
+  1. **serie** — `(źródła z wartością w PLN i stopą, bieżący plan, przychody
+     miesięcy, faktyczne wpłaty rozliczonych miesięcy, bieżący miesiąc) →
+     punkt wyjścia, zdanie kontrolne i miesięczne serie 40 lat`: majątek
+     każdego scenariusza oraz wartość każdego źródła w scenariuszu bazowym
+     (do tabeli źródeł). Kwoty celów liczy `computeMonthPlan` (reguły
+     2–3), przeliczenia EUR reguła 8;
+  2. **podsumowanie dla horyzontu N** — `(serie, N) → karty, „Wpłaty kontra
+     zysk”, udział zysku, „każda złotówka”, progi i miesiące ich
+     osiągnięcia, wartości źródeł na koniec`. Ta funkcja nie zna bazy, więc
+     importuje ją komponent kliencki.
+- **Arytmetyka:** grosze na `BigInt`, wynik każdego punktu po zaokrągleniu
+  wraca jako `number`. Zysk miesiąca przy ujemnej stopie wymaga nowego
+  zaokrąglenia połówek od zera (dziś `arithmetic.ts` ma tylko wersje dla
+  wartości nieujemnych). Zakres stopy od −50 do 20% (SPEC P31) gwarantuje,
+  że 40 lat mieści się w `Number.MAX_SAFE_INTEGER` dla realnych danych:
+  przekroczenie wymaga majątku od ok. 32 mld zł albo wpłaty od ok. 538 mln
+  zł miesięcznie (review E prognozy). Błąd domeny przy przekroczeniu
+  zostaje tylko jako zabezpieczenie przed danymi spoza walidacji.
 - **Dane:** kolumna `sources.expected_return` (migracja dodająca, bez
-  zmiany danych) z zapisem w istniejącej akcji edycji źródła i walidacją
-  z SPEC 7.1. Prognoza nie ma własnych tabel ani akcji zapisu.
+  zmiany danych, CHECK od −5000 do 2000) z zapisem w istniejącej akcji
+  edycji źródła. Parser stopy (SPEC 7.1, także minus `−`) w
+  `src/domain/input.ts` obok innych parserów; walidacja horyzontu w module
+  prognozy. Prognoza nie ma własnych tabel ani akcji zapisu.
 - **Strona `/prognoza`:** Server Component czyta dane przez `db/`
-  (zapytania już używane przez „Ten miesiąc”, Majątek i Historię) i liczy
-  serie dla wszystkich czterech scenariuszy naraz. Horyzont (do 40 lat)
-  i wybór scenariusza w „Wpłaty kontra zysk” to stan klienta: komponent
-  kliencki dostaje policzone serie dla 40 lat i przycina je do horyzontu,
-  więc zmiana horyzontu nie wysyła żadnego żądania (SPEC scen. 47).
+  (zapytania już używane przez „Ten miesiąc”, Majątek i Historię), ustala
+  bieżący kurs przez `resolveCurrentRate` (leniwe pobranie NBP jak na
+  innych ekranach; w E2E `NBP_API_URL` wskazuje kursy z helpera) i liczy
+  serie. Komponent kliencki (`"use client"`, jak `NetWorthChart`) dostaje
+  serie 40 lat i liczy podsumowanie dla wybranego horyzontu, więc zmiana
+  horyzontu i scenariusza nie wysyła żadnego żądania (SPEC scen. 47).
 - **Wykresy:** komponenty SVG jak wykres majątku (T20): linie, warstwy,
   znaczniki progów, dymek na hover, dotyk i fokus, tabela dla czytników
   ekranu. Bez nowej zależności.
 - **Nawigacja:** `NAV_TABS` dostaje szóstą zakładkę; przycisk motywu
-  w dolnej belce ukryty regułą CSS dla wąskiego ekranu (SPEC P30).
+  w dolnej belce ukryty regułą CSS dla wąskiego ekranu (SPEC P30). Zmieniają
+  się `src/ui/nav.test.ts` i `e2e/layout.spec.ts` (dziś: pięć zakładek
+  i widoczny przycisk motywu przy 360 px).
 - **Demo:** generator ustawia `expected_return` części źródeł i zostawia
   co najmniej jedno aktywne źródło bez stopy (SPEC 5.8).
 
@@ -411,8 +430,8 @@ Etap 2: obliczeniowe (22–25, 27, 28, 35, 38) jako testy jednostkowe domeny
 i wyboru kursu; zapis kursu rozliczenia, migracja starych rozliczeń
 i historia wartości (23, 25, 36, 39) jako testy integracyjne; przepływy
 (22–24, 26–28, 34, 36–39) jako E2E z kursami z helpera. Prognoza majątku:
-obliczenia (40–42, 45) jako testy jednostkowe reguły 6.14, zapis stopy (43)
-jako test integracyjny, przepływy (40, 41, 43, 44, 46, 47) jako E2E;
+obliczenia (40–42, 45, 48) jako testy jednostkowe reguły 6.14, zapis stopy
+(43) jako test integracyjny, przepływy (40–48) jako E2E;
 scen. 47 sprawdza w Playwright, że strona nie wysyła żądań poza aplikację.
 
 ## 8. Największa niewiadoma
@@ -459,8 +478,10 @@ jako zapis historii.
 8. **Docker Desktop przy logowaniu (Etap 2, 2026-10-27, SPEC P21,
    wycofana):** autostart Dockera jest wymaganiem wersji prywatnej; bez
    niego codzienne maile nie wychodzą.
-9. **Prognoza majątku (2026-10-29, SPEC P25–P29):** bez nowej zależności
-   produkcyjnej i bez połączeń zewnętrznych; jedyna zmiana schematu to
-   kolumna `sources.expected_return`.
+9. **Prognoza majątku (2026-10-29, SPEC P25–P32):** bez nowej zależności
+   produkcyjnej i bez nowych połączeń zewnętrznych (tylko istniejące
+   pobieranie kursu NBP); jedyna zmiana schematu to kolumna
+   `sources.expected_return`. Zakres stopy do 20% (P31) zamiast `BigInt`
+   aż do formatowania.
 
 Pozostałe decyzje z tego dokumentu są techniczne i nie wymagają akceptacji.

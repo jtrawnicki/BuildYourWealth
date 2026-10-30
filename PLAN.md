@@ -384,7 +384,7 @@ czy to decyzje produktowe dla człowieka:
 # Etap 2
 
 Zakres: SPEC 5.9, 5.11–5.13 i 8.1, reguły 6.10–6.14, scenariusze 22–28
-i 34–47, STACK „Kurs NBP”, „Historia wartości”, „Prognoza celu”, „Prognoza
+i 34–48, STACK „Kurs NBP”, „Historia wartości”, „Prognoza celu”, „Prognoza
 majątku”.
 Oznaczenia jak w MVP. Plan po niezależnym review etapu E
 ([`docs/reviews/plan-review-etap2-E.md`](docs/reviews/plan-review-etap2-E.md))
@@ -569,24 +569,30 @@ jako nieplanowane. Kod ich nie zawierał.
 
 ### T27 Domena prognozy majątku
 
-- **Rezultat:** czysta funkcja reguły 6.14 w `src/domain/` wg STACK
-  „Prognoza majątku”: średni przychód (z liczbą miesięcy), przychód
-  i wpłata scenariusza, wpłata do każdego źródła z bieżącego planu
-  (reguły 2–3), serie miesięczne czterech scenariuszy na `BigInt`
-  z kapitalizacją miesięczną i zaokrągleniem połówek od zera, suma wpłat,
-  zysk, udział zysku, „każda złotówka”, progi i miesiące ich osiągnięcia,
-  średnia faktycznych wpłat do zdania kontrolnego; walidacja stopy
-  i horyzontu z SPEC 7.1.
+- **Rezultat:** czyste funkcje reguły 6.14 w `src/domain/wealth-forecast.ts`
+  wg STACK „Prognoza majątku”: serie (średni przychód z dopiskiem, przychód
+  i wpłata scenariusza, wpłata do każdego źródła z bieżącego planu przez
+  `computeMonthPlan`, serie 40 lat czterech scenariuszy i źródeł
+  bazowych na `BigInt` z kapitalizacją miesięczną, średnia faktycznych
+  wpłat do zdania kontrolnego) i podsumowanie dla horyzontu N (karty,
+  suma wpłat, zysk i legenda, udział zysku, „każda złotówka”, wariant
+  zdania i odmiana „rok / lata / lat”, progi i miesiące ich osiągnięcia);
+  zaokrąglenie połówek od zera w `arithmetic.ts`; walidacja horyzontu
+  z SPEC 7.1. Parser stopy należy do T28.
 - **Zależy od:** brak. **Poziom:** 2 (obliczenia na pieniądzach).
   **Równolegle:** z T28, T22.
 - **Kryteria akceptacji:** przykład prognozy majątku z SPEC 6 co do grosza
   (13 050,00, 14 105,25 i 24 952,36 zł; 85 259, 88 747, 92 236
-  i 95 724 zł; k = 34 i k = 30); scen. 40–42 i 45 (część obliczeniowa);
-  przypadki: mniej niż 6 miesięcy, tylko bieżący miesiąc, brak przychodu,
-  pule 0%, źródło bez celu, dwa cele na jednym źródle, cel osiągnięty,
-  ujemna stopa, brak stóp, źródło EUR (bieżący kurs, brak kursu), więcej
-  niż 3 progi, brak progów, horyzont 40 lat bez przekroczenia bezpiecznego
-  zakresu, rozliczenia z kwotami EUR w zdaniu kontrolnym, przełom roku.
+  i 95 724 zł; k = 34 i k = 30); scen. 40–42, 45 i 48 (część
+  obliczeniowa: 55 421 zł i −16 579 zł); przypadki: mniej niż 6 miesięcy,
+  miesiące z przychodem z przerwą, tylko bieżący miesiąc, bieżący miesiąc
+  rozliczony, zaległy nierozliczony miesiąc (Z19), brak przychodu, pule 0%,
+  majątek końcowy 0, zysk dokładnie 0, źródło bez celu, dwa cele na jednym
+  źródle, cel osiągnięty, ujemna stopa i stopy mieszane, brak stóp, źródło
+  EUR (bieżący kurs, brak kursu), więcej niż 3 progi, brak progów, suma
+  zaokrąglonych części legendy, zaokrąglenie −0,5 i −1,5 gr, źródło
+  2 mld zł ze stopą 20% przez 40 lat mieści się w zakresie, rozliczenia
+  z kwotami EUR w zdaniu kontrolnym, przełom roku.
 - **Weryfikacja:** testy jednostkowe, niezależne review obliczeń.
 
 ### T28 Zakładana stopa zwrotu źródła
@@ -594,12 +600,14 @@ jako nieplanowane. Kod ich nie zawierał.
 - **Rezultat:** kolumna `sources.expected_return` (migracja dodająca,
   CHECK zakresu), zapis i odczyt w `db/`, pole „Zakładana stopa zwrotu
   (opcjonalnie)” z podpowiedzią w formularzu źródła na Majątku (SPEC 5.2),
-  walidacja z SPEC 7.1; generator demo ustawia stopy części źródeł
+  parser i walidacja z SPEC 7.1 (od −50 do 20, minus `-` i `−`) w
+  `src/domain/input.ts`, stopa przy źródle na liście (SPEC 5.2); generator
+  demo ustawia stopy części źródeł
   i zostawia co najmniej jedno aktywne źródło bez stopy (SPEC 5.8).
 - **Zależy od:** brak. **Poziom:** 2 (migracja na `byw_private`).
   **Równolegle:** z T27, T22.
 - **Kryteria akceptacji:** scen. 43 bez części o Prognozie (zapis 6,50%,
-  odrzucenie 60, wyczyszczenie pola); zmiana stopy nie dodaje wiersza do
+  odrzucenie 60, przyjęcie „−10”, wyczyszczenie pola); zmiana stopy nie dodaje wiersza do
   `source_values` (test integracyjny); migracja na danych z T17 zachowuje
   wszystkie wartości, `drizzle-kit generate` nie daje różnicy; testy
   generatora potwierdzają źródła ze stopą i bez dla wielu dat `now`;
@@ -616,14 +624,16 @@ jako nieplanowane. Kod ich nie zawierał.
   i strzałki, znaczniki progów, tabela dla czytników ekranu), kartami
   scenariuszy, „Wpłaty kontra zysk” z przełącznikiem scenariusza,
   kamieniami milowymi, tabelą źródeł z dopiskami i stałym dopiskiem; stany
-  braku danych; szósta zakładka w nawigacji i ukryty przycisk motywu
-  w dolnej belce (SPEC P30).
+  braku danych w kolejności z SPEC 5.13; szósta zakładka w nawigacji
+  i ukryty przycisk motywu w dolnej belce (SPEC P30), ze zmianą
+  `src/ui/nav.test.ts` i `e2e/layout.spec.ts`.
 - **Zależy od:** T27, T28. **Poziom:** 2.
-- **Kryteria akceptacji:** scen. 40, 41, 43 (część Prognozy), 44, 46, 47
-  jako E2E, scen. 34 (część Prognozy) w trybie demo; strona ma test „bez
-  sesji brak danych” (scen. 13); scen. 12 dla Prognozy i nawigacji (oba
-  motywy, 360 px bez przewijania w poziomie); brak nowej zależności
-  produkcyjnej; zmiana horyzontu nie wysyła żądania do serwera.
+- **Kryteria akceptacji:** scen. 40–42, 43 (część Prognozy), 44–48 jako
+  E2E, w tym stany „brak źródeł”, „brak przychodu”, „brak kursu” i pule 0%;
+  scen. 34 (część Prognozy) w trybie demo; strona ma test „bez sesji brak
+  danych” (scen. 13); scen. 12 dla Prognozy i nawigacji (oba motywy, 360 px
+  bez przewijania w poziomie i bez uciętych nazw zakładek); brak nowej
+  zależności produkcyjnej; zmiana horyzontu nie wysyła żądania do serwera.
 - **Weryfikacja:** E2E w obu trybach, niezależne review.
 
 ## M11 Wydanie Etapu 2
@@ -633,7 +643,7 @@ jako nieplanowane. Kod ich nie zawierał.
 - **Rezultat:** wydanie zgodne z WORKFLOW etap G, raport
   `docs/RELEASE-ETAP-2.md` (jak `RELEASE-MVP.md`).
 - **Zależy od:** wszystkie. **Poziom:** 3.
-- **Kryteria akceptacji:** scenariusze 1–28 i 34–47 mają zielony test albo
+- **Kryteria akceptacji:** scenariusze 1–28 i 34–48 mają zielony test albo
   odhaczony krok ręczny; audyt bezpieczeństwa: wersja prywatna nadal
   niedostępna z sieci, jedyne połączenie wychodzące to NBP, Prognoza nie
   wysyła danych poza aplikację, kursy demo nie są podpisane jako NBP; smoke
@@ -654,5 +664,10 @@ Właściciel produktu przyjął 2026-10-27 rekomendacje obu review:
   T19 na T19a i T19b, Issue dla R; B1–B5 poprawione w PLAN i STACK.
 - **Zmiana zakresu (2026-10-29):** właściciel wycofał powiadomienia e-mail
   (SPEC P24) i dodał prognozę majątku (P25–P30) po burzy mózgów i makiecie;
-  M10 to teraz T27–T29. Zmiana SPEC przechodzi niezależne review etapu B,
-  a nowe zadania review etapu E, zanim dostaną Issue.
+  M10 to teraz T27–T29.
+- **Review prognozy** (`docs/reviews/spec-review-etap2-prognoza-B.md`,
+  `docs/reviews/plan-review-etap2-prognoza-E.md`, 2026-10-30): D1 → stopa
+  od −50 do 20% (SPEC P31); D2 → Z19 obejmuje zaległe miesiące (P32);
+  B1–B3 z review B i B1–B2 z review E oraz większość uwag poprawione
+  w SPEC, STACK i PLAN. Otwarte poza tym zakresem: rozdz. 8 SPEC nadal
+  opisuje wariant B, choć R jest zmergowane.
