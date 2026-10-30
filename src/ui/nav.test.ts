@@ -9,6 +9,7 @@ describe("activeTab", () => {
   it("zakładka i jej podstrony", () => {
     expect(activeTab("/majatek")).toBe("/majatek");
     expect(activeTab("/historia/2026-09")).toBe("/historia");
+    expect(activeTab("/prognoza")).toBe("/prognoza");
     expect(activeTab("/ustawienia")).toBe("/ustawienia");
   });
 

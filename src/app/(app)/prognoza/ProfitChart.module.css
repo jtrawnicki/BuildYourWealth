@@ -1,0 +1,40 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  /* Etykiety osi Y wychodzą nieco w lewo poza obszar rysunku; nie przycinamy. */
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.yLabel {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: end;
+}
+
+/* Warstwy od dołu: majątek dziś (neutralny), wpłaty (jasny akcent),
+   zysk (kolor sukcesu) — SPEC 8.1. */
+.today {
+  fill: var(--spend);
+}
+
+.contrib {
+  fill: var(--invest-soft);
+}
+
+.profit {
+  fill: var(--ok-text);
+  opacity: 0.85;
+}
