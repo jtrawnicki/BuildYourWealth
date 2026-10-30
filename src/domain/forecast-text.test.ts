@@ -264,6 +264,25 @@ describe("requiredText: warianty", () => {
   });
 });
 
+describe("requiredText: cel EUR bez kursu", () => {
+  it("pomija zdanie o zaplanowanej kwocie, której nie da się wyrazić w EUR", () => {
+    const input: GoalInput = {
+      currency: "EUR",
+      targetAmount: 100_000,
+      progress: 0,
+      months: goalMonths(GOAL, "savings", [pm("2026-11")]),
+      currentMonth: "2026-11",
+      currentRate: null,
+    };
+    const result = goalDeadline(input, "2026-12");
+    expect(
+      plain(requiredText(result, forecastGoal(input), "2026-12", "EUR")),
+    ).toBe(
+      "Do grudnia 2026 brakuje 1 000,00 €. W każdym kolejnym miesiącu potrzebujesz 1 000,00 €.",
+    );
+  });
+});
+
 describe("suggestionText: komunikaty zamiast procentu", () => {
   it.each([
     [{ kind: "over-100" } as const, FORECAST_MESSAGES.over100],

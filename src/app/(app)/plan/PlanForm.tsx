@@ -593,9 +593,11 @@ export function PlanForm({
   );
   const v = validate(form, savedDeadlines, context);
 
-  // Lata terminu: od bieżącego (albo wcześniejszego zapisanego terminu) do 2099.
+  // Lata terminu: od bieżącego, roku P celu (zaległy miesiąc z poprzedniego
+  // roku) albo wcześniejszego zapisanego terminu — do 2099.
   const firstYear = Math.min(
     Number(context.currentMonth.slice(0, 4)),
+    ...form.rows.map((row) => Number(firstMonthOf(row, context).slice(0, 4))),
     ...initial.goals.flatMap((goal) =>
       goal.deadline === null ? [] : [Number(goal.deadline.slice(0, 4))],
     ),

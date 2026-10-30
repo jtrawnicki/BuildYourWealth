@@ -286,8 +286,12 @@ export function goalDeadline(
   const plannedPln = plannedInRange.reduce((sum, m) => sum + m.planAmount, 0);
   // Bez kursu kwot planu celu EUR nie da się wyrazić w EUR; traktujemy je jak 0
   // i prosimy o kurs (SPEC 7: „Ustaw kurs EUR, aby zobaczyć sugestię procentu”).
-  const planned =
-    planInGoalCurrency(plannedPln, input.currency, input.currentRate) ?? 0;
+  const plannedConverted = planInGoalCurrency(
+    plannedPln,
+    input.currency,
+    input.currentRate,
+  );
+  const planned = plannedConverted ?? 0;
 
   const existing = new Set(sorted.map((m) => m.month));
   let futureMonths = 0;
@@ -326,7 +330,9 @@ export function goalDeadline(
     status,
     firstMonth,
     planned,
-    plannedMonths: plannedInRange.map((m) => m.month),
+    // Bez kursu kwoty planu nie ma, więc nie mówimy, że miesiące ją mają.
+    plannedMonths:
+      plannedConverted === null ? [] : plannedInRange.map((m) => m.month),
     shortfall,
     futureMonths,
     required,
