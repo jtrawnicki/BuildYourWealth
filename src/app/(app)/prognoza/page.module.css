@@ -1,0 +1,331 @@
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.lead {
+  margin: 0;
+  color: var(--muted);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  min-width: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Blok informacyjny: zdanie kontrolne i zdanie „Wpłaty kontra zysk". */
+.info {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-size: 14px;
+}
+
+/* „Punkt wyjścia": cztery liczby w rzędzie, dwa rzędy po dwie na wąskim ekranie. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.factLabel {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.factValue {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  overflow-wrap: anywhere;
+}
+
+.factNote {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chartHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+/* Przełącznik horyzontu i scenariusza: pigułki wyboru. */
+.horizon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--track);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--invest-soft);
+  color: var(--invest-ink);
+  font-weight: 600;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.customField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.customInput {
+  width: 56px;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
+
+.customInput:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--err-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Karty scenariuszy: cztery, dwie w rzędzie na wąskim ekranie. */
+.scenarioCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.scenarioCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  min-width: 0;
+}
+
+.scenarioBase {
+  border-color: transparent;
+  background: var(--track);
+}
+
+.scenarioName {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.scenarioWorth {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  overflow-wrap: anywhere;
+}
+
+.scenarioMeta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.scenarioDiff {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* „Wpłaty kontra zysk": wykres i legenda obok (pod spodem na wąskim ekranie). */
+.profitWrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  gap: 20px;
+  align-items: center;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.legendRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.legendRow dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.legendRow dd {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.legendTotal {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.legendTotal dt {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 3px;
+}
+
+.swatchToday {
+  background: var(--spend);
+}
+
+.swatchContrib {
+  background: var(--invest-soft);
+}
+
+.swatchProfit {
+  background: var(--ok-text);
+}
+
+/* Tabele kamieni milowych i źródeł: opakowanie przycina szeroką tabelę. */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.table tbody th {
+  font-weight: 600;
+}
+
+.sourcesNote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.disclaimer {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 759px) {
+  .facts,
+  .scenarioCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profitWrap {
+    grid-template-columns: 1fr;
+  }
+}

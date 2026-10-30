@@ -29,6 +29,12 @@ const ICONS: Record<NavHref, ReactNode> = {
       <path d="M12 8v4l3 2" />
     </>
   ),
+  "/prognoza": (
+    <>
+      <path d="M3 17l6-6 4 4 7-7" />
+      <path d="M15 8h5v5" />
+    </>
+  ),
   "/ustawienia": (
     <>
       <circle cx="12" cy="12" r="3" />

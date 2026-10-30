@@ -77,6 +77,22 @@ test("druga przeglądarka dostaje osobną piaskownicę: zmiany pierwszej są nie
   await c2.close();
 });
 
+test("Prognoza w demo pokazuje scenariusze i źródła ze stopami (scen. 34)", async ({
+  page,
+}) => {
+  await enterDemo(page);
+  await page.goto("/prognoza");
+
+  await expect(page.getByRole("heading", { name: "Prognoza" })).toBeVisible();
+  // Cztery karty scenariuszy liczone na żywo z danych piaskownicy.
+  for (const name of ["Bazowy", "+5%", "+10%", "+15%"]) {
+    await expect(page.getByRole("group", { name, exact: true })).toBeVisible();
+  }
+  // Generator ustawia stopy części źródeł i zostawia co najmniej jedno bez stopy.
+  const sources = page.getByRole("region", { name: "Źródła w prognozie" });
+  await expect(sources).toContainText("brak (0%)");
+});
+
 test("Wyloguj kończy piaskownicę: wraca na ekran startowy, a sesja nie działa (scen. 20)", async ({
   page,
 }) => {

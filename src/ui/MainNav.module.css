@@ -62,8 +62,11 @@
     flex-direction: column;
     justify-content: center;
     gap: 3px;
-    padding: 0 2px;
-    font-size: 10.5px;
+    padding: 0 1px;
+    /* Sześć zakładek na 360 px: nazwy muszą się zmieścić bez ucinania
+       („Ustawienia" jest najdłuższa, SPEC 8.1, scen. 46). */
+    font-size: 10px;
+    letter-spacing: -0.2px;
     line-height: 1.1;
   }
 

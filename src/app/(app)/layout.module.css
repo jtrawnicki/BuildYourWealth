@@ -92,9 +92,10 @@
     display: none;
   }
 
+  /* Dolna belka telefonu mieści tylko sześć zakładek; przycisk motywu jest
+     ukryty, a motyw zmienia się w Ustawieniach (SPEC P30, scen. 46). */
   .railFoot {
-    margin-top: 0;
-    padding-left: 0;
+    display: none;
   }
 
   .main {

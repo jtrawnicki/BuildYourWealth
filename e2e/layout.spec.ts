@@ -5,10 +5,13 @@ const TABS = [
   "Majątek",
   "Plan podziału",
   "Historia",
+  "Prognoza",
   "Ustawienia",
 ];
 
-test("nawigacja ma pięć zakładek, aktywna jest oznaczona", async ({ page }) => {
+test("nawigacja ma sześć zakładek, aktywna jest oznaczona", async ({
+  page,
+}) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Menu główne" });
   // Na telefonie widać skróconą nazwę, więc zakładki rozpoznajemy po dostępnej
@@ -26,7 +29,9 @@ for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`360 px, motyw ${colorScheme}`, () => {
     test.use({ viewport: { width: 360, height: 740 }, colorScheme });
 
-    test("nawigacja używalna bez przewijania w poziomie", async ({ page }) => {
+    test("sześć zakładek bez przycisku motywu i bez przewijania w poziomie (scen. 46)", async ({
+      page,
+    }) => {
       await page.goto("/");
       const overflow = await page.evaluate(
         () =>
@@ -42,10 +47,18 @@ for (const colorScheme of ["light", "dark"] as const) {
         const link = nav.getByRole("link", { name, exact: true });
         await expect(link).toBeInViewport({ ratio: 1 });
         expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        // Skrócona nazwa mieści się bez ucinania (SPEC 8.1, scen. 46).
+        const short = link.locator("span").last();
+        const fits = await short.evaluate(
+          (el) => el.scrollWidth <= el.clientWidth,
+        );
+        expect(fits).toBe(true);
       }
+      // Przycisk motywu jest ukryty w dolnej belce (SPEC P30); motyw zmienia się
+      // w Ustawieniach.
       await expect(
         page.getByRole("button", { name: /^Włącz motyw/ }),
-      ).toBeInViewport({ ratio: 1 });
+      ).toBeHidden();
     });
   });
 }

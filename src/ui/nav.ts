@@ -3,6 +3,7 @@ export const NAV_TABS = [
   { href: "/majatek", label: "Majątek", short: "Majątek" },
   { href: "/plan", label: "Plan podziału", short: "Plan" },
   { href: "/historia", label: "Historia", short: "Historia" },
+  { href: "/prognoza", label: "Prognoza", short: "Prognoza" },
   { href: "/ustawienia", label: "Ustawienia", short: "Ustawienia" },
 ] as const;
 
