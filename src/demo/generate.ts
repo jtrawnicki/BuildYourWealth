@@ -25,6 +25,12 @@ export type DemoSource = {
   currency: "PLN" | "EUR";
   /** Wartość bieżąca = wartość ostatniego punktu historii źródła. */
   value: number;
+  /**
+   * Zakładana stopa zwrotu w setnych procenta albo `null` (SPEC 5.2, 5.8).
+   * Część źródeł ma stopę, a co najmniej jedno aktywne źródło jej nie ma, żeby
+   * prognoza majątku pokazała oba przypadki.
+   */
+  expectedReturn: number | null;
 };
 
 /** Punkt historii wartości źródła (SPEC 5.11): stan po zmianie. */
@@ -95,21 +101,38 @@ type PlanGoalDef = {
   sourceKey: string;
 };
 
+// Stopy zwrotu: inwestycje mają stopę (makler 6,50%, IKE 5,00%), oszczędności
+// jej nie mają (null), więc prognoza majątku pokazuje źródła ze stopą i bez
+// (SPEC 5.8, scen. 43).
 const SOURCES: Omit<DemoSource, "value">[] = [
   {
     key: "osz",
     name: "Konto oszczędnościowe",
     kind: "savings",
     currency: "PLN",
+    expectedReturn: null,
   },
-  { key: "lokata", name: "Lokata", kind: "savings", currency: "PLN" },
+  {
+    key: "lokata",
+    name: "Lokata",
+    kind: "savings",
+    currency: "PLN",
+    expectedReturn: null,
+  },
   {
     key: "makler",
     name: "Konto maklerskie",
     kind: "investments",
     currency: "PLN",
+    expectedReturn: 650,
   },
-  { key: "ike", name: "Konto IKE (EUR)", kind: "investments", currency: "EUR" },
+  {
+    key: "ike",
+    name: "Konto IKE (EUR)",
+    kind: "investments",
+    currency: "EUR",
+    expectedReturn: 500,
+  },
 ];
 
 const PLAN_GOALS: PlanGoalDef[] = [

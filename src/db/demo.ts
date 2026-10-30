@@ -143,6 +143,7 @@ export async function writeDemoData(
         name: s.name,
         kind: s.kind,
         currency: s.currency,
+        expectedReturn: s.expectedReturn,
       })),
     )
     .returning({ id: sources.id });

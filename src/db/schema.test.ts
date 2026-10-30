@@ -669,6 +669,31 @@ describe("ograniczenia schematu", () => {
       ]);
     });
 
+    it.each([2001, -5001])(
+      "odrzuca stopę zwrotu spoza zakresu (%i)",
+      async (rate) => {
+        expect(
+          await rejection(
+            "update sources set expected_return = $2 where id = $1",
+            [investmentsSourceId, rate],
+          ),
+        ).toEqual({
+          code: "23514",
+          constraint: "sources_expected_return_check",
+        });
+      },
+    );
+
+    it.each([2000, -5000, 650, 0])(
+      "przyjmuje stopę zwrotu z zakresu (%i) i null",
+      async (rate) => {
+        await client.query(
+          "update sources set expected_return = $2 where id = $1",
+          [savingsSourceId, rate],
+        );
+      },
+    );
+
     it("odrzuca drugie konto o tym samym adresie e-mail", async () => {
       expect(
         await rejection(

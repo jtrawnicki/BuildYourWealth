@@ -166,6 +166,15 @@ export function SourceFields({
         label="Notatka lub instytucja (opcjonalnie)"
         value={values.note}
       />
+      <TextField
+        id={`${prefix}-rate`}
+        name="expectedReturn"
+        label="Zakładana stopa zwrotu (opcjonalnie)"
+        hint="Używana tylko w Prognozie. Puste pole oznacza 0%: źródło rośnie wyłącznie o wpłaty."
+        value={values.expectedReturn}
+        error={errors?.rate}
+        inputMode="decimal"
+      />
       <div className={styles.field}>
         <label className={styles.check}>
           <input

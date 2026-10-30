@@ -9,11 +9,13 @@ export type SourceFormValues = {
   note: string;
   /** Pole wyboru „Nie wliczaj do majątku”: `"on"` albo pusty string. */
   excluded: string;
+  /** Zakładana stopa zwrotu, tak jak wpisana; puste = brak (SPEC 5.2). */
+  expectedReturn: string;
 };
 
 export type SourceFormState = {
   values: SourceFormValues;
-  errors?: { name?: string; value?: string; kind?: string };
+  errors?: { name?: string; value?: string; kind?: string; rate?: string };
   /** Odmowa zapisu z powodu reguły SPEC 5.2 albo nieaktualnego źródła. */
   formError?: string;
   saveFailed?: boolean;
@@ -29,6 +31,7 @@ export const EMPTY_SOURCE: SourceFormValues = {
   value: "",
   note: "",
   excluded: "",
+  expectedReturn: "",
 };
 
 export const SOURCE_MESSAGES = {

@@ -20,6 +20,8 @@ export type SourceView = {
   kindLocked: boolean;
   /** Źródło nie wchodzi do sum majątku (P35). */
   excluded: boolean;
+  /** Zakładana stopa zwrotu, np. `stopa 6,50%`, albo `null` gdy brak (SPEC 5.2). */
+  rateText: string | null;
   /** Wartości startowe formularza edycji. */
   form: SourceFormValues;
 };
@@ -116,6 +118,9 @@ export function SourceItem({ source }: { source: SourceView }) {
           <span className={styles.itemName}>{source.name}</span>
           {source.note && (
             <span className={styles.itemNote}>{source.note}</span>
+          )}
+          {source.rateText && (
+            <span className={styles.itemNote}>{source.rateText}</span>
           )}
           {source.excluded && (
             <span className={styles.excluded}>Nie wliczane do majątku</span>

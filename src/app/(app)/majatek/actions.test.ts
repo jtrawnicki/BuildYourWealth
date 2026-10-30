@@ -35,6 +35,7 @@ const VALID: SourceFormValues = {
   value: "1 234,56",
   note: " ",
   excluded: "",
+  expectedReturn: "",
 };
 
 function form(values: Partial<SourceFormValues> & { id?: string }): FormData {
@@ -73,6 +74,7 @@ describe("dodanie źródła", () => {
       value: 123456,
       note: null,
       excludedFromNetWorth: false,
+      expectedReturn: null,
     });
     expect(refresh).toHaveBeenCalled();
   });
@@ -117,6 +119,7 @@ describe("edycja źródła", () => {
       value: 123456,
       note: null,
       excludedFromNetWorth: false,
+      expectedReturn: null,
     });
   });
 
