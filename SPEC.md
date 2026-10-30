@@ -314,7 +314,7 @@ nie ma dostępu do danych z wersji prywatnej.
   usuwa termin. Walidacja: rozdz. 7.1.
 - **Prognoza** dla każdego celu z kwotą docelową, który nie jest osiągnięty
   (reguła 6.12), ma jeden z trzech wyników:
-  - „Osiągniesz ok. w styczniu 2027”;
+  - „Osiągniesz w styczniu 2027” (P34);
   - „Przy obecnych wpłatach cel nie zostanie osiągnięty” (średnia wpłata 0);
   - „Prognoza pojawi się, gdy cel trafi do planu miesiąca.” (brak danych:
     cel nie był jeszcze w planie żadnego miesiąca).
@@ -324,17 +324,19 @@ nie ma dostępu do danych z wersji prywatnej.
   z tym celem, pod prognozą jest dopisek „Prognoza uwzględni nowy procent po
   rozliczeniu miesięcy z nowym planem.” (P22).
 - **Status celu z terminem** (reguła 6.13): „zdążysz”, „zagrożony”, „termin
-  minął” albo „brak danych” (P23). Cel osiągnięty pokazuje „osiągnięty”, jak
-  dotąd, bez statusu terminu.
+  minął” albo „brak danych” (P23). Na ekranie te statusy mają etykiety
+  „Zgodnie z planem”, „Ryzyko opóźnienia”, „Po terminie” i „Brak danych”
+  (P34). Cel osiągnięty pokazuje „osiągnięty”, jak dotąd, bez statusu
+  terminu.
 - **„Ten miesiąc”**, przelewy do wykonania: pod paskiem postępu jedna linia:
 
   | Cel | Linia |
   | --- | --- |
-  | bez terminu | wynik prognozy, np. „Osiągniesz ok. w styczniu 2027” |
-  | „zdążysz” | „Termin: marzec 2027 · zdążysz (ok. styczeń 2027)” |
-  | „zagrożony” | „Termin: grudzień 2026 · zagrożony” (link do Planu podziału) |
-  | „termin minął” | „Termin: grudzień 2026 · termin minął” |
-  | „brak danych” | „Termin: czerwiec 2027 · brak danych” |
+  | bez terminu | wynik prognozy, np. „Osiągniesz w styczniu 2027” |
+  | „zdążysz” | „Termin: marzec 2027 · Zgodnie z planem (ok. styczeń 2027)” |
+  | „zagrożony” | „Termin: grudzień 2026 · Ryzyko opóźnienia” (link do Planu podziału) |
+  | „termin minął” | „Termin: grudzień 2026 · Po terminie” |
+  | „brak danych” | „Termin: czerwiec 2027 · Brak danych” |
 
   Dopisek o nowym procencie (wyżej) jest drugą linią.
 - **Plan podziału**, przy celu z terminem: linia statusu jak na „Ten
@@ -750,10 +752,13 @@ przed zadaniami interfejsu Etapu 2 (P20). Niezależnie od kierunku:
   nie nakładały. Wysokość ok. 200 px (ok. 160 px przy 360 px). Podpowiedź
   w dymku przy punkcie.
 - **Prognoza na „Ten miesiąc”:** mały tekst pod paskiem postępu; status jako
-  mała pigułka: „zdążysz” w kolorze sukcesu, „zagrożony” w kolorze
-  ostrzeżenia, pozostałe neutralne. Kontrast co najmniej 4.5:1.
+  mała pigułka: „Zgodnie z planem” w kolorze sukcesu, „Ryzyko opóźnienia”
+  w kolorze ostrzeżenia, pozostałe neutralne. Wszystkie pigułki wyglądają
+  tak samo (bez podkreślenia, także pigułka będąca linkiem) i różnią się
+  tylko kolorem (P34). Kontrast co najmniej 4.5:1.
 - **Plan podziału:** status terminu, wymagana wpłata i sugestia w neutralnym
-  bloku informacyjnym pod wierszem celu (status pogrubiony, bez pigułki).
+  bloku informacyjnym pod wierszem celu (status jako ta sama pigułka co na
+  „Ten miesiąc”).
 - **Nawigacja:** sześć zakładek; „Prognoza” między Historią a Ustawieniami,
   z ikoną linii trendu ze strzałką. Na wąskim ekranie dolna belka mieści
   sześć skróconych nazw (Miesiąc, Majątek, Plan, Historia, Prognoza,
@@ -921,6 +926,12 @@ wycofuje P24, więc znów obowiązuje.
   w bloku pod celem z terminem. „Ten miesiąc” zna tylko cele z migawki
   miesiąca, a cel z „brak danych” w żadnej migawce jeszcze nie jest, więc
   bez tego jego status nie byłby nigdzie widoczny (scen. 38).
+- P34 (po testach właściciela, 2026-10-30): prognoza celu bez terminu nie
+  ma „ok.” („Osiągniesz w styczniu 2027”). Statusy terminu na ekranie mają
+  bardziej rzeczowe etykiety pisane wielką literą: „Zgodnie z planem”,
+  „Ryzyko opóźnienia”, „Po terminie”, „Brak danych”; nazwy statusów
+  w regułach (6.13) zostają bez zmian. Wszystkie pigułki statusu wyglądają
+  tak samo i różnią się tylko kolorem.
 
 **Założenia Etapu 2 (zaproponowane przez agenta, zaakceptowane przez
 właściciela produktu 2026-10-27 po review B i E):**
@@ -1059,10 +1070,11 @@ wymienione tabele.
     kolejnym miesiącu potrzebujesz 712,00 zł (średnio wpłacasz 566,66 zł).”
     i „Ustaw ok. 36,33% puli Oszczędności (teraz 30,00%) i zmniejsz
     pozostałe cele albo zwiększ procent puli.”, a „Ten miesiąc” pokazuje
-    „Termin: grudzień 2026 · zagrożony”. Po zmianie terminu na marzec 2027:
-    „Termin: marzec 2027 · zdążysz (ok. styczeń 2027)”, wymagana wpłata
-    178,00 zł, bez sugestii procentu. Procenty planu nie zmieniają się same.
-28. **Prognoza bez terminu:** ten sam cel bez terminu pokazuje „Osiągniesz ok.
+    „Termin: grudzień 2026 · Ryzyko opóźnienia”. Po zmianie terminu na
+    marzec 2027: „Termin: marzec 2027 · Zgodnie z planem (ok. styczeń
+    2027)”, wymagana wpłata 178,00 zł, bez sugestii procentu. Procenty
+    planu nie zmieniają się same.
+28. **Prognoza bez terminu:** ten sam cel bez terminu pokazuje „Osiągniesz
     w styczniu 2027”. Gdy faktyczne wpłaty z trzech ostatnich rozliczonych
     miesięcy wynoszą 0, pokazuje „Przy obecnych wpłatach cel nie zostanie
     osiągnięty”.

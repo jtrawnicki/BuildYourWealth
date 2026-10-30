@@ -229,6 +229,13 @@ function firstMonthOf(row: Row, context: ForecastContext): string {
 
 type Advice = { status: DeadlineLine; lines: string[] };
 
+const STATUS_CLASS: Record<DeadlineLine["status"], string> = {
+  "on-track": styles.statusOk,
+  "at-risk": styles.statusWarn,
+  overdue: styles.statusNeutral,
+  "no-data": styles.statusNeutral,
+};
+
 /**
  * Blok pod wierszem celu z terminem (SPEC 5.12, 8.1), liczony na żywo z pól:
  * status terminu (przy „brak danych” z wyjaśnieniem), a dla statusu innego niż
@@ -540,7 +547,11 @@ function GoalRow({
         <div className={styles.advice} role="note">
           <p>
             {advice.status.deadline} ·{" "}
-            <strong>{advice.status.statusLabel}</strong>
+            <span
+              className={`${styles.status} ${STATUS_CLASS[advice.status.status]}`}
+            >
+              {advice.status.statusLabel}
+            </span>
             {advice.status.detail !== null && ` ${advice.status.detail}`}
           </p>
           {advice.lines.map((line) => (

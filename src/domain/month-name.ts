@@ -93,7 +93,7 @@ export function formatMonthYearGenitive(key: string): string {
   return `${GENITIVE[month - 1]} ${year}`;
 }
 
-/** `2027-01` → `styczniu 2027`: „Osiągniesz ok. w styczniu 2027” (SPEC 5.12). */
+/** `2027-01` → `styczniu 2027`: „Osiągniesz w styczniu 2027” (SPEC 5.12). */
 export function formatMonthYearLocative(key: string): string {
   const { year, month } = parseMonth(key);
   return `${LOCATIVE[month - 1]} ${year}`;
