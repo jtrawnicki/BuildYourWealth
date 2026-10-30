@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ceilMulDiv,
   floorMulDiv,
+  roundMulDivHalfAwayFromZero,
   roundMulDivHalfUp,
   toSafeInteger,
 } from "./arithmetic";
@@ -69,5 +70,30 @@ describe("ceilMulDiv", () => {
 
   it("liczy dokładnie przy iloczynie pośrednim powyżej MAX_SAFE_INTEGER", () => {
     expect(ceilMulDiv(200_000_000_000, 10_000, 196_000)).toBe(10_204_081_633);
+  });
+});
+
+describe("roundMulDivHalfAwayFromZero", () => {
+  it("dla wartości nieujemnych działa jak zaokrąglenie połówek w górę", () => {
+    expect(roundMulDivHalfAwayFromZero(1, 1, 2)).toBe(1); // 0,5 → 1
+    expect(roundMulDivHalfAwayFromZero(3, 1, 2)).toBe(2); // 1,5 → 2
+    expect(roundMulDivHalfAwayFromZero(1_000_000, 600, 120_000)).toBe(5000);
+  });
+
+  it("połówki ujemne zaokrągla od zera", () => {
+    expect(roundMulDivHalfAwayFromZero(-1, 1, 2)).toBe(-1); // −0,5 → −1
+    expect(roundMulDivHalfAwayFromZero(-3, 1, 2)).toBe(-2); // −1,5 → −2
+    expect(roundMulDivHalfAwayFromZero(-16_578_5, 1, 10)).toBe(-16_579); // −16 578,5 → −16 579
+  });
+
+  it("zysk miesiąca przy ujemnej stopie (reguła 6.14)", () => {
+    // wartość 1 000 000 gr × −10,00% ÷ 12 ÷ 10 000 = −833,33… → −8333 gr (od zera)
+    expect(roundMulDivHalfAwayFromZero(1_000_000, -1000, 120_000)).toBe(-8333);
+  });
+
+  it("liczy dokładnie przy iloczynie pośrednim powyżej MAX_SAFE_INTEGER", () => {
+    expect(roundMulDivHalfAwayFromZero(-200_000_000_000, 45_036, 10_000)).toBe(
+      -900_720_000_000,
+    );
   });
 });

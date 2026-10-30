@@ -51,3 +51,22 @@ export function ceilMulDiv(a: number, b: number, divisor: number): number {
   const d = BigInt(divisor);
   return toSafeInteger((numerator + d - ONE) / d);
 }
+
+/**
+ * Zaokrąglenie ilorazu `(a × b) / divisor` do najbliższej liczby całkowitej,
+ * połówki od zera, dla dowolnych znaków `a` i `b` oraz dodatniego `divisor`
+ * (SPEC 6.14: zysk miesiąca przy ujemnej stopie, kwoty prognozy w pełnych
+ * złotych). Dla wyniku nieujemnego jest tożsame z `roundMulDivHalfUp`.
+ */
+export function roundMulDivHalfAwayFromZero(
+  a: number,
+  b: number,
+  divisor: number,
+): number {
+  const numerator = BigInt(a) * BigInt(b);
+  const negative = numerator < BigInt(0);
+  const abs = negative ? -numerator : numerator;
+  const d = BigInt(divisor);
+  const rounded = (abs * TWO + d) / (d * TWO);
+  return toSafeInteger(negative ? -rounded : rounded);
+}
