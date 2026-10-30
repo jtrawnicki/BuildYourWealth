@@ -22,7 +22,7 @@ export type Progress =
 
 /**
  * Prognoza celu pod paskiem postępu (SPEC 5.12, 8.1): wynik prognozy albo
- * status terminu jako pigułka; „zagrożony” prowadzi do Planu podziału.
+ * status terminu jako pigułka; „Ryzyko opóźnienia” prowadzi do Planu podziału.
  */
 export type GoalForecastView = {
   line: { kind: "text"; text: string } | ({ kind: "deadline" } & DeadlineLine);

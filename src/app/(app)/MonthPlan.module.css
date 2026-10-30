@@ -259,12 +259,14 @@
 .progress {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   padding-top: 4px;
 }
 
+/* W wąskiej kolumnie kwota schodzi pod pasek, zamiast ściskać go do kreski. */
 .track {
-  flex-grow: 1;
+  flex: 1 0 96px;
   height: 6px;
   border-radius: 3px;
   background: var(--track);
@@ -272,6 +274,7 @@
 }
 
 .fill {
+  display: block;
   height: 6px;
   border-radius: 3px;
 }
@@ -327,13 +330,12 @@
 .statusWarn {
   background: var(--warn-bg);
   color: var(--warn-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
-/* Link „zagrożony”: pigułka zostaje mała, a obszar dotyku ma co najmniej 44 px. */
+/* Link „Ryzyko opóźnienia”: pigułka zostaje mała, a obszar dotyku ma co najmniej 44 px. */
 .statusLink {
   position: relative;
+  text-decoration: none;
 }
 
 .statusLink::after {

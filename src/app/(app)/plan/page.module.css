@@ -186,6 +186,30 @@
   margin: 0;
 }
 
+/* Pigułka statusu terminu, ta sama co na „Ten miesiąc”. */
+.status {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusOk {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.statusWarn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.statusNeutral {
+  background: var(--track);
+  color: var(--text);
+}
+
 .fieldLabel {
   font-size: 0.875rem;
   font-weight: 600;

@@ -114,7 +114,7 @@ describe("latestSnapshotPct", () => {
 describe("forecastText (SPEC 5.12)", () => {
   it("cel bez terminu: miesiąc osiągnięcia w miejscowniku (scen. 28)", () => {
     expect(forecastText(forecastGoal(wakacje()))).toBe(
-      "Osiągniesz ok. w styczniu 2027",
+      "Osiągniesz w styczniu 2027",
     );
   });
 
@@ -145,7 +145,7 @@ describe("teksty terminu (scen. 27)", () => {
     expect(deadlineLine(result, forecast, "2026-12")).toEqual({
       deadline: "Termin: grudzień 2026",
       status: "at-risk",
-      statusLabel: "zagrożony",
+      statusLabel: "Ryzyko opóźnienia",
       detail: null,
     });
     expect(plain(requiredText(result, forecast, "2026-12", "PLN"))).toBe(
@@ -167,7 +167,7 @@ describe("teksty terminu (scen. 27)", () => {
     expect(deadlineLine(result, forecast, "2027-03")).toEqual({
       deadline: "Termin: marzec 2027",
       status: "on-track",
-      statusLabel: "zdążysz",
+      statusLabel: "Zgodnie z planem",
       detail: "(ok. styczeń 2027)",
     });
     expect(plain(requiredText(result, forecast, "2027-03", "PLN"))).toBe(
@@ -181,7 +181,7 @@ describe("teksty terminu (scen. 27)", () => {
   it("termin minął: status bez zdania o wpłacie", () => {
     const result = goalDeadline(input, "2026-10");
     expect(deadlineLine(result, forecast, "2026-10").statusLabel).toBe(
-      "termin minął",
+      "Po terminie",
     );
     expect(requiredText(result, forecast, "2026-10", "PLN")).toBeNull();
   });
@@ -202,7 +202,7 @@ describe("brak danych (scen. 38)", () => {
 
   it("status „brak danych” i wymagana wpłata bez zdania o zaplanowanej kwocie", () => {
     expect(deadlineLine(result, forecast, "2027-06").statusLabel).toBe(
-      "brak danych",
+      "Brak danych",
     );
     expect(forecastText(forecast)).toBe(FORECAST_MESSAGES.noData);
     expect(plain(requiredText(result, forecast, "2027-06", "PLN"))).toBe(

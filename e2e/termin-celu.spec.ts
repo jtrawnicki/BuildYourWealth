@@ -112,12 +112,11 @@ test("termin zagrożony, potem zdążysz; procenty planu się nie zmieniają (sc
   await page.goto("/");
   const line = transfer(page, "Wakacje");
   await expect(line).toContainText(
-    `Termin: ${formatMonthYear(month(1))} · zagrożony`,
+    `Termin: ${formatMonthYear(month(1))} · Ryzyko opóźnienia`,
   );
-  await expect(line.getByRole("link", { name: "zagrożony" })).toHaveAttribute(
-    "href",
-    "/plan",
-  );
+  await expect(
+    line.getByRole("link", { name: "Ryzyko opóźnienia" }),
+  ).toHaveAttribute("href", "/plan");
 
   await page.goto("/plan");
   const row = goalRow(page, "Wakacje");
@@ -140,7 +139,7 @@ test("termin zagrożony, potem zdążysz; procenty planu się nie zmieniają (sc
 
   await page.goto("/");
   await expect(transfer(page, "Wakacje")).toContainText(
-    `Termin: ${formatMonthYear(month(4))} · zdążysz (ok. ${formatMonthYear(month(2))})`,
+    `Termin: ${formatMonthYear(month(4))} · Zgodnie z planem (ok. ${formatMonthYear(month(2))})`,
   );
 });
 
@@ -151,7 +150,7 @@ test("cel bez terminu pokazuje prognozę, a przy wpłatach 0 — brak osiągnię
   await seedExample(seed);
   await page.goto("/");
   await expect(transfer(page, "Wakacje")).toContainText(
-    `Osiągniesz ok. w ${formatMonthYearLocative(month(2))}`,
+    `Osiągniesz w ${formatMonthYearLocative(month(2))}`,
   );
 });
 
@@ -180,7 +179,7 @@ test("nowy procent nie zmienia statusu, ale dodaje dopisek (scen. 37)", async ({
   await page.goto("/");
   const line = transfer(page, "Wakacje");
   await expect(line).toContainText(
-    `Termin: ${formatMonthYear(month(1))} · zagrożony`,
+    `Termin: ${formatMonthYear(month(1))} · Ryzyko opóźnienia`,
   );
   await expect(line).toContainText(
     "Prognoza uwzględni nowy procent po rozliczeniu miesięcy z nowym planem.",
@@ -211,7 +210,7 @@ test("cel spoza migawek: brak danych, wymagana wpłata i sugestia w Planie (scen
   await page.goto("/plan");
   const note = goalRow(page, "Rower").getByRole("note");
   await expect(note).toContainText(
-    `Termin: ${formatMonthYear(month(7))} · brak danych`,
+    `Termin: ${formatMonthYear(month(7))} · Brak danych`,
   );
   await expect(note).toContainText(
     "Prognoza pojawi się, gdy cel trafi do planu miesiąca.",
@@ -262,7 +261,7 @@ test.describe("szerokość 360 px (scen. 12)", () => {
     }) => {
       await seedExample(seed, { deadline: month(1) });
       await page.goto(path);
-      await expect(page.getByText(/zagrożony/).first()).toBeVisible();
+      await expect(page.getByText(/Ryzyko opóźnienia/).first()).toBeVisible();
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
       );

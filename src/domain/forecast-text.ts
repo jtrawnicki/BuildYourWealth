@@ -30,10 +30,10 @@ export const FORECAST_MESSAGES = {
 } as const;
 
 export const DEADLINE_STATUS_LABEL: Record<DeadlineStatus, string> = {
-  "on-track": "zdążysz",
-  "at-risk": "zagrożony",
-  overdue: "termin minął",
-  "no-data": "brak danych",
+  "on-track": "Zgodnie z planem",
+  "at-risk": "Ryzyko opóźnienia",
+  overdue: "Po terminie",
+  "no-data": "Brak danych",
 };
 
 /** Prognoza celu bez terminu (SPEC 5.12); cel osiągnięty nie ma prognozy. */
@@ -46,18 +46,18 @@ export function forecastText(forecast: Forecast): string | null {
     case "never":
       return FORECAST_MESSAGES.never;
     case "forecast":
-      return `Osiągniesz ok. w ${formatMonthYearLocative(forecast.achievementMonth)}`;
+      return `Osiągniesz w ${formatMonthYearLocative(forecast.achievementMonth)}`;
   }
 }
 
-/** Linia statusu terminu na „Ten miesiąc”: „Termin: marzec 2027 · zdążysz (ok. styczeń 2027)”. */
+/** Linia statusu terminu na „Ten miesiąc”: „Termin: marzec 2027 · Zgodnie z planem (ok. styczeń 2027)”. */
 export type DeadlineLine = {
   /** „Termin: marzec 2027”. */
   deadline: string;
   status: DeadlineStatus;
   /** Tekst pigułki statusu. */
   statusLabel: string;
-  /** Dopełnienie po pigułce, np. „(ok. styczeń 2027)” przy „zdążysz”. */
+  /** Dopełnienie po pigułce, np. „(ok. styczeń 2027)” przy „Zgodnie z planem”. */
   detail: string | null;
 };
 
