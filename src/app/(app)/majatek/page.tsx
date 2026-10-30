@@ -59,12 +59,14 @@ function toView(row: SourceRow, rate: number | null): SourceView {
         ? formatMoney(convertEurToPln(row.value, rate), "PLN")
         : null,
     kindLocked: row.kindLocked,
+    excluded: row.excludedFromNetWorth,
     form: {
       name: row.name,
       kind: row.kind,
       currency: row.currency,
       value: formatAmount(row.value),
       note: row.note ?? "",
+      excluded: row.excludedFromNetWorth ? "on" : "",
     },
   };
 }
@@ -98,17 +100,21 @@ export default async function WealthPage() {
 
   // Majątek przelicza źródła EUR po bieżącym kursie NBP (SPEC 5.9, reguła 6.10)
   // i pokazuje użyty kurs z datą, gdy jest choć jedno źródło w EUR.
+  // Źródła wykluczone z majątku (P35) są na liście, ale nie w sumach.
+  const counted = rows.filter((row) => !row.excludedFromNetWorth);
   const current = chartRates.current;
   const rate = current?.rate ?? null;
-  const total = sumPln(rows, rate);
-  const hasEur = rows.some((row) => row.currency === "EUR");
+  const total = sumPln(counted, rate);
+  const hasEur = counted.some((row) => row.currency === "EUR");
 
   // Stan wykresu: za mało punktów (miesiąc wdrożenia), brak kursu dla źródła EUR
   // albo gotowe punkty reguły 6.11.
   const chart =
     deploymentMonth && monthSpan(deploymentMonth, currentMonth(nowDate)) >= 2
       ? netWorthChart({
-          history,
+          // Wykluczenie działa wstecz (P35), ale miesiąc wdrożenia liczy się
+          // z całej historii, więc wykres nie zaczyna się później.
+          history: history.filter((entry) => !entry.excludedFromNetWorth),
           deploymentMonth,
           now: nowDate,
           rateForDay: chartRates.rateForDay,
@@ -155,7 +161,7 @@ export default async function WealthPage() {
       <section className={styles.summary} aria-labelledby="suma">
         <div className={styles.summaryMain}>
           <h2 id="suma" className={styles.summaryLabel}>
-            Majątek łącznie ({formatSourceCount(rows.length)})
+            Majątek łącznie ({formatSourceCount(counted.length)})
           </h2>
           {total !== null ? (
             <>
@@ -178,7 +184,7 @@ export default async function WealthPage() {
         <dl className={styles.summaryPools}>
           {GROUPS.map(({ kind, title, dot, pool }) => {
             const sum = sumPln(
-              rows.filter((row) => row.kind === kind),
+              counted.filter((row) => row.kind === kind),
               rate,
             );
             return (
@@ -197,7 +203,10 @@ export default async function WealthPage() {
       <div className={styles.groups}>
         {GROUPS.map(({ kind, title, dot }) => {
           const group = rows.filter((row) => row.kind === kind);
-          const groupSum = sumPln(group, rate);
+          const groupSum = sumPln(
+            group.filter((row) => !row.excludedFromNetWorth),
+            rate,
+          );
           return (
             <section
               key={kind}

@@ -279,6 +279,32 @@
   font-size: 0.875rem;
 }
 
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+/* Pigułka przy źródle wykluczonym z majątku (P35). */
+.excluded {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--track);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
 .input {
   min-width: 0;
   min-height: 44px;

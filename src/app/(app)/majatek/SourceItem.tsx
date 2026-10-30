@@ -18,6 +18,8 @@ export type SourceView = {
   /** Dla EUR wartość w PLN albo `null`, gdy brak kursu. */
   plnText: string | null;
   kindLocked: boolean;
+  /** Źródło nie wchodzi do sum majątku (P35). */
+  excluded: boolean;
   /** Wartości startowe formularza edycji. */
   form: SourceFormValues;
 };
@@ -114,6 +116,9 @@ export function SourceItem({ source }: { source: SourceView }) {
           <span className={styles.itemName}>{source.name}</span>
           {source.note && (
             <span className={styles.itemNote}>{source.note}</span>
+          )}
+          {source.excluded && (
+            <span className={styles.excluded}>Nie wliczane do majątku</span>
           )}
         </div>
         <div className={styles.itemValue}>

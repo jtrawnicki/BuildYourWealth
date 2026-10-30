@@ -121,7 +121,7 @@ funkcje domeny zgłaszają błąd, jeśli nie mieści się w bezpiecznym zakresi
 | `users` | id, email, password_hash, demo_expires_at, demo_ip_hash | Wersja prywatna: jedno konto, `demo_*` puste. Demo: każde konto to piaskownica z czasem wygaśnięcia i skrótem adresu IP (do limitu, SPEC 5.8). |
 | `sessions` | id (hash tokenu), user_id, expires_at | Token w ciasteczku, w bazie tylko hash. |
 | `settings` | user_id, eur_rate (null = brak), savings_pct, investments_pct | Kurs i procenty pul bieżącego planu. |
-| `sources` | id, user_id, name, kind, currency, value, note, archived_at | `kind`: savings / investments; `currency`: PLN / EUR. |
+| `sources` | id, user_id, name, kind, currency, value, note, archived_at, excluded_from_net_worth | `kind`: savings / investments; `currency`: PLN / EUR. `excluded_from_net_worth` (domyślnie false, SPEC P35): źródło poza sumami majątku i wykresem; zmiana nie trafia do `source_values`. |
 | `goals` | id, user_id, pool, name, pct, source_id, target_amount, start_amount, position, removed_at | Usunięcie z planu ustawia `removed_at`; tożsamość celu się nie zmienia. |
 | `months` | id, user_id, month (`YYYY-MM`), savings_pct, investments_pct, settled_at, settled_eur_rate | Unikalne (user_id, month). Migawka procentów pul. |
 | `month_goals` | month_id, goal_id, pool, pct, source_id, actual_amount | Migawka celów; `actual_amount` w walucie źródła, null do rozliczenia. |
