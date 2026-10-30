@@ -65,7 +65,7 @@ test("karty, wpłaty kontra zysk, kamienie milowe i źródła przy horyzoncie 5 
 }) => {
   await seedExample(seed);
   await page.goto("/prognoza");
-  await page.getByRole("button", { name: "5 lat" }).click();
+  await page.getByRole("button", { name: "5 lat", exact: true }).click();
 
   const base = page.getByRole("group", { name: "Bazowy" });
   await expect(base).toContainText("85 259 zł");
@@ -205,7 +205,8 @@ test("horyzont: własna liczba lat i walidacja (scen. 44)", async ({
   await page.goto("/prognoza");
 
   const field = page.getByLabel("Własna liczba lat");
-  const button = (name: string) => page.getByRole("button", { name });
+  const button = (name: string) =>
+    page.getByRole("button", { name, exact: true });
 
   // Domyślnie zaznaczone „10 lat".
   await expect(button("10 lat")).toHaveAttribute("aria-pressed", "true");
@@ -280,7 +281,7 @@ test("otwarcie i zmiana horyzontu nie wysyłają żądań poza aplikację (scen.
   // Zmiana horyzontu liczy się po stronie klienta: żadnego żądania do serwera.
   const toServer: string[] = [];
   page.on("request", (request) => toServer.push(request.url()));
-  await page.getByRole("button", { name: "5 lat" }).click();
+  await page.getByRole("button", { name: "5 lat", exact: true }).click();
   await expect(page.getByRole("group", { name: "Bazowy" })).toContainText(
     "85 259 zł",
   );
@@ -293,7 +294,7 @@ test("otwarcie i zmiana horyzontu nie wysyłają żądań poza aplikację (scen.
 test("zysk ujemny i zerowy (scen. 48)", async ({ page, seed }) => {
   await seedExample(seed, { rate: -1000 });
   await page.goto("/prognoza");
-  await page.getByRole("button", { name: "5 lat" }).click();
+  await page.getByRole("button", { name: "5 lat", exact: true }).click();
 
   await expect(page.getByRole("group", { name: "Bazowy" })).toContainText(
     "55 421 zł",
