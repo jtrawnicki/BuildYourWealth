@@ -34,6 +34,7 @@ const VALID: SourceFormValues = {
   currency: "EUR",
   value: "1 234,56",
   note: " ",
+  excluded: "",
 };
 
 function form(values: Partial<SourceFormValues> & { id?: string }): FormData {
@@ -71,6 +72,7 @@ describe("dodanie źródła", () => {
       currency: "EUR",
       value: 123456,
       note: null,
+      excludedFromNetWorth: false,
     });
     expect(refresh).toHaveBeenCalled();
   });
@@ -114,7 +116,20 @@ describe("edycja źródła", () => {
       currency: "EUR",
       value: 123456,
       note: null,
+      excludedFromNetWorth: false,
     });
+  });
+
+  it("zaznaczone „Nie wliczaj do majątku” zapisuje wykluczenie (P35)", async () => {
+    getSessionUser.mockResolvedValue(USER);
+    updateSource.mockResolvedValue("ok");
+    await editSource(PREV, form({ ...VALID, excluded: "on", id: "5" }));
+    expect(updateSource).toHaveBeenCalledWith(
+      {},
+      USER.id,
+      5,
+      expect.objectContaining({ excludedFromNetWorth: true }),
+    );
   });
 
   it.each([

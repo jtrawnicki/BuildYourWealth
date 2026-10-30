@@ -84,7 +84,10 @@ export default async function Home() {
   const canSettle =
     hasIncome && !currentData.settled && canSettleMonth(current, now());
 
-  const wealthView = buildWealthView(sources, eurRate);
+  const wealthView = buildWealthView(
+    sources.filter((source) => !source.excludedFromNetWorth),
+    eurRate,
+  );
 
   return (
     <>

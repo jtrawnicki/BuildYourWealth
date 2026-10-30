@@ -113,6 +113,9 @@ export const sources = pgTable(
     value: amount("value").notNull().default(0),
     note: text("note"),
     archivedAt: timestamptz("archived_at"),
+    excludedFromNetWorth: boolean("excluded_from_net_worth")
+      .notNull()
+      .default(false),
   },
   (t) => [
     // Cel wskazuje źródło razem z użytkownikiem, więc baza nie przyjmie celu

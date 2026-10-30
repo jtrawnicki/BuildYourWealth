@@ -29,6 +29,7 @@ function readValues(formData: FormData): SourceFormValues {
     currency: field(formData, "currency"),
     value: field(formData, "value"),
     note: field(formData, "note"),
+    excluded: field(formData, "excluded"),
   };
 }
 
@@ -65,6 +66,7 @@ function parseSource(
       currency,
       value: value.value,
       note: note === "" ? null : note,
+      excludedFromNetWorth: values.excluded !== "",
     },
   };
 }

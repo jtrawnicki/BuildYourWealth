@@ -7,6 +7,8 @@ export type SourceFormValues = {
   currency: string;
   value: string;
   note: string;
+  /** Pole wyboru „Nie wliczaj do majątku”: `"on"` albo pusty string. */
+  excluded: string;
 };
 
 export type SourceFormState = {
@@ -26,6 +28,7 @@ export const EMPTY_SOURCE: SourceFormValues = {
   currency: "PLN",
   value: "",
   note: "",
+  excluded: "",
 };
 
 export const SOURCE_MESSAGES = {

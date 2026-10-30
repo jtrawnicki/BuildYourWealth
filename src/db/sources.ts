@@ -11,6 +11,8 @@ export type SourceInput = {
   currency: SourceCurrency;
   value: number;
   note: string | null;
+  /** Źródło nie wchodzi do sum majątku (SPEC 5.2, P35); domyślnie `false`. */
+  excludedFromNetWorth?: boolean;
 };
 
 /**
@@ -23,6 +25,7 @@ export type SourceInput = {
  */
 export type SourceRow = SourceInput & {
   id: number;
+  excludedFromNetWorth: boolean;
   inUse: boolean;
   kindLocked: boolean;
 };
@@ -120,6 +123,7 @@ export async function listSources(
       currency: sources.currency,
       value: sources.value,
       note: sources.note,
+      excludedFromNetWorth: sources.excludedFromNetWorth,
       inUse: sql<boolean>`(${inCurrentPlan} or ${inOpenMonth})`,
       kindLocked: sql<boolean>`(${inCurrentPlan} or ${inAnyMonth})`,
     })
@@ -134,6 +138,8 @@ export type SourceValueEntry = {
   value: number;
   currency: SourceCurrency;
   recordedAt: Date;
+  /** Bieżące ustawienie źródła: wykluczenie działa wstecz (P35). */
+  excludedFromNetWorth: boolean;
 };
 
 /**
@@ -151,8 +157,10 @@ export async function listSourceHistory(
       value: sourceValues.value,
       currency: sourceValues.currency,
       recordedAt: sourceValues.recordedAt,
+      excludedFromNetWorth: sources.excludedFromNetWorth,
     })
     .from(sourceValues)
+    .innerJoin(sources, eq(sources.id, sourceValues.sourceId))
     .where(eq(sourceValues.userId, userId))
     .orderBy(asc(sourceValues.recordedAt), asc(sourceValues.id));
 }

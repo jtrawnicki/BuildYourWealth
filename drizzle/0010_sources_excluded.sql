@@ -1,0 +1,1 @@
+ALTER TABLE "sources" ADD COLUMN "excluded_from_net_worth" boolean DEFAULT false NOT NULL;

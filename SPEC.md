@@ -96,6 +96,20 @@ Etapu 2 w rozdziałach MVP są wpisane bezpośrednio w ich treść.
 - Zarchiwizować można tylko źródło o wartości 0 (najpierw trzeba wyzerować
   wartość, np. po wypłacie). Zarchiwizowane źródło nie liczy się do majątku
   ani do liczby źródeł i nie pojawia się na liście wyboru celów.
+- Źródło można oznaczyć polem wyboru „Nie wliczaj do majątku” (P35), np.
+  nadpłatę kredytu: użytkownik odkłada na nią, ale nadpłacona kwota nie jest
+  jego majątkiem. Podpowiedź pod polem: „Np. nadpłata kredytu: odkładasz na
+  nią, ale nie jest Twoim majątkiem. Źródło zostaje na liście i w celach,
+  ale nie wchodzi do sum ani do wykresu.” Pole można zmieniać zawsze, w obie
+  strony. Takie źródło:
+  - zostaje na liście w swojej grupie z wartością i pigułką „Nie wliczane do
+    majątku”, można je edytować, archiwizować i wybierać w celach;
+  - nie wchodzi do sumy majątku, sum oszczędności i inwestycji ani do liczby
+    źródeł przy „Majątek łącznie” (Majątek i „Ten miesiąc”);
+  - nie wchodzi do wykresu „Wartość majątku” w żadnym miesiącu, także
+    sprzed oznaczenia (reguła 6.11), ani do Prognozy majątku (reguła 6.14);
+  - wpłaty na jego cele nadal liczą się do kwoty „Odkładasz w tym miesiącu”
+    i do postępu celów, a rozliczenie nadal dopisuje je do wartości źródła.
 
 ### 5.3 Plan podziału
 - Dwie pule: Oszczędności i Inwestycje, każda z procentem przychodu.
@@ -498,7 +512,8 @@ przecinku. Bez arytmetyki zmiennoprzecinkowej.
    dla tego celu. Ręczne zmiany wartości źródła (wycena, wypłata) nie zmieniają
    postępu celu.
 7. Majątek w PLN = suma wartości źródeł PLN + suma przeliczeń wartości źródeł
-   EUR na PLN (reguła 8).
+   EUR na PLN (reguła 8). Liczą się tylko źródła aktywne, niewykluczone
+   z majątku (5.2).
 8. Przeliczenia PLN↔EUR: `EUR = PLN ÷ kurs`, `PLN = EUR × kurs`, zaokrąglone
    do najbliższego grosza lub eurocenta, połówki w górę. Każde źródło jest
    przeliczane osobno, potem sumowane.
@@ -525,6 +540,9 @@ przecinku. Bez arytmetyki zmiennoprzecinkowej.
     - zapis w EUR przeliczony na PLN regułą 8 po `kursie na dzień` ostatniego
       dnia M, a gdy go nie ma — po kursie zapasowym;
     - punkt bieżącego miesiąca: bieżące wartości źródeł i `bieżący kurs`;
+    - źródło wykluczone z majątku (5.2) pomija się we wszystkich punktach,
+      według jego bieżącego ustawienia, także w miesiącach sprzed oznaczenia;
+      miesiąc pierwszego punktu liczy się z całej historii;
     - suma jak w regule 7.
 12. Prognoza celu z kwotą docelową, nieosiągniętego (5.12), w walucie
     źródła celu. „Miesiąc z celem” to miesiąc, w którego migawce planu jest
@@ -567,8 +585,9 @@ przecinku. Bez arytmetyki zmiennoprzecinkowej.
       po `bieżącym kursie`, a bez kursu sugestii nie ma) ÷ `średnia kwota
       bazowa puli`, w setnych procenta, zaokrąglony w górę. Powyżej 100,00% —
       komunikat „Nawet 100% puli nie wystarczy…” zamiast procentu.
-14. Prognoza majątku (5.13), w groszach, dla każdego aktywnego źródła osobno,
-    potem sumowana. Miesiąc k = 0 to stan dziś, miesiąc k ≥ 1 to bieżący
+14. Prognoza majątku (5.13), w groszach, dla każdego aktywnego źródła
+    niewykluczonego z majątku (5.2) osobno, potem sumowana. Wpłaty do źródeł
+    wykluczonych nie wchodzą do `wpłaty scenariusza` ani `sumy wpłat`. Miesiąc k = 0 to stan dziś, miesiąc k ≥ 1 to bieżący
     miesiąc kalendarzowy + k; horyzont N lat to k = 1 … 12 × N.
     - `średni przychód` = średnia arytmetyczna przychodów (reguła 1)
       z najwyżej 6 najnowszych miesięcy z przychodem wcześniejszych niż
@@ -932,6 +951,11 @@ wycofuje P24, więc znów obowiązuje.
   „Ryzyko opóźnienia”, „Po terminie”, „Brak danych”; nazwy statusów
   w regułach (6.13) zostają bez zmian. Wszystkie pigułki statusu wyglądają
   tak samo i różnią się tylko kolorem.
+- P35 (po testach właściciela, 2026-10-30): źródło można wykluczyć
+  z majątku (5.2), np. nadpłatę kredytu hipotecznego. Wykluczenie działa
+  wstecz na wykresie (źródło znika z całej historii), obejmuje wszystkie
+  sumy majątku i Prognozę majątku, ale nie kwotę „Odkładasz w tym
+  miesiącu”: to nadal faktycznie odłożone pieniądze.
 
 **Założenia Etapu 2 (zaproponowane przez agenta, zaakceptowane przez
 właściciela produktu 2026-10-27 po review B i E):**
@@ -1170,3 +1194,11 @@ wymienione tabele.
     zdanie ma „za 1 rok” (o 1 490 zł), przy 22 latach „za 22 lata”. Gdy wszystkie źródła mają wartość 0 i plan ma pule 0%,
     zakładka pokazuje majątek 0 zł we wszystkich scenariuszach i „Przy
     założonych stopach zysk za 10 lat wynosi 0 zł.”
+49. **Źródło wykluczone z majątku:** przy źródłach „Konto” 10 000,00 zł
+    i „Nadpłata kredytu” 4 000,00 zł zaznaczenie przy nadpłacie „Nie
+    wliczaj do majątku” zmienia „Majątek łącznie (2 źródła)” 14 000,00 zł na
+    „Majątek łącznie (1 źródło)” 10 000,00 zł na Majątku i na „Ten
+    miesiąc”. Nadpłata zostaje na liście z pigułką „Nie wliczane do
+    majątku”, a wykres „Wartość majątku” nie zawiera jej w żadnym miesiącu.
+    Cel na nadpłatę nadal wchodzi do „Odkładasz w tym miesiącu”.
+    Odznaczenie pola przywraca poprzednie sumy i wykres.

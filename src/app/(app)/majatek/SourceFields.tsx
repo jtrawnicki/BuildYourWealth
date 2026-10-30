@@ -166,6 +166,22 @@ export function SourceFields({
         label="Notatka lub instytucja (opcjonalnie)"
         value={values.note}
       />
+      <div className={styles.field}>
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            name="excluded"
+            defaultChecked={values.excluded !== ""}
+            aria-describedby={`${prefix}-excluded-hint`}
+          />
+          Nie wliczaj do majątku
+        </label>
+        <span id={`${prefix}-excluded-hint`} className={styles.hint}>
+          Np. nadpłata kredytu: odkładasz na nią, ale nie jest Twoim majątkiem.
+          Źródło zostaje na liście i w celach, ale nie wchodzi do sum ani do
+          wykresu.
+        </span>
+      </div>
     </>
   );
 }

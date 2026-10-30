@@ -71,6 +71,13 @@
       "when": 1793270341822,
       "tag": "0009_backfill_fallback_eur_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793387802381,
+      "tag": "0010_sources_excluded",
+      "breakpoints": true
     }
   ]
 }

@@ -131,6 +131,7 @@ describe("lista źródeł", () => {
         ...POLISH,
         value: 100000,
         note: "mBank",
+        excludedFromNetWorth: false,
         inUse: false,
         kindLocked: false,
       },
@@ -141,6 +142,7 @@ describe("lista źródeł", () => {
         currency: "EUR",
         value: 0,
         note: null,
+        excludedFromNetWorth: false,
         inUse: false,
         kindLocked: false,
       },
@@ -419,5 +421,39 @@ describe("listSourceHistory (wykres majątku, reguła 6.11)", () => {
 
   it("puste konto nie ma historii", async () => {
     expect(await listSourceHistory(getDb(), userId)).toEqual([]);
+  });
+
+  it("wykluczenie z majątku oznacza całą historię źródła, także sprzed zmiany (P35)", async () => {
+    const id = await createSource(getDb(), userId, { ...POLISH, value: 1000 });
+    const kept = await createSource(getDb(), userId, { ...POLISH, value: 50 });
+    await updateSource(getDb(), userId, id, {
+      ...POLISH,
+      value: 2000,
+      excludedFromNetWorth: true,
+    });
+
+    expect((await listSources(getDb(), userId)).map((row) => row.id)).toEqual([
+      id,
+      kept,
+    ]);
+    const flags = (await listSourceHistory(getDb(), userId)).map((e) => [
+      e.sourceId,
+      e.value,
+      e.excludedFromNetWorth,
+    ]);
+    expect(flags).toEqual([
+      [id, 1000, true],
+      [kept, 50, false],
+      [id, 2000, true],
+    ]);
+
+    // Edycja bez pola wykluczenia go nie zmienia; odznaczenie przywraca źródło.
+    await updateSource(getDb(), userId, id, { ...POLISH, name: "Inna" });
+    expect((await stored(id)).excludedFromNetWorth).toBe(true);
+    await updateSource(getDb(), userId, id, {
+      ...POLISH,
+      excludedFromNetWorth: false,
+    });
+    expect((await stored(id)).excludedFromNetWorth).toBe(false);
   });
 });
