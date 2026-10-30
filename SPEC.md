@@ -427,8 +427,11 @@ Wygląd: rozdz. 8.1, makieta w P25.
     - zysk > 0: „Za 5 lat 16% majątku to zysk z założonych stóp zwrotu.
       Każda złotówka wpłacona według planu zamieni się średnio w 1,22 zł.”
       Drugie zdanie jest pominięte, gdy wpłata scenariusza wynosi 0;
+      Udział zysku poniżej 1% (po zaokrągleniu 0%) jest pokazany jako
+      „mniej niż 1%”;
     - zysk < 0: „Przy założonych stopach majątek za 5 lat będzie
-      o 1 234 zł niższy niż majątek dziś i suma wpłat.”;
+      o 1 234 zł niższy niż majątek dziś i suma wpłat.” Kwota to wartość
+      bezwzględna zysku z legendy;
     - zysk = 0 (po zaokrągleniu): „Przy założonych stopach zysk za 5 lat
       wynosi 0 zł.”
   - Bez zysku dodatniego warstwy zysku nie ma; przy zysku ujemnym warstwy

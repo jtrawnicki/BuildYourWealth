@@ -154,3 +154,51 @@ jeden E2E na stan).
   luka 3 miesięcy w ostatnich 6), bieżący miesiąc już rozliczony (Z19),
   zaległy nierozliczony miesiąc (review B, D2), zysk dokładnie 0 i majątek
   końcowy 0 (review B, B1), suma zaokrąglonych części legendy.
+
+## 6. Ponowne review (c916fdd)
+
+Zakres: `git diff 79c1c8a..c916fdd -- PLAN.md STACK.md` w odniesieniu do
+poprawionego SPEC (P31, P32, scen. 48).
+
+**Werdykt: APPROVE.**
+
+Ustalenia blokujące:
+- **B1 — rozwiązane.** Stopa do 20% (P31) w SPEC 7.1, CHECK
+  `expected_return` od −5000 do 2000, STACK „Arytmetyka” z progami
+  przekroczenia (ok. 32 mld zł / 538 mln zł miesięcznie — zgodne z moim
+  przeliczeniem 32,3 mld / 538,1 mln) i błędem domeny tylko jako
+  zabezpieczeniem; kryterium T27 „źródło 2 mld zł ze stopą 20% przez 40
+  lat” jest wykonalne (przeliczone: 5 581 495 985 202,74 zł, w zakresie).
+  Decyzja 9.9 zapisuje wybór „zakres zamiast `BigInt` do formatowania”.
+- **B2 — rozwiązane.** T29: E2E dla scen. 40–42, 43 (część Prognozy),
+  44–48 oraz stanów „brak źródeł”, „brak przychodu”, „brak kursu” i pul 0%;
+  STACK 7: przepływy 40–48 jako E2E, obliczenia 40–42, 45, 48 jako testy
+  jednostkowe. Każdy scenariusz 40–48 ma właściciela.
+
+Uwagi nieblokujące z rozdz. 5: N1 (podział na serie 40 lat i
+podsumowanie dla horyzontu w komponencie klienckim), N2 (parser stopy
+tylko w T28, `input.ts`), N3 (`nav.test.ts`, `e2e/layout.spec.ts`), N4
+(zaokrąglenie ze znakiem, testy −0,5 i −1,5 gr), N5 (`wealth-forecast.ts`),
+N8 (`resolveCurrentRate`, `NBP_API_URL` w E2E), N9 (przypadki T27) —
+uwzględnione. N6 (R a SPEC 8) zapisane w PLAN jako otwarte poza zakresem.
+N7 bez zmian (do opisu PR).
+
+Sprawdzone ponownie:
+- Spójność SPEC–STACK–PLAN: zakres stopy (7.1, scen. 43, STACK model
+  danych i „Dane”, T28) ✓; scen. 48 w zakresie PLAN, T26 („1–28 i 34–48”),
+  T27, T29, STACK 7 ✓; scen. 47 i P27 zgodne z opisem strony w STACK ✓;
+  Z19/P32 nie wymaga zmian w planie poza przypadkiem T27 ✓.
+- Zależności i równoległość bez zmian: T27 ∥ T28 (parser stopy już tylko
+  w T28, więc bez duplikatu), T29 po obu ✓.
+- Liczby scen. 48 (55 421 / −16 579 / −1 490 zł) przeliczone — szczegóły
+  w ponownym review B.
+- `prettier --check` dla SPEC, STACK i PLAN przechodzi.
+
+Nowe uwagi nieblokujące:
+1. Kryterium T29 „bez uciętych nazw zakładek” przy 360 px: przy obecnym
+   CSS (`MainNav.module.css`: 10,5 px, ok. 54 px na nazwę) „Ustawienia”
+   raczej się nie zmieści — T29 będzie musiało zmienić rozmiar albo odstępy
+   belki; warto, żeby test sprawdzał `scrollWidth ≤ clientWidth` etykiety.
+2. T27: dopisać przypadek „zysk ujemny z połówką” (np. 22 lata w scen. 48),
+   żeby kwota w zdaniu była ta sama co w legendzie (ponowne review B,
+   uwaga 1).

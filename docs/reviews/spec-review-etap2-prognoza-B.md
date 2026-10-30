@@ -212,3 +212,62 @@ Ocena założeń:
     ma komunikatu.
 11. Czy lista źródeł na Majątku pokazuje stopę (5.2 opisuje tylko
     formularz)? Wystarczy zdanie.
+
+## 6. Ponowne review (c916fdd)
+
+Zakres: `git diff 79c1c8a..c916fdd -- SPEC.md` (oraz STACK i PLAN dla
+spójności). Rozstrzygnięcia właściciela: D1 → stopa od −50 do 20% (P31),
+D2 → wariant A, Z19 obejmuje zaległe miesiące (P32).
+
+**Werdykt: APPROVE.**
+
+Ustalenia blokujące:
+- **B1 — rozwiązane.** 5.13 ma odmianę „Za 1 rok / 2 lata (2–4, 22–24,
+  32–34) / 5 lat” — poprawna dla 1–40 (12–14 → „lat”); cztery warianty
+  zdania (brak stóp, zysk > 0, < 0, = 0); udział zysku liczony tylko przy
+  zysku > 0, więc majątek końcowy > 0 i dzielenie przez zero nie zachodzi;
+  przy wpłacie 0 drugie zdanie pominięte; warstwy przycięte do majątku
+  scenariusza. Nowe wiersze rozdz. 7 (stopy mieszane, majątek 0 i pule 0%)
+  i scen. 48.
+- **B2 — rozwiązane.** 5.13 („Bez danych na zewnątrz”), P27 i scen. 47
+  rozróżniają żądania przeglądarki (żadnych) i pobranie kursu NBP przez
+  serwer (jak na innych ekranach, bez danych użytkownika); STACK wskazuje
+  `resolveCurrentRate`.
+- **B3 — rozwiązane.** Dopiski „ostatni miesiąc z przychodem” / „2 ostatnie
+  miesiące z przychodem” / „6 ostatnich miesięcy z przychodem” / „bieżący
+  miesiąc, jeszcze niepełny” (gramatyka poprawna), wiersz rozdz. 7
+  o przerwach, scen. 41 i 42 sprawdzają nowe teksty.
+
+Decyzje: P31 wpisane w 7.1 (komunikat, minus `-` i `−`), scen. 43 („60”
+odrzucone, „−10” przyjęte), STACK (CHECK −5000…2000) i PLAN T28 ✓. P32
+wpisane w Z19 ✓. Z17–Z19 oznaczone jako zaakceptowane ✓.
+
+Uwagi nieblokujące z rozdz. 5: uwzględnione 1 (status), 3 (skrócone nazwy,
+„bez ucinania”), 4 (legenda, „od zera”), 5 (zdanie kontrolne dla 1
+miesiąca), 6 (próg bez znacznika), 7 (kolejność stanów), 8 („bez celu”,
+pełne złote w tabeli), 9 (oba minusy), 10 (puste pole), 11 (stopa na
+liście). Uwaga 2 (rozdz. 8 opisuje wariant B) pozostaje otwarta i jest
+jawnie zapisana w PLAN jako poza zakresem.
+
+Przeliczone ponownie (ten sam skrypt, `BigInt`, grosze):
+
+| Miejsce | Obliczenie | Wynik |
+| --- | --- | --- |
+| Scen. 48, 5 lat | „Konto” −10%: zysk miesiąca `v × (−1000) ÷ 120 000`, połówki od zera; + 2 000 zł | 55 421,27 → 55 421 zł ✓ |
+| j.w., legenda | 55 421 − 12 000 − 60 000 | −16 579 zł ✓ |
+| j.w., 1 rok | 22 509,57 → 22 510; 22 510 − 12 000 − 12 000 | −1 490 zł ✓ |
+| j.w., 22 lata | 109 923,50 → 109 924; wpłaty 264 000 | −166 076 zł (zdanie „za 22 lata” ✓) |
+| Scen. 48, zero | wartości 0, wpłata 0 | 0 zł, brak progów, zdanie „zysk … 0 zł” ✓ |
+| P31 | 2 mld zł przy 20% przez 480 miesięcy | 5 581 495 985 202,74 zł < `MAX_SAFE_INTEGER` ✓ |
+
+Nowe uwagi nieblokujące:
+1. Kwota w zdaniu dla zysku ujemnego (i warunek „zysk = 0 po
+   zaokrągleniu”) nie mówi wprost, że to kwota z legendy (zaokrąglony
+   majątek minus zaokrąglone części). Różnica ma znaczenie przy połówkach:
+   dla 22 lat w scen. 48 legenda daje 166 076 zł, a zaokrąglenie
+   niezaokrąglonego zysku (−166 076,50) od zera — 166 077 zł. Dopisać
+   „kwota jak w legendzie”.
+2. Zysk > 0, ale udział zaokrąglony do 0% daje „0% majątku to zysk”;
+   dopuszczalne, ewentualnie „mniej niż 1%”.
+3. Scen. 41, 43 i 48 mają wiersze dłuższe niż reszta dokumentu
+   (kosmetyka; `prettier --check` przechodzi).

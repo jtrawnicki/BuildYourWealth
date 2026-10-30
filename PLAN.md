@@ -590,7 +590,9 @@ jako nieplanowane. Kod ich nie zawierał.
   majątek końcowy 0, zysk dokładnie 0, źródło bez celu, dwa cele na jednym
   źródle, cel osiągnięty, ujemna stopa i stopy mieszane, brak stóp, źródło
   EUR (bieżący kurs, brak kursu), więcej niż 3 progi, brak progów, suma
-  zaokrąglonych części legendy, zaokrąglenie −0,5 i −1,5 gr, źródło
+  zaokrąglonych części legendy (22 lata ze scen. 48: kwota w zdaniu
+  = 166 076 zł z legendy), udział zysku poniżej 1%, zaokrąglenie −0,5
+  i −1,5 gr, źródło
   2 mld zł ze stopą 20% przez 40 lat mieści się w zakresie, rozliczenia
   z kwotami EUR w zdaniu kontrolnym, przełom roku.
 - **Weryfikacja:** testy jednostkowe, niezależne review obliczeń.
