@@ -3,14 +3,33 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { PlanData, PlanSource } from "@/db/plan";
+import {
+  forecastGoal,
+  goalDeadline,
+  goalFirstMonth,
+  goalMonths,
+  type PlanMonth,
+} from "@/domain/forecast";
+import {
+  FORECAST_MESSAGES,
+  deadlineLine,
+  requiredText,
+  suggestionText,
+  type DeadlineLine,
+} from "@/domain/forecast-text";
 import { formatAmount, formatPercent } from "@/domain/format";
 import {
+  MAX_DEADLINE,
+  MESSAGES,
   parseGoalPercent,
   parseName,
   parseOptionalAmount,
   parsePoolPercent,
+  validateDeadline,
 } from "@/domain/input";
+import { formatMonthName } from "@/domain/month-name";
 import { validatePlan, type Pool } from "@/domain/plan";
+import { goalProgress, isGoalReached } from "@/domain/progress";
 import { SaveError } from "@/ui/SaveError";
 import { savePlanAction } from "./actions";
 import type { GoalDraft, PlanState } from "./state";
@@ -24,6 +43,17 @@ const POOLS: { pool: Pool; title: string; dot: string }[] = [
 ];
 
 type Row = GoalDraft & { key: string };
+
+/**
+ * Dane prognozy celów (SPEC 5.12) z serwera: istniejące miesiące z migawkami,
+ * bieżący miesiąc i bieżący kurs. Prognozę i walidację terminu formularz liczy
+ * sam z wartości pól, bez żądań do serwera.
+ */
+export type ForecastContext = {
+  months: PlanMonth[];
+  currentMonth: string;
+  currentRate: number | null;
+};
 
 type FormValues = {
   savingsPct: string;
@@ -50,6 +80,7 @@ function toForm(data: PlanData): FormValues {
       sourceId: String(goal.sourceId),
       target: amountField(goal.targetAmount),
       start: amountField(goal.startAmount),
+      deadline: goal.deadline ?? "",
     })),
   };
 }
@@ -63,6 +94,7 @@ type GoalErrors = {
   source?: string;
   target?: string;
   start?: string;
+  deadline?: string;
 };
 
 type Validation = {
@@ -74,7 +106,20 @@ type Validation = {
   canSave: boolean;
 };
 
-function validate(form: FormValues): Validation {
+/** Termin rozbity na pola wyboru: `2027-03` → rok `2027`, miesiąc `03`. */
+function splitDeadline(deadline: string): { year: string; month: string } {
+  const [year = "", month = ""] = deadline.split("-");
+  return { year, month };
+}
+
+const joinDeadline = (year: string, month: string) =>
+  year === "" && month === "" ? "" : `${year}-${month}`;
+
+function validate(
+  form: FormValues,
+  savedDeadlines: Map<number, string | null>,
+  context: ForecastContext,
+): Validation {
   const savings = parsePoolPercent(form.savingsPct);
   const investments = parsePoolPercent(form.investmentsPct);
   const poolErrors: Validation["poolErrors"] = {};
@@ -96,6 +141,22 @@ function validate(form: FormValues): Validation {
     if (!target.ok) errors.target = target.error;
     if (!start.ok) errors.start = start.error;
     if (row.sourceId === "") errors.source = "Wybierz źródło celu.";
+    // Termin (SPEC 7.1): wymaga kwoty docelowej, a zakres sprawdzamy tylko przy
+    // zmianie — zapisany termin, który z czasem minął, zostaje („termin minął”).
+    if (row.deadline !== "") {
+      if (target.ok && target.value === null) {
+        errors.deadline = MESSAGES.deadlineNeedsTarget;
+      } else if (
+        row.id === null ||
+        savedDeadlines.get(row.id) !== row.deadline
+      ) {
+        const range = validateDeadline(
+          row.deadline,
+          firstMonthOf(row, context),
+        );
+        if (!range.ok) errors.deadline = range.error;
+      }
+    }
     if (Object.keys(errors).length > 0) {
       goalErrors[row.key] = errors;
       allGoalsOk = false;
@@ -156,6 +217,65 @@ function validate(form: FormValues): Validation {
     poolStatus,
     goalErrors,
     canSave,
+  };
+}
+
+function firstMonthOf(row: Row, context: ForecastContext): string {
+  return goalFirstMonth(
+    goalMonths(row.id, row.pool, context.months),
+    context.currentMonth,
+  );
+}
+
+type Advice = { status: DeadlineLine; lines: string[] };
+
+/**
+ * Blok pod wierszem celu z terminem (SPEC 5.12, 8.1), liczony na żywo z pól:
+ * status terminu (przy „brak danych” z wyjaśnieniem), a dla statusu innego niż
+ * „termin minął” wymagana wpłata i sugestia procentu. Tylko dla terminu
+ * poprawnego i celu z kwotą docelową, nieosiągniętego.
+ */
+function deadlineAdvice(
+  row: Row,
+  errors: GoalErrors | undefined,
+  sources: PlanSource[],
+  context: ForecastContext,
+  poolTitle: string,
+): Advice | null {
+  if (row.deadline === "" || errors?.deadline || errors?.target) return null;
+  if (errors?.start || errors?.source) return null;
+  const source = sources.find((s) => String(s.id) === row.sourceId);
+  const target = parseOptionalAmount(row.target);
+  const start = parseOptionalAmount(row.start);
+  if (!source || !target.ok || target.value === null || !start.ok) return null;
+
+  const months = goalMonths(row.id, row.pool, context.months);
+  const progress = goalProgress(
+    start.value,
+    months.flatMap((m) => (m.actualAmount === null ? [] : [m.actualAmount])),
+  );
+  if (isGoalReached(progress, target.value)) return null;
+  const input = {
+    currency: source.currency,
+    targetAmount: target.value,
+    progress,
+    months,
+    currentMonth: context.currentMonth,
+    currentRate: context.currentRate,
+  };
+  const result = goalDeadline(input, row.deadline);
+  const forecast = forecastGoal(input);
+  const status = deadlineLine(result, forecast, row.deadline);
+  if (result.status === "overdue") return { status, lines: [] };
+  const pct = parseGoalPercent(row.pct);
+  const lines = [
+    result.status === "no-data" ? FORECAST_MESSAGES.noData : null,
+    requiredText(result, forecast, row.deadline, source.currency),
+    suggestionText(result.suggestion, poolTitle, pct.ok ? pct.value : null),
+  ];
+  return {
+    status,
+    lines: lines.filter((line): line is string => line !== null),
   };
 }
 
@@ -225,11 +345,80 @@ function Field({
   );
 }
 
+const MONTH_KEYS = Array.from({ length: 12 }, (_, i) =>
+  String(i + 1).padStart(2, "0"),
+);
+
+function DeadlineField({
+  id,
+  value,
+  years,
+  error,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  years: number[];
+  error?: string;
+  onChange: (deadline: string) => void;
+}) {
+  const { year, month } = splitDeadline(value);
+  const describedBy = error ? `${id}-error` : undefined;
+  return (
+    <fieldset className={`${styles.field} ${styles.goalDeadline}`}>
+      <legend className={styles.fieldLabel}>Termin</legend>
+      <div className={styles.deadlineInputs}>
+        <select
+          id={`${id}-month`}
+          aria-label="Miesiąc terminu"
+          value={month}
+          onChange={(event) => onChange(joinDeadline(year, event.target.value))}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={styles.input}
+        >
+          <option value="">brak</option>
+          {MONTH_KEYS.map((key) => (
+            <option key={key} value={key}>
+              {formatMonthName(`2000-${key}`).toLowerCase()}
+            </option>
+          ))}
+        </select>
+        <select
+          id={`${id}-year`}
+          aria-label="Rok terminu"
+          value={year}
+          onChange={(event) =>
+            onChange(joinDeadline(event.target.value, month))
+          }
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={styles.input}
+        >
+          <option value="">rok</option>
+          {years.map((y) => (
+            <option key={y} value={String(y)}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <p id={`${id}-error`} className={styles.fieldError}>
+          {error}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
 function GoalRow({
   row,
   sources,
   lock,
   errors,
+  years,
+  advice,
   onChange,
   onRemove,
 }: {
@@ -237,6 +426,8 @@ function GoalRow({
   sources: PlanSource[];
   lock: Lock | undefined;
   errors: GoalErrors | undefined;
+  years: number[];
+  advice: Advice | null;
   onChange: (patch: Partial<GoalDraft>) => void;
   onRemove: () => void;
 }) {
@@ -306,7 +497,10 @@ function GoalRow({
         id={`${id}-target`}
         label="Kwota docelowa"
         value={row.target}
-        onChange={(target) => onChange({ target })}
+        // Usunięcie kwoty docelowej usuwa termin (SPEC 5.12).
+        onChange={(target) =>
+          onChange(target.trim() === "" ? { target, deadline: "" } : { target })
+        }
         error={errors?.target}
         placeholder="brak"
         inputMode="decimal"
@@ -322,6 +516,13 @@ function GoalRow({
         inputMode="decimal"
         className={styles.goalAmount}
       />
+      <DeadlineField
+        id={`${id}-deadline`}
+        value={row.deadline}
+        years={years}
+        error={errors?.deadline}
+        onChange={(deadline) => onChange({ deadline })}
+      />
       <div className={`${styles.field} ${styles.goalAction}`}>
         <span className={styles.fieldLabel} aria-hidden="true">
           &nbsp;
@@ -335,6 +536,18 @@ function GoalRow({
           Usuń
         </button>
       </div>
+      {advice !== null && (
+        <div className={styles.advice} role="note">
+          <p>
+            {advice.status.deadline} ·{" "}
+            <strong>{advice.status.statusLabel}</strong>
+            {advice.status.detail !== null && ` ${advice.status.detail}`}
+          </p>
+          {advice.lines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -342,9 +555,11 @@ function GoalRow({
 export function PlanForm({
   initial,
   sources,
+  context,
 }: {
   initial: PlanData;
   sources: PlanSource[];
+  context: ForecastContext;
 }) {
   const [form, setForm] = useState<FormValues>(() => toForm(initial));
   const nextKey = useRef(0);
@@ -373,7 +588,24 @@ export function PlanForm({
     });
   }
 
-  const v = validate(form);
+  const savedDeadlines = new Map(
+    initial.goals.map((goal) => [goal.id, goal.deadline]),
+  );
+  const v = validate(form, savedDeadlines, context);
+
+  // Lata terminu: od bieżącego, roku P celu (zaległy miesiąc z poprzedniego
+  // roku) albo wcześniejszego zapisanego terminu — do 2099.
+  const firstYear = Math.min(
+    Number(context.currentMonth.slice(0, 4)),
+    ...form.rows.map((row) => Number(firstMonthOf(row, context).slice(0, 4))),
+    ...initial.goals.flatMap((goal) =>
+      goal.deadline === null ? [] : [Number(goal.deadline.slice(0, 4))],
+    ),
+  );
+  const years = Array.from(
+    { length: Number(MAX_DEADLINE.slice(0, 4)) - firstYear + 1 },
+    (_, i) => firstYear + i,
+  );
 
   const setPool = (pool: Pool, value: string) =>
     setForm((f) =>
@@ -397,6 +629,7 @@ export function PlanForm({
             sourceId: first ? String(first.id) : "",
             target: "",
             start: "",
+            deadline: "",
           },
         ],
       };
@@ -420,6 +653,7 @@ export function PlanForm({
       sourceId: r.sourceId,
       target: r.target,
       start: r.start,
+      deadline: r.deadline,
     })),
   });
 
@@ -506,6 +740,14 @@ export function PlanForm({
                 sources={sources}
                 lock={row.id !== null ? locks.get(row.id) : undefined}
                 errors={v.goalErrors[row.key]}
+                years={years}
+                advice={deadlineAdvice(
+                  row,
+                  v.goalErrors[row.key],
+                  sources,
+                  context,
+                  title,
+                )}
                 onChange={(patch) => changeGoal(row.key, patch)}
                 onRemove={() => removeGoal(row.key)}
               />

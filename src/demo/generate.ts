@@ -7,9 +7,15 @@
 // dowolnej losowości i daty. Losowość jest wstrzykiwana, żeby testy były
 // powtarzalne. Zapis wyniku robi osobno `db/demo.ts`.
 
+import {
+  forecastGoal,
+  goalMonths,
+  type GoalInput,
+  type PlanMonth,
+} from "@/domain/forecast";
 import { computeMonthPlan } from "@/domain/plan";
 import { plannedActual } from "@/domain/settlement";
-import { currentMonth, previousMonth } from "@/domain/time";
+import { addMonths, currentMonth, previousMonth } from "@/domain/time";
 
 export type DemoSource = {
   /** Klucz do łączenia celów ze źródłem przy zapisie (nie trafia do bazy). */
@@ -38,6 +44,8 @@ export type DemoGoal = {
   sourceKey: string;
   targetAmount: number | null;
   startAmount: number | null;
+  /** Termin `YYYY-MM` (SPEC 5.12) albo null. */
+  deadline: string | null;
   position: number;
 };
 
@@ -196,6 +204,26 @@ function plannedActuals(income: number, eurRate: number): Map<string, number> {
 
 function index(key: string): number {
   return PLAN_GOALS.findIndex((g) => g.key === key);
+}
+
+/** Miesiące demo w postaci wejścia prognozy celu (reguły 6.12–6.13). */
+function toPlanMonths(months: DemoMonth[]): PlanMonth[] {
+  return months.map((m) => ({
+    month: m.month,
+    settled: m.settled,
+    income: m.incomes.reduce((sum, item) => sum + item.amount, 0),
+    savingsPct: m.savingsPct,
+    investmentsPct: m.investmentsPct,
+    goals: m.goals.map((mg) => {
+      const def = PLAN_GOALS[index(mg.goalKey)];
+      return {
+        goalId: index(mg.goalKey),
+        pool: def.pool,
+        pct: def.pct,
+        actualAmount: mg.actualAmount,
+      };
+    }),
+  }));
 }
 
 /** Następny miesiąc kalendarzowy `YYYY-MM`. */
@@ -396,8 +424,12 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
     value: lastValue.get(s.key) ?? 0,
   }));
 
+  const months = [...settledMonths, ...openMonths];
+  const planMonths = toPlanMonths(months);
+
   // Role celów ustalamy po poznaniu wpłat, żeby niezależnie od losowości jeden
-  // był osiągnięty, jeden w toku i jeden bez kwoty docelowej (SPEC 5.8, 5.3).
+  // był osiągnięty, jeden w toku i jeden bez kwoty docelowej (SPEC 5.8, 5.3),
+  // a cele z terminem miały statusy „zagrożony” i „zdążysz” (scen. 34).
   const goals: DemoGoal[] = PLAN_GOALS.map((g, position) => {
     const paid = paidByGoal.get(g.key) ?? 0;
     const base: DemoGoal = {
@@ -408,13 +440,38 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
       sourceKey: g.sourceKey,
       targetAmount: null,
       startAmount: null,
+      deadline: null,
       position,
     };
     if (g.key === "poduszka" || g.key === "akcje") {
-      // Postęp w toku: kwota docelowa powyżej dotychczasowego postępu.
+      // Postęp w toku: kwota docelowa powyżej dotychczasowego postępu. Poduszce
+      // brakuje co najmniej 3 000 zł, czyli więcej niż trzy średnie wpłaty, więc
+      // miesiąc osiągnięcia wypada co najmniej 2 miesiące po P.
       const start = randInt(rng, 0, 50000);
       base.startAmount = start;
-      base.targetAmount = start + paid + randInt(rng, 50000, 300000);
+      base.targetAmount =
+        start +
+        paid +
+        (g.key === "poduszka"
+          ? randInt(rng, 300000, 600000)
+          : randInt(rng, 50000, 300000));
+      const currency = SOURCES.find((s) => s.key === g.sourceKey)!.currency;
+      const forecast = forecastGoal({
+        currency,
+        targetAmount: base.targetAmount,
+        progress: start + paid,
+        months: goalMonths(index(g.key), g.pool, planMonths),
+        currentMonth: current,
+        currentRate: eurRate,
+      } satisfies GoalInput);
+      if (forecast.status === "forecast") {
+        // „zagrożony”: termin miesiąc przed osiągnięciem (i nie przed P);
+        // „zdążysz”: termin w miesiącu osiągnięcia albo do 3 miesięcy później.
+        base.deadline =
+          g.key === "poduszka"
+            ? addMonths(forecast.achievementMonth, -1)
+            : addMonths(forecast.achievementMonth, randInt(rng, 0, 3));
+      }
     } else if (g.key === "rezerwa") {
       // Osiągnięty: kwota docelowa nie większa niż postęp (postęp > 0).
       const start = randInt(rng, 0, 50000);
@@ -431,7 +488,7 @@ export function generateDemoData(now: Date, rng: () => number): DemoData {
     investmentsPct: INVEST_PCT,
     sources,
     goals,
-    months: [...settledMonths, ...openMonths],
+    months,
     history,
   };
 }

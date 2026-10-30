@@ -7,6 +7,7 @@
 import { ceilMulDiv, floorMulDiv } from "./arithmetic";
 import { convertEurToPln, convertPlnToEur } from "./currency";
 import type { Currency } from "./format";
+import { computeMonthPlan, type Pool } from "./plan";
 import { addMonths, compareMonths } from "./time";
 
 export type { Currency };
@@ -82,6 +83,8 @@ export type DeadlineResult =
       firstMonth: string;
       /** Zaplanowane wpłaty od P do T (reguła 6.13) w walucie celu. */
       planned: number;
+      /** Istniejące nierozliczone miesiące z celem od P do T, rosnąco. */
+      plannedMonths: string[];
       /** Brakuje = pozostało − zaplanowane, w walucie celu. */
       shortfall: number;
       /** k: liczba miesięcy od P do T, które jeszcze nie istnieją. */
@@ -101,13 +104,21 @@ function sortedByMonth(months: GoalMonth[]): GoalMonth[] {
  * z celem; gdy takiego nie ma — bieżący miesiąc, jeśli nie jest rozliczony,
  * w przeciwnym razie następny.
  */
-function firstPaymentMonth(input: GoalInput, sorted: GoalMonth[]): string {
+function firstPaymentMonth(currentMonth: string, sorted: GoalMonth[]): string {
   const oldestUnsettled = sorted.find((m) => m.hasGoal && !m.settled);
   if (oldestUnsettled) return oldestUnsettled.month;
   const currentSettled = sorted.some(
-    (m) => m.month === input.currentMonth && m.settled,
+    (m) => m.month === currentMonth && m.settled,
   );
-  return currentSettled ? addMonths(input.currentMonth, 1) : input.currentMonth;
+  return currentSettled ? addMonths(currentMonth, 1) : currentMonth;
+}
+
+/** Pierwszy miesiąc wpłaty P (reguła 6.12) — dolna granica terminu (SPEC 7.1). */
+export function goalFirstMonth(
+  months: GoalMonth[],
+  currentMonth: string,
+): string {
+  return firstPaymentMonth(currentMonth, sortedByMonth(months));
 }
 
 /**
@@ -142,7 +153,11 @@ function averageOfLast3(values: number[]): number {
  */
 export function forecastGoal(input: GoalInput): Forecast {
   const sorted = sortedByMonth(input.months);
-  return forecastFrom(input, sorted, firstPaymentMonth(input, sorted));
+  return forecastFrom(
+    input,
+    sorted,
+    firstPaymentMonth(input.currentMonth, sorted),
+  );
 }
 
 /**
@@ -238,7 +253,7 @@ export function goalDeadline(
   deadline: string,
 ): DeadlineResult {
   const sorted = sortedByMonth(input.months);
-  const firstMonth = firstPaymentMonth(input, sorted);
+  const firstMonth = firstPaymentMonth(input.currentMonth, sorted);
   const forecast = forecastFrom(input, sorted, firstMonth);
 
   if (compareMonths(deadline, firstMonth) < 0) {
@@ -265,13 +280,18 @@ export function goalDeadline(
   const inRange = (month: string) =>
     compareMonths(month, firstMonth) >= 0 &&
     compareMonths(month, deadline) <= 0;
-  const plannedPln = sorted
-    .filter((m) => m.hasGoal && !m.settled && inRange(m.month))
-    .reduce((sum, m) => sum + m.planAmount, 0);
+  const plannedInRange = sorted.filter(
+    (m) => m.hasGoal && !m.settled && inRange(m.month),
+  );
+  const plannedPln = plannedInRange.reduce((sum, m) => sum + m.planAmount, 0);
   // Bez kursu kwot planu celu EUR nie da się wyrazić w EUR; traktujemy je jak 0
   // i prosimy o kurs (SPEC 7: „Ustaw kurs EUR, aby zobaczyć sugestię procentu”).
-  const planned =
-    planInGoalCurrency(plannedPln, input.currency, input.currentRate) ?? 0;
+  const plannedConverted = planInGoalCurrency(
+    plannedPln,
+    input.currency,
+    input.currentRate,
+  );
+  const planned = plannedConverted ?? 0;
 
   const existing = new Set(sorted.map((m) => m.month));
   let futureMonths = 0;
@@ -310,9 +330,83 @@ export function goalDeadline(
     status,
     firstMonth,
     planned,
+    // Bez kursu kwoty planu nie ma, więc nie mówimy, że miesiące ją mają.
+    plannedMonths:
+      plannedConverted === null ? [] : plannedInRange.map((m) => m.month),
     shortfall,
     futureMonths,
     required,
     suggestion,
   };
+}
+
+/** Istniejący miesiąc użytkownika z migawką planu — wejście `goalMonths`. */
+export type PlanMonth = {
+  month: string;
+  settled: boolean;
+  /** Przychód miesiąca (reguła 1) w groszach. */
+  income: number;
+  savingsPct: number;
+  investmentsPct: number;
+  /** Cele migawki planu z faktyczną kwotą (gdy rozliczony). */
+  goals: {
+    goalId: number;
+    pool: Pool;
+    pct: number;
+    actualAmount: number | null;
+  }[];
+};
+
+/**
+ * Miesiące użytkownika w postaci potrzebnej prognozie jednego celu (reguły
+ * 6.12–6.13): kwota celu z planu miesiąca (reguła 3) i kwota bazowa puli celu
+ * (reguła 2). Miesiąc bez celu w migawce ma kwotę bazową puli `pool` — tej,
+ * do której cel należy teraz (nowy cel nie ma jeszcze migawki).
+ */
+export function goalMonths(
+  goalId: number | null,
+  pool: Pool,
+  months: PlanMonth[],
+): GoalMonth[] {
+  return months.map((m) => {
+    const entry = m.goals.find((g) => g.goalId === goalId);
+    const goalPool = entry?.pool ?? pool;
+    const poolPct = goalPool === "savings" ? m.savingsPct : m.investmentsPct;
+    const plan = computeMonthPlan({
+      income: m.income,
+      savingsPct: m.savingsPct,
+      investmentsPct: m.investmentsPct,
+      goals: m.goals.map((g) => ({ id: g.goalId, pool: g.pool, pct: g.pct })),
+    });
+    return {
+      month: m.month,
+      settled: m.settled,
+      hasGoal: entry !== undefined,
+      actualAmount: entry && m.settled ? (entry.actualAmount ?? 0) : null,
+      planAmount: plan.goals.find((g) => g.id === goalId)?.amount ?? 0,
+      poolBase: floorMulDiv(m.income, poolPct, 10_000),
+    };
+  });
+}
+
+/**
+ * Procent celu w najnowszym miesiącu z tym celem albo null. Gdy różni się od
+ * procentu w bieżącym planie, prognoza dostaje dopisek o nowym procencie
+ * (SPEC 5.12, P22).
+ */
+export function latestSnapshotPct(
+  goalId: number,
+  months: PlanMonth[],
+): number | null {
+  let latest: { month: string; pct: number } | null = null;
+  for (const m of months) {
+    const entry = m.goals.find((g) => g.goalId === goalId);
+    if (
+      entry &&
+      (latest === null || compareMonths(m.month, latest.month) > 0)
+    ) {
+      latest = { month: m.month, pct: entry.pct };
+    }
+  }
+  return latest?.pct ?? null;
 }

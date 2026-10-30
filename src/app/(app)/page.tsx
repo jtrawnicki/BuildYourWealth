@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import {
   getMonth,
   getMonthSnapshot,
+  listHistory,
   listOverdueMonths,
   type MonthData,
 } from "@/db/months";
@@ -21,6 +22,18 @@ import {
   formatProgress,
   formatSourceCount,
 } from "@/domain/format";
+import {
+  forecastGoal,
+  goalDeadline,
+  goalMonths,
+  latestSnapshotPct,
+  type PlanMonth,
+} from "@/domain/forecast";
+import {
+  FORECAST_MESSAGES,
+  deadlineLine,
+  forecastText,
+} from "@/domain/forecast-text";
 import { formatMonthTitle, monthGenitive } from "@/domain/month-name";
 import { computeMonthPlan, type Pool } from "@/domain/plan";
 import { isGoalReached } from "@/domain/progress";
@@ -30,6 +43,7 @@ import { toIncomeView } from "./income-view";
 import { IncomeItem } from "./IncomeItem";
 import {
   MonthPlan,
+  type GoalForecastView,
   type MonthPlanView,
   type PoolGroup,
   type Segment,
@@ -61,7 +75,7 @@ export default async function Home() {
 
   const hasIncome = currentData !== null && currentData.incomes.length > 0;
   const planView = hasIncome
-    ? await buildPlanView(db, currentData, eurRate)
+    ? await buildPlanView(db, user.id, currentData, current, eurRate)
     : null;
 
   // Rozliczenie bieżącego miesiąca jest dostępne od jego ostatniego dnia
@@ -104,10 +118,15 @@ type SnapshotGoalRow = Awaited<ReturnType<typeof getMonthSnapshot>>[number];
  */
 async function buildPlanView(
   db: ReturnType<typeof getDb>,
+  userId: number,
   data: MonthData,
+  current: string,
   eurRate: number | null,
 ): Promise<MonthPlanView> {
-  const snapshot = await getMonthSnapshot(db, data.id);
+  const [snapshot, planMonths] = await Promise.all([
+    getMonthSnapshot(db, data.id),
+    listHistory(db, userId),
+  ]);
   const income = data.incomes.reduce((sum, item) => sum + item.amount, 0);
   const plan = computeMonthPlan({
     income,
@@ -144,7 +163,13 @@ async function buildPlanView(
     const items = snapshot
       .filter((goal) => goal.pool === pool)
       .map((goal) =>
-        buildItem(goal, planByGoal.get(goal.goalId) ?? 0, data, eurRate),
+        buildItem(
+          goal,
+          planByGoal.get(goal.goalId) ?? 0,
+          data,
+          eurRate,
+          buildForecast(goal, planMonths, current, eurRate),
+        ),
       );
     if (items.length > 0) {
       groups.push({
@@ -225,11 +250,60 @@ function buildSegments(
     });
 }
 
+/**
+ * Prognoza celu z kwotą docelową, nieosiągniętego (SPEC 5.12): wynik prognozy
+ * albo status terminu, a w kolejnych liniach brak danych przy terminie i dopisek
+ * o nowym procencie, gdy bieżący plan ma inny procent niż najnowszy miesiąc
+ * z celem (P22).
+ */
+function buildForecast(
+  goal: SnapshotGoalRow,
+  planMonths: PlanMonth[],
+  current: string,
+  eurRate: number | null,
+): GoalForecastView | null {
+  const target = goal.targetAmount;
+  if (target === null || isGoalReached(goal.progress, target)) return null;
+  const input = {
+    currency: goal.currency,
+    targetAmount: target,
+    progress: goal.progress,
+    months: goalMonths(goal.goalId, goal.pool, planMonths),
+    currentMonth: current,
+    currentRate: eurRate,
+  };
+  const forecast = forecastGoal(input);
+  const notes: string[] = [];
+  let line: GoalForecastView["line"];
+  if (goal.deadline === null) {
+    const text = forecastText(forecast);
+    if (text === null) return null;
+    line = { kind: "text", text };
+  } else {
+    const result = goalDeadline(input, goal.deadline);
+    line = {
+      kind: "deadline",
+      ...deadlineLine(result, forecast, goal.deadline),
+    };
+    if (result.status === "no-data") notes.push(FORECAST_MESSAGES.noData);
+  }
+  const latestPct = latestSnapshotPct(goal.goalId, planMonths);
+  if (
+    goal.currentPct !== null &&
+    latestPct !== null &&
+    goal.currentPct !== latestPct
+  ) {
+    notes.push(FORECAST_MESSAGES.newPercent);
+  }
+  return { line, notes };
+}
+
 function buildItem(
   goal: SnapshotGoalRow,
   planAmount: number,
   data: MonthData,
   eurRate: number | null,
+  forecast: GoalForecastView | null,
 ): TransferItem {
   // `goal.progress` z bazy to kwota startowa + wpłaty z rozliczonych miesięcy
   // (reguła `goalProgress`, SPEC 6.6). Postęp pokazujemy tylko dla celu z kwotą
@@ -254,6 +328,7 @@ function buildItem(
     sourceName: goal.sourceName,
     pctLabel: formatPercent(goal.pct),
     progress,
+    forecast,
   };
 
   // Rozliczony: główna kwota = wpłata faktyczna w walucie źródła, pod spodem

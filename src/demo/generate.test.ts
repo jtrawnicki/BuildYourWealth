@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  goalDeadline,
+  goalFirstMonth,
+  goalMonths,
+  type PlanMonth,
+} from "@/domain/forecast";
+import { validateDeadline } from "@/domain/input";
 import { computeMonthPlan, validatePlan } from "@/domain/plan";
 import { currentMonth, previousMonth } from "@/domain/time";
 import { generateDemoData, type DemoData } from "./generate";
@@ -141,6 +148,53 @@ function goalProgressOf(data: DemoData, goalKey: string): number {
   return start + paid;
 }
 
+/** Statusy terminów celów (reguła 6.13) tak, jak policzy je aplikacja. */
+function deadlineStatuses(data: DemoData, current: string): string[] {
+  const id = (key: string) => data.goals.findIndex((g) => g.key === key);
+  const planMonths: PlanMonth[] = data.months.map((m) => ({
+    month: m.month,
+    settled: m.settled,
+    income: m.incomes.reduce((sum, i) => sum + i.amount, 0),
+    savingsPct: m.savingsPct,
+    investmentsPct: m.investmentsPct,
+    goals: m.goals.map((mg) => {
+      const goal = data.goals[id(mg.goalKey)];
+      return {
+        goalId: id(mg.goalKey),
+        pool: goal.pool,
+        pct: goal.pct,
+        actualAmount: mg.actualAmount,
+      };
+    }),
+  }));
+  const statuses: string[] = [];
+  for (const goal of data.goals) {
+    if (goal.deadline === null) continue;
+    expect(goal.targetAmount).not.toBeNull();
+    const months = goalMonths(id(goal.key), goal.pool, planMonths);
+    expect(
+      validateDeadline(goal.deadline, goalFirstMonth(months, current)).ok,
+    ).toBe(true);
+    const currency = data.sources.find(
+      (s) => s.key === goal.sourceKey,
+    )!.currency;
+    statuses.push(
+      goalDeadline(
+        {
+          currency,
+          targetAmount: goal.targetAmount!,
+          progress: goalProgressOf(data, goal.key),
+          months,
+          currentMonth: current,
+          currentRate: data.eurRate,
+        },
+        goal.deadline,
+      ).status,
+    );
+  }
+  return statuses;
+}
+
 describe("generator danych demo (SPEC 5.8, T16)", () => {
   for (const date of DATES) {
     for (const seed of SEEDS) {
@@ -231,6 +285,12 @@ describe("generator danych demo (SPEC 5.8, T16)", () => {
         );
         expect(eurGoal).toBeDefined();
         expect(data.sources.some((s) => s.currency === "EUR")).toBe(true);
+
+        // Cele z terminem (scen. 34): jeden „zdążysz”, jeden „zagrożony”, termin
+        // tylko z kwotą docelową i w zakresie z SPEC 7.1.
+        const statuses = deadlineStatuses(data, current);
+        expect(statuses).toContain("on-track");
+        expect(statuses).toContain("at-risk");
       });
     }
   }

@@ -171,6 +171,7 @@ export async function writeDemoData(
         sourceId: sourceIdByKey.get(g.sourceKey)!,
         targetAmount: g.targetAmount,
         startAmount: g.startAmount,
+        deadline: g.deadline,
         position: g.position,
       })),
     )

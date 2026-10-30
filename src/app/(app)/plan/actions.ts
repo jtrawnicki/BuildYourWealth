@@ -1,15 +1,26 @@
 "use server";
 import { refresh } from "next/cache";
 import { requireUser } from "@/auth/guard";
-import { getDb } from "@/db/client";
-import { savePlan, type PlanGoalInput, type PlanInput } from "@/db/plan";
+import { getDb, type Db } from "@/db/client";
+import { listHistory } from "@/db/months";
 import {
+  getPlan,
+  savePlan,
+  type PlanGoalInput,
+  type PlanInput,
+} from "@/db/plan";
+import { now } from "@/domain/clock";
+import { goalFirstMonth, goalMonths } from "@/domain/forecast";
+import {
+  isDeadline,
   parseGoalPercent,
   parseName,
   parseOptionalAmount,
   parsePoolPercent,
+  validateDeadline,
 } from "@/domain/input";
 import { validatePlan } from "@/domain/plan";
+import { currentMonth } from "@/domain/time";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
 import { field } from "@/app/form-data";
 import {
@@ -48,7 +59,8 @@ function parseDraft(raw: string): PlanDraft | null {
       typeof g.pct !== "string" ||
       typeof g.sourceId !== "string" ||
       typeof g.target !== "string" ||
-      typeof g.start !== "string"
+      typeof g.start !== "string" ||
+      typeof g.deadline !== "string"
     ) {
       return null;
     }
@@ -73,12 +85,15 @@ function toInput(draft: PlanDraft): PlanInput | null {
     const pct = parseGoalPercent(draftGoal.pct);
     const target = parseOptionalAmount(draftGoal.target);
     const start = parseOptionalAmount(draftGoal.start);
+    const deadline = draftGoal.deadline === "" ? null : draftGoal.deadline;
     const sourceId = Number(draftGoal.sourceId);
     if (
       !name.ok ||
       !pct.ok ||
       !target.ok ||
       !start.ok ||
+      // Termin: pełny miesiąc i rok, tylko z kwotą docelową (SPEC 7.1).
+      (deadline !== null && (!isDeadline(deadline) || target.value === null)) ||
       !Number.isSafeInteger(sourceId) ||
       sourceId <= 0
     ) {
@@ -92,8 +107,7 @@ function toInput(draft: PlanDraft): PlanInput | null {
       sourceId,
       targetAmount: target.value,
       startAmount: start.value,
-      // Pole terminu w formularzu wprowadza T22; na razie plan go nie ustawia.
-      deadline: null,
+      deadline,
     });
   }
 
@@ -111,6 +125,34 @@ function toInput(draft: PlanDraft): PlanInput | null {
   };
 }
 
+/**
+ * Zakres terminu (SPEC 7.1) sprawdzany tylko przy jego zmianie: nowy termin nie
+ * może być wcześniejszy niż pierwszy miesiąc wpłaty P celu (reguła 6.12), a już
+ * zapisany, który z czasem minął, zostaje bez zmian („termin minął”).
+ */
+async function deadlinesInRange(
+  db: Db,
+  userId: number,
+  input: PlanInput,
+): Promise<boolean> {
+  const withDeadline = input.goals.filter((goal) => goal.deadline !== null);
+  if (withDeadline.length === 0) return true;
+  const [plan, planMonths] = await Promise.all([
+    getPlan(db, userId),
+    listHistory(db, userId),
+  ]);
+  const saved = new Map(plan.goals.map((goal) => [goal.id, goal.deadline]));
+  const current = currentMonth(now());
+  return withDeadline.every((goal) => {
+    if (goal.id !== null && saved.get(goal.id) === goal.deadline) return true;
+    const firstMonth = goalFirstMonth(
+      goalMonths(goal.id, goal.pool, planMonths),
+      current,
+    );
+    return validateDeadline(goal.deadline!, firstMonth).ok;
+  });
+}
+
 export async function savePlanAction(
   _prev: PlanState,
   formData: FormData,
@@ -123,6 +165,9 @@ export async function savePlanAction(
 
   let result;
   try {
+    if (!(await deadlinesInRange(getDb(), user.id, input))) {
+      return { formError: PLAN_MESSAGES.invalid };
+    }
     result = await savePlan(getDb(), user.id, input);
   } catch (error) {
     // Błąd zapisu lub budzącej się bazy (SPEC 7): dane zostają w formularzu.

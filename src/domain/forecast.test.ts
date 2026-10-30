@@ -216,6 +216,7 @@ describe("goalDeadline (reguła 6.13)", () => {
       status: "at-risk",
       firstMonth: "2026-11",
       planned: 58_800, // listopad zaplanowany
+      plannedMonths: ["2026-11"],
       shortfall: 71_200, // 1 300 − 588
       futureMonths: 1, // grudzień
       required: 71_200,
@@ -228,6 +229,7 @@ describe("goalDeadline (reguła 6.13)", () => {
       status: "on-track",
       firstMonth: "2026-11",
       planned: 58_800,
+      plannedMonths: ["2026-11"],
       shortfall: 71_200,
       futureMonths: 4, // grudzień–marzec
       required: 17_800, // 712 ÷ 4

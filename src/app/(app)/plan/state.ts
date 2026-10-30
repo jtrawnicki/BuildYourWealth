@@ -20,6 +20,8 @@ export type GoalDraft = {
   sourceId: string;
   target: string;
   start: string;
+  /** Termin `YYYY-MM`, pusty albo niepełny (`YYYY-` / `-MM`), gdy wybrano tylko część. */
+  deadline: string;
 };
 
 export type PlanDraft = {

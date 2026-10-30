@@ -32,6 +32,21 @@ const GENITIVE = [
   "grudnia",
 ] as const;
 
+const LOCATIVE = [
+  "styczniu",
+  "lutym",
+  "marcu",
+  "kwietniu",
+  "maju",
+  "czerwcu",
+  "lipcu",
+  "sierpniu",
+  "wrześniu",
+  "październiku",
+  "listopadzie",
+  "grudniu",
+] as const;
+
 function parseMonth(key: string): { year: number; month: number } {
   const [year, month] = key.split("-").map(Number);
   return { year, month };
@@ -64,6 +79,29 @@ export function formatMonthTitle(key: string): string {
 /** `2026-10` → `października`: dopełniacz do zdania „Wpisz przychód z …". */
 export function monthGenitive(key: string): string {
   return GENITIVE[parseMonth(key).month - 1];
+}
+
+/** `2026-12` → `grudzień 2026`: miesiąc z rokiem w środku zdania (SPEC 5.12). */
+export function formatMonthYear(key: string): string {
+  const { year, month } = parseMonth(key);
+  return `${NOMINATIVE[month - 1]} ${year}`;
+}
+
+/** `2026-12` → `grudnia 2026`: „Do grudnia 2026 brakuje…” (SPEC 5.12). */
+export function formatMonthYearGenitive(key: string): string {
+  const { year, month } = parseMonth(key);
+  return `${GENITIVE[month - 1]} ${year}`;
+}
+
+/** `2027-01` → `styczniu 2027`: „Osiągniesz ok. w styczniu 2027” (SPEC 5.12). */
+export function formatMonthYearLocative(key: string): string {
+  const { year, month } = parseMonth(key);
+  return `${LOCATIVE[month - 1]} ${year}`;
+}
+
+/** `2026-11` → `Listopad`: nazwa miesiąca bez roku, wielką literą. */
+export function formatMonthName(key: string): string {
+  return capitalize(NOMINATIVE[parseMonth(key).month - 1]);
 }
 
 /**

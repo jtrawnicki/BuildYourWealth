@@ -78,6 +78,8 @@ type GoalOptions = {
   pct?: number;
   targetAmount?: number;
   startAmount?: number;
+  /** Termin `YYYY-MM` (SPEC 5.12); wymaga kwoty docelowej. */
+  deadline?: string;
 };
 
 function makeSeed(userId: number): Seed {
@@ -114,6 +116,7 @@ function makeSeed(userId: number): Seed {
           sourceId,
           targetAmount: options.targetAmount ?? null,
           startAmount: options.startAmount ?? null,
+          deadline: options.deadline ?? null,
           position: 0,
         })
         .returning({ id: goals.id });
