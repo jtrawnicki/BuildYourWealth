@@ -96,6 +96,11 @@ export function parseEurRate(input: string): Parsed<number> {
   return ok(value);
 }
 
+/** Czy zapis terminu to pełne `YYYY-MM`; zakres sprawdza `validateDeadline`. */
+export function isDeadline(input: string): boolean {
+  return DEADLINE_FORMAT.test(input);
+}
+
 /**
  * Walidacja terminu celu (SPEC 7.1): poprawny zapis `YYYY-MM`, miesiąc nie
  * wcześniejszy niż pierwszy miesiąc wpłaty P (reguła 6.12) i nie późniejszy niż

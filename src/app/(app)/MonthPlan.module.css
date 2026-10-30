@@ -297,6 +297,61 @@
   color: var(--ok-text);
 }
 
+/* Prognoza celu (SPEC 8.1): mały tekst, status jako mała pigułka. */
+.forecast {
+  padding-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.forecastNote {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.status {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusOk {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.statusWarn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Link „zagrożony”: pigułka zostaje mała, a obszar dotyku ma co najmniej 44 px. */
+.statusLink {
+  position: relative;
+}
+
+.statusLink::after {
+  content: "";
+  position: absolute;
+  inset: -14px -6px;
+}
+
+.statusLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.statusNeutral {
+  background: var(--track);
+  color: var(--text);
+}
+
 .actual {
   padding-top: 4px;
   font-size: 0.875rem;

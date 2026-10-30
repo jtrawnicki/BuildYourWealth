@@ -4,15 +4,22 @@ import { PLAN_MESSAGES, type GoalDraft, type PlanDraft } from "./state";
 
 const getSessionUser = vi.hoisted(() => vi.fn());
 const savePlan = vi.hoisted(() => vi.fn());
+const getPlan = vi.hoisted(() => vi.fn());
+const listHistory = vi.hoisted(() => vi.fn());
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("@/auth/session", () => ({ getSessionUser }));
 vi.mock("@/db/client", () => ({ getDb: () => ({}) }));
-vi.mock("@/db/plan", () => ({ savePlan }));
+vi.mock("@/db/plan", () => ({ savePlan, getPlan }));
+vi.mock("@/db/months", () => ({ listHistory }));
+vi.mock("@/domain/clock", () => ({
+  now: () => new Date("2026-11-10T12:00:00Z"),
+}));
 vi.mock("next/cache", () => ({ refresh }));
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const mock of [getSessionUser, savePlan, refresh]) mock.mockReset();
+  for (const mock of [getSessionUser, savePlan, getPlan, listHistory, refresh])
+    mock.mockReset();
 });
 
 const USER = { id: 7, email: "test@example.com" };
@@ -25,6 +32,7 @@ const goal = (over: Partial<GoalDraft> = {}): GoalDraft => ({
   sourceId: "3",
   target: "",
   start: "",
+  deadline: "",
   ...over,
 });
 
@@ -186,5 +194,75 @@ describe("zapis", () => {
     expect(await savePlanAction(PREV, form(draft()))).toEqual({
       saveFailed: true,
     });
+  });
+});
+
+describe("termin celu (SPEC 7.1)", () => {
+  const withTarget = (over: Partial<GoalDraft>) =>
+    draft({ goals: [goal({ target: "3 000", ...over })] });
+
+  function savedPlan(deadline: string | null) {
+    getPlan.mockResolvedValue({
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [{ id: 5, deadline }],
+    });
+    listHistory.mockResolvedValue([]);
+  }
+
+  it("zapisuje termin od bieżącego miesiąca (P = listopad 2026)", async () => {
+    getSessionUser.mockResolvedValue(USER);
+    savePlan.mockResolvedValue({ status: "ok" });
+    savedPlan(null);
+    expect(
+      await savePlanAction(PREV, form(withTarget({ deadline: "2026-11" }))),
+    ).toEqual({ saved: true });
+    expect(savePlan.mock.calls[0][2].goals[0].deadline).toBe("2026-11");
+  });
+
+  it.each([
+    ["bez kwoty docelowej", { target: "", deadline: "2027-06" }],
+    ["niepełny (sam rok)", { deadline: "2027-" }],
+    ["niepełny (sam miesiąc)", { deadline: "-06" }],
+    ["wcześniejszy niż P", { deadline: "2026-10" }],
+    ["po grudniu 2099", { deadline: "2100-01" }],
+  ])("odrzuca termin %s", async (_name, over) => {
+    getSessionUser.mockResolvedValue(USER);
+    savedPlan(null);
+    expect(await savePlanAction(PREV, form(withTarget(over)))).toEqual({
+      formError: PLAN_MESSAGES.invalid,
+    });
+    expect(savePlan).not.toHaveBeenCalled();
+  });
+
+  it("zapisany termin, który minął, przechodzi bez zmiany", async () => {
+    getSessionUser.mockResolvedValue(USER);
+    savePlan.mockResolvedValue({ status: "ok" });
+    savedPlan("2026-06");
+    expect(
+      await savePlanAction(
+        PREV,
+        form(withTarget({ id: 5, deadline: "2026-06" })),
+      ),
+    ).toEqual({ saved: true });
+  });
+
+  it("zmiana na inny przeszły termin jest odrzucona", async () => {
+    getSessionUser.mockResolvedValue(USER);
+    savedPlan("2026-06");
+    expect(
+      await savePlanAction(
+        PREV,
+        form(withTarget({ id: 5, deadline: "2026-07" })),
+      ),
+    ).toEqual({ formError: PLAN_MESSAGES.invalid });
+  });
+
+  it("bez terminów nie czyta planu ani miesięcy", async () => {
+    getSessionUser.mockResolvedValue(USER);
+    savePlan.mockResolvedValue({ status: "ok" });
+    await savePlanAction(PREV, form(draft()));
+    expect(getPlan).not.toHaveBeenCalled();
+    expect(listHistory).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { DeadlineLine } from "@/domain/forecast-text";
 import type { Pool } from "@/domain/plan";
 import styles from "./MonthPlan.module.css";
 
@@ -19,6 +20,16 @@ export type Progress =
   | { reached: false; label: string; widthPct: number }
   | null;
 
+/**
+ * Prognoza celu pod paskiem postępu (SPEC 5.12, 8.1): wynik prognozy albo
+ * status terminu jako pigułka; „zagrożony” prowadzi do Planu podziału.
+ */
+export type GoalForecastView = {
+  line: { kind: "text"; text: string } | ({ kind: "deadline" } & DeadlineLine);
+  /** Kolejne linie: brak danych przy terminie i dopisek o nowym procencie. */
+  notes: string[];
+};
+
 export type TransferItem = {
   goalId: number;
   pool: Pool;
@@ -34,6 +45,7 @@ export type TransferItem = {
   /** Linia w kolumnie celu: plan w rozliczonym miesiącu („plan: … zł"). */
   planNote: string | null;
   progress: Progress;
+  forecast: GoalForecastView | null;
 };
 
 export type PoolGroup = {
@@ -222,6 +234,7 @@ function TransferRow({ item }: { item: TransferItem }) {
         {item.progress?.reached === true && (
           <span className={styles.reached}>osiągnięty</span>
         )}
+        {item.forecast !== null && <GoalForecast forecast={item.forecast} />}
         {item.planNote !== null && (
           <span className={styles.actual}>{item.planNote}</span>
         )}
@@ -239,5 +252,45 @@ function TransferRow({ item }: { item: TransferItem }) {
         )}
       </span>
     </li>
+  );
+}
+
+const STATUS_CLASS: Record<DeadlineLine["status"], string> = {
+  "on-track": styles.statusOk,
+  "at-risk": styles.statusWarn,
+  overdue: styles.statusNeutral,
+  "no-data": styles.statusNeutral,
+};
+
+function GoalForecast({ forecast }: { forecast: GoalForecastView }) {
+  const { line } = forecast;
+  return (
+    <>
+      {line.kind === "text" ? (
+        <span className={styles.forecast}>{line.text}</span>
+      ) : (
+        <span className={styles.forecast}>
+          {line.deadline} ·{" "}
+          {line.status === "at-risk" ? (
+            <Link
+              href="/plan"
+              className={`${styles.status} ${styles.statusLink} ${STATUS_CLASS[line.status]}`}
+            >
+              {line.statusLabel}
+            </Link>
+          ) : (
+            <span className={`${styles.status} ${STATUS_CLASS[line.status]}`}>
+              {line.statusLabel}
+            </span>
+          )}
+          {line.detail !== null && ` ${line.detail}`}
+        </span>
+      )}
+      {forecast.notes.map((note) => (
+        <span key={note} className={styles.forecastNote}>
+          {note}
+        </span>
+      ))}
+    </>
   );
 }

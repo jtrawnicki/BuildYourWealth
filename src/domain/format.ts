@@ -64,6 +64,12 @@ export function formatPercent(hundredths: number): string {
   return `${sign}${whole}${trimmed ? `,${trimmed}` : ""}%`;
 }
 
+/** Procent zawsze z dwoma miejscami: `3000` → `30,00%` (sugestia procentu, SPEC 5.12). */
+export function formatPercentFixed(hundredths: number): string {
+  const { sign, whole, fraction } = splitScaled(hundredths, 2);
+  return `${sign}${whole},${fraction}%`;
+}
+
 /** Kurs w dziesięciotysięcznych: `42850` → `4,2850`. */
 export function formatEurRate(rate: number): string {
   const { sign, whole, fraction } = splitScaled(rate, 4);

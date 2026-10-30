@@ -46,6 +46,10 @@ export type SnapshotGoal = {
   currency: "PLN" | "EUR";
   targetAmount: number | null;
   startAmount: number | null;
+  /** Termin celu `YYYY-MM` (żywy atrybut, SPEC 5.12) albo null. */
+  deadline: string | null;
+  /** Procent celu w bieżącym planie; null, gdy cel usunięto z planu (SPEC 5.12, P22). */
+  currentPct: number | null;
   /** Faktyczna wpłata tego miesiąca (SPEC 5.5); `null`, dopóki nierozliczony. */
   actualAmount: number | null;
   /** Postęp celu (SPEC 6.6): kwota startowa + suma wpłat z rozliczonych miesięcy. */
@@ -256,6 +260,10 @@ export async function getMonthSnapshot(
       currency: sources.currency,
       targetAmount: goals.targetAmount,
       startAmount: goals.startAmount,
+      deadline: goals.deadline,
+      currentPct: sql<
+        number | null
+      >`case when ${goals.removedAt} is null then ${goals.pct} end`,
       actualAmount: monthGoals.actualAmount,
       // Suma `bigint` wraca ze sterownika jako string; rzutujemy na liczbę.
       progress: sql<string>`coalesce(${goals.startAmount}, 0) + ${settledPaid}`,

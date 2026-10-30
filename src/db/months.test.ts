@@ -423,7 +423,7 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
           sourceId,
           targetAmount: 500000,
           startAmount: 200000,
-          deadline: null,
+          deadline: "2027-03",
         },
       ],
     });
@@ -472,6 +472,8 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
         currency: "PLN",
         targetAmount: 500000,
         startAmount: 200000,
+        deadline: "2027-03",
+        currentPct: 10000,
         // Otwarty październik nie liczy się do postępu, tylko rozliczony wrzesień.
         actualAmount: null,
         progress: 200000 + 58800,
@@ -529,6 +531,41 @@ describe("migawka planu miesiąca (getMonthSnapshot, SPEC 5.4, 6.6)", () => {
 
     const [snap] = await getMonthSnapshot(getDb(), october!.id);
     expect(snap.name).toBe("Nowa nazwa");
+  });
+
+  it("cel usunięty z planu nie ma bieżącego procentu (SPEC 5.12, P22)", async () => {
+    const sourceId = await addSource("savings");
+    const goal = {
+      id: null,
+      pool: "savings" as const,
+      name: "Wakacje",
+      pct: 10000,
+      sourceId,
+      targetAmount: null,
+      startAmount: null,
+      deadline: null,
+    };
+    await savePlan(getDb(), userId, {
+      savingsPct: 2000,
+      investmentsPct: 0,
+      goals: [goal],
+    });
+    await addIncome(
+      getDb(),
+      userId,
+      "2026-10",
+      { name: "Pensja", amount: 850000 },
+      NOW,
+    );
+    const october = await getMonth(getDb(), userId, "2026-10");
+    await savePlan(getDb(), userId, {
+      savingsPct: 0,
+      investmentsPct: 0,
+      goals: [],
+    });
+
+    const [snap] = await getMonthSnapshot(getDb(), october!.id);
+    expect(snap.currentPct).toBeNull();
   });
 });
 

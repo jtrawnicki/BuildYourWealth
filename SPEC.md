@@ -337,8 +337,10 @@ nie ma dostępu do danych z wersji prywatnej.
   | „brak danych” | „Termin: czerwiec 2027 · brak danych” |
 
   Dopisek o nowym procencie (wyżej) jest drugą linią.
-- **Plan podziału**, przy celu z terminem i statusem innym niż „termin
-  minął”: brakująca kwota i wymagana wpłata, np. „Do grudnia 2026 brakuje
+- **Plan podziału**, przy celu z terminem: linia statusu jak na „Ten
+  miesiąc” (przy „brak danych” z wynikiem „Prognoza pojawi się…”; P33),
+  a przy statusie innym niż „termin minął” także brakująca kwota i wymagana
+  wpłata, np. „Do grudnia 2026 brakuje
   1 300,00 zł. Listopad ma już zaplanowane 588,00 zł, więc w każdym
   kolejnym miesiącu potrzebujesz 712,00 zł (średnio wpłacasz 566,66 zł).”
   Gdy średnia pochodzi z planu (reguła 6.12), zamiast „średnio wpłacasz”
@@ -750,8 +752,8 @@ przed zadaniami interfejsu Etapu 2 (P20). Niezależnie od kierunku:
 - **Prognoza na „Ten miesiąc”:** mały tekst pod paskiem postępu; status jako
   mała pigułka: „zdążysz” w kolorze sukcesu, „zagrożony” w kolorze
   ostrzeżenia, pozostałe neutralne. Kontrast co najmniej 4.5:1.
-- **Plan podziału:** wymagana wpłata i sugestia w neutralnym bloku
-  informacyjnym pod wierszem celu.
+- **Plan podziału:** status terminu, wymagana wpłata i sugestia w neutralnym
+  bloku informacyjnym pod wierszem celu (status pogrubiony, bez pigułki).
 - **Nawigacja:** sześć zakładek; „Prognoza” między Historią a Ustawieniami,
   z ikoną linii trendu ze strzałką. Na wąskim ekranie dolna belka mieści
   sześć skróconych nazw (Miesiąc, Majątek, Plan, Historia, Prognoza,
@@ -915,6 +917,10 @@ wycofuje P24, więc znów obowiązuje.
 - P32 (po review B prognozy, D2, 2026-10-30): prognoza pomija zaplanowane,
   a nierozliczone wpłaty bieżącego i zaległych miesięcy (Z19); „majątek
   dziś” jest ten sam co na pozostałych ekranach.
+- P33 (przy T22, 2026-10-30): status terminu pokazuje też Plan podziału,
+  w bloku pod celem z terminem. „Ten miesiąc” zna tylko cele z migawki
+  miesiąca, a cel z „brak danych” w żadnej migawce jeszcze nie jest, więc
+  bez tego jego status nie byłby nigdzie widoczny (scen. 38).
 
 **Założenia Etapu 2 (zaproponowane przez agenta, zaakceptowane przez
 właściciela produktu 2026-10-27 po review B i E):**
@@ -1082,9 +1088,9 @@ wymienione tabele.
     „zagrożony”, z dopiskiem „Prognoza uwzględni nowy procent po rozliczeniu
     miesięcy z nowym planem.”.
 38. **Brak danych:** cel dodany 5.11.2026 z kwotą docelową 3 000 zł
-    i terminem czerwiec 2027 (listopad istnieje bez niego) pokazuje „Termin:
-    czerwiec 2027 · brak danych” i „Prognoza pojawi się, gdy cel trafi do
-    planu miesiąca.”; Plan podziału pokazuje wymaganą wpłatę 428,58 zł
+    i terminem czerwiec 2027 (listopad istnieje bez niego) pokazuje w Planie
+    podziału „Termin: czerwiec 2027 · brak danych”, „Prognoza pojawi się, gdy
+    cel trafi do planu miesiąca.” (P33) oraz wymaganą wpłatę 428,58 zł
     (3 000 ÷ 7 miesięcy grudzień–czerwiec, w górę) i sugestię procentu.
 39. **Rozliczenia sprzed Etapu 2:** miesiąc rozliczony w MVP z celem EUR po
     kursie ręcznym 4,3000 pokazuje w Historii „Kurs 4,3000 zł (ręczny,
