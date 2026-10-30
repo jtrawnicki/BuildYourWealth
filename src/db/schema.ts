@@ -116,6 +116,10 @@ export const sources = pgTable(
     excludedFromNetWorth: boolean("excluded_from_net_worth")
       .notNull()
       .default(false),
+    // Zakładana roczna stopa zwrotu w setnych procenta (6,50% = 650), tylko
+    // do prognozy majątku (SPEC 5.2, reguła 6.14); null = brak (liczona jako
+    // 0%). Zmiana stopy nie zmienia wartości źródła ani historii (SPEC 5.2).
+    expectedReturn: integer("expected_return"),
   },
   (t) => [
     // Cel wskazuje źródło razem z użytkownikiem, więc baza nie przyjmie celu
@@ -125,6 +129,11 @@ export const sources = pgTable(
     check("sources_kind_check", sql`${t.kind} in ('savings', 'investments')`),
     check("sources_currency_check", sql`${t.currency} in ('PLN', 'EUR')`),
     check("sources_value_check", sql`${t.value} >= 0`),
+    // Stopa od −50% do 20% (SPEC 7.1, P31).
+    check(
+      "sources_expected_return_check",
+      sql`${t.expectedReturn} is null or ${t.expectedReturn} between -5000 and 2000`,
+    ),
     check(
       "sources_archived_value_check",
       sql`${t.archivedAt} is null or ${t.value} = 0`,

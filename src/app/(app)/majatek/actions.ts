@@ -8,7 +8,7 @@ import {
   updateSource,
   type SourceInput,
 } from "@/db/sources";
-import { parseAmount, parseName } from "@/domain/input";
+import { parseAmount, parseExpectedReturn, parseName } from "@/domain/input";
 import { SAVE_ERROR_MESSAGE } from "@/ui/SaveError";
 import { field, readId } from "@/app/form-data";
 import {
@@ -30,6 +30,7 @@ function readValues(formData: FormData): SourceFormValues {
     value: field(formData, "value"),
     note: field(formData, "note"),
     excluded: field(formData, "excluded"),
+    expectedReturn: field(formData, "expectedReturn"),
   };
 }
 
@@ -42,9 +43,10 @@ function parseSource(
 ): { ok: true; input: SourceInput } | { ok: false; state: SourceFormState } {
   const name = parseName(values.name);
   const value = parseAmount(values.value);
+  const rate = parseExpectedReturn(values.expectedReturn);
   const kind = includes(KINDS, values.kind);
   const currency = includes(CURRENCIES, values.currency);
-  if (!name.ok || !value.ok || !kind || !currency) {
+  if (!name.ok || !value.ok || !rate.ok || !kind || !currency) {
     return {
       ok: false,
       state: {
@@ -52,6 +54,7 @@ function parseSource(
         errors: {
           name: name.ok ? undefined : name.error,
           value: value.ok ? undefined : value.error,
+          rate: rate.ok ? undefined : rate.error,
           kind: kind && currency ? undefined : SOURCE_MESSAGES.kind,
         },
       },
@@ -67,6 +70,7 @@ function parseSource(
       value: value.value,
       note: note === "" ? null : note,
       excludedFromNetWorth: values.excluded !== "",
+      expectedReturn: rate.value,
     },
   };
 }

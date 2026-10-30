@@ -216,7 +216,16 @@ describe("generator danych demo (SPEC 5.8, T16)", () => {
           expect(NAME_OK(s.name)).toBe(true);
           expect(s.value).toBeGreaterThanOrEqual(0);
           expect(Number.isSafeInteger(s.value)).toBe(true);
+          // Stopa zwrotu w zakresie bazy (SPEC 7.1, P31) albo brak.
+          if (s.expectedReturn !== null) {
+            expect(s.expectedReturn).toBeGreaterThanOrEqual(-5000);
+            expect(s.expectedReturn).toBeLessThanOrEqual(2000);
+          }
         }
+        // Prognoza majątku pokazuje oba przypadki: część źródeł ma stopę,
+        // a co najmniej jedno aktywne źródło jej nie ma (SPEC 5.8, 5.2).
+        expect(data.sources.some((s) => s.expectedReturn !== null)).toBe(true);
+        expect(data.sources.some((s) => s.expectedReturn === null)).toBe(true);
         for (const g of data.goals) {
           expect(g.pct).toBeGreaterThan(0);
           expect(g.pct).toBeLessThanOrEqual(10000);

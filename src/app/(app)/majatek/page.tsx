@@ -5,7 +5,12 @@ import { getDb } from "@/db/client";
 import { listSourceHistory, listSources, type SourceRow } from "@/db/sources";
 import { now } from "@/domain/clock";
 import { convertEurToPln, netWorthPln } from "@/domain/currency";
-import { formatAmount, formatMoney, formatSourceCount } from "@/domain/format";
+import {
+  formatAmount,
+  formatMoney,
+  formatPercentFixed,
+  formatSourceCount,
+} from "@/domain/format";
 import { netWorthChart } from "@/domain/networth-chart";
 import {
   addMonths,
@@ -60,6 +65,10 @@ function toView(row: SourceRow, rate: number | null): SourceView {
         : null,
     kindLocked: row.kindLocked,
     excluded: row.excludedFromNetWorth,
+    rateText:
+      row.expectedReturn !== null
+        ? `stopa ${formatPercentFixed(row.expectedReturn)}`
+        : null,
     form: {
       name: row.name,
       kind: row.kind,
@@ -67,6 +76,8 @@ function toView(row: SourceRow, rate: number | null): SourceView {
       value: formatAmount(row.value),
       note: row.note ?? "",
       excluded: row.excludedFromNetWorth ? "on" : "",
+      expectedReturn:
+        row.expectedReturn !== null ? formatAmount(row.expectedReturn) : "",
     },
   };
 }

@@ -30,7 +30,13 @@ async function submit(button: Locator) {
 
 async function addSource(
   page: Page,
-  fields: { name: string; value: string; kind?: string; currency?: string },
+  fields: {
+    name: string;
+    value: string;
+    kind?: string;
+    currency?: string;
+    rate?: string;
+  },
 ) {
   const form = addSection(page);
   await form.getByLabel("Nazwa").fill(fields.name);
@@ -39,6 +45,11 @@ async function addSource(
     await form.getByText(fields.currency, { exact: true }).click();
   }
   await form.getByLabel("Bieżąca wartość").fill(fields.value);
+  if (fields.rate !== undefined) {
+    await form.getByLabel("Zakładana stopa zwrotu (opcjonalnie)").fill(
+      fields.rate,
+    );
+  }
   await submit(form.getByRole("button", { name: "Dodaj źródło" }));
 }
 
@@ -141,6 +152,40 @@ test("błędne pola dają komunikaty z SPEC 7.1, a wpis zostaje", async ({
   await expect(form.getByText(MESSAGES.name)).toBeVisible();
   await expect(form.getByText(MESSAGES.amount)).toBeVisible();
   expect(await seed.countSources()).toBe(0);
+});
+
+test("zakładana stopa zwrotu: zapis, zakres i wyczyszczenie (scen. 43)", async ({
+  page,
+  seed,
+}) => {
+  await page.goto("/majatek");
+
+  // „60” spoza zakresu jest odrzucone komunikatem z SPEC 7.1, a wpis zostaje.
+  await addSource(page, { name: "Makler", value: "1 000", rate: "60" });
+  const form = addSection(page);
+  await expect(form.getByText(MESSAGES.expectedReturn)).toBeVisible();
+  await expect(
+    form.getByLabel("Zakładana stopa zwrotu (opcjonalnie)"),
+  ).toHaveValue("60");
+  expect(await seed.countSources()).toBe(0);
+
+  // „6,5” zapisuje 6,50% i pokazuje stopę przy źródle.
+  await form.getByLabel("Zakładana stopa zwrotu (opcjonalnie)").fill("6,5");
+  await submit(form.getByRole("button", { name: "Dodaj źródło" }));
+  const makler = item(page, "Makler");
+  await expect(makler).toContainText(text("stopa 6,50%"));
+
+  // „−10” jest przyjęte (ujemna stopa, SPEC P31).
+  await addSource(page, { name: "Fundusz", value: "500", rate: "−10" });
+  await expect(item(page, "Fundusz")).toContainText(text("stopa -10,00%"));
+
+  // Wyczyszczenie pola usuwa stopę ze źródła.
+  const row = item(page, "Makler");
+  await row.getByRole("button", { name: "Edytuj Makler" }).click();
+  await row.getByLabel("Zakładana stopa zwrotu (opcjonalnie)").fill("");
+  await submit(row.getByRole("button", { name: "Zapisz zmiany" }));
+  await expect(row.getByRole("button", { name: "Zapisz zmiany" })).toBeHidden();
+  await expect(item(page, "Makler")).not.toContainText("stopa");
 });
 
 test("wypłata: zmniejszenie wartości źródła zmniejsza sumę majątku (scen. 9)", async ({

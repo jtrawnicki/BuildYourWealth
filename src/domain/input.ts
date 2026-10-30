@@ -14,6 +14,7 @@ export const MESSAGES = {
   poolPercent: "Wpisz procent od 0 do 100",
   goalPercent: "Wpisz procent większy od 0",
   eurRate: "Wpisz kurs, np. 4,2850",
+  expectedReturn: "Wpisz stopę od −50 do 20, np. 6,5",
   name: "Wpisz nazwę",
   deadlineNeedsTarget: "Termin wymaga kwoty docelowej",
 } as const;
@@ -27,6 +28,9 @@ const DEADLINE_FORMAT = /^\d{4}-(0[1-9]|1[0-2])$/;
 /** Największa wpisywana kwota (2 mld zł lub €), STACK 4. */
 export const MAX_AMOUNT = 200_000_000_000;
 export const MAX_PERCENT = 10_000;
+/** Zakładana stopa zwrotu w setnych procenta: od −50% do 20% (SPEC 7.1, P31). */
+export const MIN_EXPECTED_RETURN = -5_000;
+export const MAX_EXPECTED_RETURN = 2_000;
 export const MAX_NAME_LENGTH = 60;
 /** Największy kurs, jaki mieści kolumna `integer` (STACK 4): 214 748,3647. */
 export const MAX_EUR_RATE = 2_147_483_647;
@@ -92,6 +96,26 @@ export function parseEurRate(input: string): Parsed<number> {
   const value = parseScaled(input, 4);
   if (value === null || value === 0 || value > MAX_EUR_RATE) {
     return fail(MESSAGES.eurRate);
+  }
+  return ok(value);
+}
+
+/**
+ * Zakładana stopa zwrotu źródła (SPEC 7.1): od −50 do 20, najwyżej 2 miejsca po
+ * przecinku, separator `,` lub `.`, minus jako `-` albo `−` (U+2212), znak `%`
+ * ignorowany. Puste = brak (null, liczona jako 0%). Wynik w setnych procenta
+ * (6,5% = 650).
+ */
+export function parseExpectedReturn(input: string): Parsed<number | null> {
+  if (isBlank(input)) return ok(null);
+  const cleaned = input.replace(/%/g, "").replace(/\s/g, "");
+  const negative = cleaned.startsWith("-") || cleaned.startsWith("−");
+  const digits = negative ? cleaned.slice(1) : cleaned;
+  const magnitude = parseScaled(digits, 2);
+  if (magnitude === null) return fail(MESSAGES.expectedReturn);
+  const value = negative ? -magnitude : magnitude;
+  if (value < MIN_EXPECTED_RETURN || value > MAX_EXPECTED_RETURN) {
+    return fail(MESSAGES.expectedReturn);
   }
   return ok(value);
 }

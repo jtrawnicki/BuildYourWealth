@@ -113,6 +113,7 @@ describe("lista źródeł", () => {
       ...POLISH,
       value: 100000,
       note: "mBank",
+      expectedReturn: 650,
     });
     const second = await createSource(db, userId, {
       name: "Konto EUR",
@@ -132,6 +133,7 @@ describe("lista źródeł", () => {
         value: 100000,
         note: "mBank",
         excludedFromNetWorth: false,
+        expectedReturn: 650,
         inUse: false,
         kindLocked: false,
       },
@@ -143,6 +145,7 @@ describe("lista źródeł", () => {
         value: 0,
         note: null,
         excludedFromNetWorth: false,
+        expectedReturn: null,
         inUse: false,
         kindLocked: false,
       },
@@ -301,6 +304,59 @@ describe("edycja (SPEC 5.2)", () => {
     const id = await createSource(db, userId, POLISH);
     await archiveSource(db, userId, id);
     expect(await updateSource(db, userId, id, EDITED)).toBe("not-found");
+  });
+});
+
+describe("zakładana stopa zwrotu (SPEC 5.2, T28)", () => {
+  async function valueRows(id: number) {
+    return getDb()
+      .select({ reason: sourceValues.reason })
+      .from(sourceValues)
+      .where(eq(sourceValues.sourceId, id));
+  }
+
+  it("zapisuje i odczytuje stopę; brak = null", async () => {
+    const withRate = await createSource(getDb(), userId, {
+      ...POLISH,
+      expectedReturn: 650,
+    });
+    const without = await createSource(getDb(), userId, POLISH);
+    expect((await stored(withRate)).expectedReturn).toBe(650);
+    expect((await stored(without)).expectedReturn).toBeNull();
+    const rows = await listSources(getDb(), userId);
+    expect(rows.map((r) => r.expectedReturn)).toEqual([650, null]);
+  });
+
+  it("przyjmuje ujemną stopę w dozwolonym zakresie", async () => {
+    const id = await createSource(getDb(), userId, {
+      ...POLISH,
+      expectedReturn: -1000,
+    });
+    expect((await stored(id)).expectedReturn).toBe(-1000);
+  });
+
+  it("baza odrzuca stopę spoza zakresu (CHECK od −5000 do 2000)", async () => {
+    await expect(
+      createSource(getDb(), userId, { ...POLISH, expectedReturn: 2001 }),
+    ).rejects.toThrow();
+    await expect(
+      createSource(getDb(), userId, { ...POLISH, expectedReturn: -5001 }),
+    ).rejects.toThrow();
+  });
+
+  it("zmiana samej stopy nie dodaje wiersza do source_values", async () => {
+    const id = await createSource(getDb(), userId, POLISH);
+    await updateSource(getDb(), userId, id, {
+      ...POLISH,
+      expectedReturn: 650,
+    });
+    await updateSource(getDb(), userId, id, {
+      ...POLISH,
+      expectedReturn: null,
+    });
+    expect((await stored(id)).expectedReturn).toBeNull();
+    // Tylko punkt z utworzenia źródła; stopa nie zmienia wartości ani historii.
+    expect(await valueRows(id)).toEqual([{ reason: "created" }]);
   });
 });
 

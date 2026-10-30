@@ -24,6 +24,8 @@ type SourceInput = {
   kind: "savings" | "investments";
   currency?: "PLN" | "EUR";
   value?: number;
+  /** Zakładana stopa zwrotu w setnych procenta (SPEC 5.2) albo brak. */
+  expectedReturn?: number | null;
 };
 
 /** Helper seedujący dane użytkownika przez `db/` (rozwijany w kolejnych zadaniach). */
@@ -85,13 +87,20 @@ type GoalOptions = {
 function makeSeed(userId: number): Seed {
   return {
     userId,
-    async addSource({ name, kind, currency = "PLN", value = 0 }) {
+    async addSource({
+      name,
+      kind,
+      currency = "PLN",
+      value = 0,
+      expectedReturn = null,
+    }) {
       return createSource(getDb(), userId, {
         name,
         kind,
         currency,
         value,
         note: null,
+        expectedReturn,
       });
     },
     async countSources() {

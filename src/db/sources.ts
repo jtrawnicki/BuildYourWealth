@@ -13,6 +13,12 @@ export type SourceInput = {
   note: string | null;
   /** Źródło nie wchodzi do sum majątku (SPEC 5.2, P35); domyślnie `false`. */
   excludedFromNetWorth?: boolean;
+  /**
+   * Zakładana roczna stopa zwrotu w setnych procenta (SPEC 5.2); `null` albo
+   * pominięte = brak. Tylko do prognozy majątku; zmiana nie trafia do historii
+   * wartości (zapisuje się razem z resztą pól, bez wpisu w `source_values`).
+   */
+  expectedReturn?: number | null;
 };
 
 /**
@@ -26,6 +32,7 @@ export type SourceInput = {
 export type SourceRow = SourceInput & {
   id: number;
   excludedFromNetWorth: boolean;
+  expectedReturn: number | null;
   inUse: boolean;
   kindLocked: boolean;
 };
@@ -124,6 +131,7 @@ export async function listSources(
       value: sources.value,
       note: sources.note,
       excludedFromNetWorth: sources.excludedFromNetWorth,
+      expectedReturn: sources.expectedReturn,
       inUse: sql<boolean>`(${inCurrentPlan} or ${inOpenMonth})`,
       kindLocked: sql<boolean>`(${inCurrentPlan} or ${inAnyMonth})`,
     })

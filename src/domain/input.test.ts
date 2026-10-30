@@ -6,6 +6,7 @@ import {
   parseActualAmount,
   parseAmount,
   parseEurRate,
+  parseExpectedReturn,
   parseGoalPercent,
   parseIncomeAmount,
   parseName,
@@ -186,6 +187,42 @@ describe("nazwy (źródło, cel, przychód)", () => {
   it.each(["", "   ", " ", "a".repeat(61)])("„%s” → wpisz nazwę", (input) => {
     expect(parseName(input)).toEqual(error(MESSAGES.name));
   });
+});
+
+describe("zakładana stopa zwrotu (SPEC 7.1, scen. 43)", () => {
+  it("przyjmuje stopę i zwraca setne procenta", () => {
+    expect(parseExpectedReturn("6,5")).toEqual(value(650));
+    expect(parseExpectedReturn("6.5")).toEqual(value(650));
+    expect(parseExpectedReturn("6,50")).toEqual(value(650));
+    expect(parseExpectedReturn("0")).toEqual(value(0));
+  });
+
+  it("przyjmuje granice zakresu: 20 i −50", () => {
+    expect(parseExpectedReturn("20")).toEqual(value(2000));
+    expect(parseExpectedReturn("-50")).toEqual(value(-5000));
+  });
+
+  it("przyjmuje minus jako `-` i jako `−` (U+2212)", () => {
+    expect(parseExpectedReturn("-10")).toEqual(value(-1000));
+    expect(parseExpectedReturn("−10")).toEqual(value(-1000));
+  });
+
+  it("ignoruje znak % i spacje", () => {
+    expect(parseExpectedReturn("6,5%")).toEqual(value(650));
+    expect(parseExpectedReturn(" 6,5 % ")).toEqual(value(650));
+  });
+
+  it("puste pole oznacza brak (null)", () => {
+    expect(parseExpectedReturn("")).toEqual(value(null));
+    expect(parseExpectedReturn("   ")).toEqual(value(null));
+  });
+
+  it.each(["60", "21", "-51", "−50,01", "6,555", "abc", "-", "%"])(
+    "odrzuca „%s” komunikatem z zakresem",
+    (bad) => {
+      expect(parseExpectedReturn(bad)).toEqual(error(MESSAGES.expectedReturn));
+    },
+  );
 });
 
 describe("termin celu (SPEC 7.1)", () => {
