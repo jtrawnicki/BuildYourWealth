@@ -94,7 +94,8 @@ export function profitSentenceText(
       return `${first} Każda złotówka wpłacona według planu zamieni się średnio w ${formatMoney(sentence.perZloty, "PLN")}.`;
     }
     case "negative":
-      return `Przy założonych stopach majątek za ${phrase} będzie o ${formatMinorAsZloty(sentence.loss)} niższy niż majątek dziś i suma wpłat.`;
+      // `loss` to wartość bezwzględna zysku z legendy — już w pełnych złotych.
+      return `Przy założonych stopach majątek za ${phrase} będzie o ${formatZloty(sentence.loss)} niższy niż majątek dziś i suma wpłat.`;
     case "zero":
       return `Przy założonych stopach zysk za ${phrase} wynosi 0 zł.`;
   }

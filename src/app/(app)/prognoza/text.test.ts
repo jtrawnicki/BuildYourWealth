@@ -113,12 +113,12 @@ describe("profitSentenceText (SPEC 5.13, scen. 40, 48)", () => {
 
   it("zysk ujemny z odmianą lat", () => {
     expect(
-      plain(profitSentenceText({ kind: "negative", loss: 1_657_900 }, 5)),
+      plain(profitSentenceText({ kind: "negative", loss: 16_579 }, 5)),
     ).toBe(
       "Przy założonych stopach majątek za 5 lat będzie o 16 579 zł niższy niż majątek dziś i suma wpłat.",
     );
     expect(
-      plain(profitSentenceText({ kind: "negative", loss: 149_000 }, 1)),
+      plain(profitSentenceText({ kind: "negative", loss: 1_490 }, 1)),
     ).toBe(
       "Przy założonych stopach majątek za 1 rok będzie o 1 490 zł niższy niż majątek dziś i suma wpłat.",
     );
