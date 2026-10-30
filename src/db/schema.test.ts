@@ -677,7 +677,10 @@ describe("ograniczenia schematu", () => {
             "update sources set expected_return = $2 where id = $1",
             [investmentsSourceId, rate],
           ),
-        ).toEqual({ code: "23514", constraint: "sources_expected_return_check" });
+        ).toEqual({
+          code: "23514",
+          constraint: "sources_expected_return_check",
+        });
       },
     );
 

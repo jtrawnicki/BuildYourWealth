@@ -46,9 +46,9 @@ async function addSource(
   }
   await form.getByLabel("Bieżąca wartość").fill(fields.value);
   if (fields.rate !== undefined) {
-    await form.getByLabel("Zakładana stopa zwrotu (opcjonalnie)").fill(
-      fields.rate,
-    );
+    await form
+      .getByLabel("Zakładana stopa zwrotu (opcjonalnie)")
+      .fill(fields.rate);
   }
   await submit(form.getByRole("button", { name: "Dodaj źródło" }));
 }
