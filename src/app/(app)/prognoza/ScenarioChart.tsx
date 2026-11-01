@@ -116,6 +116,19 @@ export function ScenarioChart({
   const activeMonth =
     act === null ? null : formatMonthYear(addMonths(currentMonth, act));
 
+  // Przy prawej krawędzi scenariusze zbiegają się, więc etykiety końcowe
+  // nachodziłyby na siebie. Rozsuwamy je pionowo do minimalnego odstępu,
+  // zachowując kolejność od najwyższej wartości (+15%) do bazowej.
+  const END_GAP = 12;
+  const endLabels = SCENARIOS.map((scenario) => ({
+    scenario,
+    y: y(scenarioNetWorth[scenario][months]) + 3,
+  })).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < endLabels.length; i += 1) {
+    const minY = endLabels[i - 1].y + END_GAP;
+    if (endLabels[i].y < minY) endLabels[i].y = minY;
+  }
+
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <svg
@@ -214,12 +227,12 @@ export function ScenarioChart({
             );
           })}
 
-          {SCENARIOS.map((scenario) => (
+          {endLabels.map(({ scenario, y: labelY }) => (
             <text
               key={scenario}
               className={styles.endLabel}
               x={x(months) + 4}
-              y={y(scenarioNetWorth[scenario][months]) + 3}
+              y={labelY}
             >
               {SCENARIO_NAME[scenario]}
             </text>
