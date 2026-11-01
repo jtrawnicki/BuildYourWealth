@@ -206,8 +206,10 @@
 .scenarioDiff {
   align-self: flex-start;
   max-width: 100%;
-  padding: 2px 8px;
-  border-radius: 999px;
+  padding: 3px 10px;
+  /* Umiarkowany promień, bo plakietka na telefonie łamie się na kilka linii;
+     kapsuła (999px) wypychałaby wtedy tekst poza zaokrąglone narożniki. */
+  border-radius: 12px;
   background: var(--ok-bg);
   color: var(--ok-text);
   font-size: 12px;
